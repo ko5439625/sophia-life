@@ -33,18 +33,9 @@ interface DashboardHomeProps {
   onNavigate?: (tabId: string) => void;
 }
 
-const mockChecklist = [
-  { id: "1", title: "아침 운동 30분", isDone: true },
-  { id: "2", title: "블로그 글 작성", isDone: false },
-  { id: "3", title: "장보기 - 우유, 계란", isDone: false },
-  { id: "4", title: "저녁 요리하기", isDone: false },
-];
+const mockChecklist: { id: string; title: string; isDone: boolean }[] = [];
 
-const mockEvents = [
-  { id: "1", title: "sophia 생일", emoji: "\u{1F382}", date: "2026-04-15" },
-  { id: "2", title: "결혼기념일", emoji: "\u{1F48D}", date: "2026-05-20" },
-  { id: "3", title: "제주도 여행", emoji: "\u2708\uFE0F", date: "2026-03-28" },
-];
+const mockEvents: { id: string; title: string; emoji: string; date: string }[] = [];
 
 // Pinned memos are loaded from shared memo store
 
