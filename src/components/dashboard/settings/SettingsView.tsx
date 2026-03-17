@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGuestMode } from "../../../hooks/useGuestMode";
+import { proxyFetch } from "../../../services/proxyFetch";
 import {
   Lock,
   Tag,
@@ -17,6 +18,7 @@ import {
   Bot,
   Shield,
   Cloud,
+  RefreshCw,
 } from "lucide-react";
 
 const formatWon = (value: string) => {
@@ -84,6 +86,248 @@ const CollapsibleSection = ({
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// API Connection Status with live ping tests
+// ---------------------------------------------------------------------------
+
+type ApiStatus = "idle" | "testing" | "ok" | "fail" | "unconfigured";
+
+const statusIndicator = (status: ApiStatus) => {
+  switch (status) {
+    case "ok":
+      return { dot: "bg-green-500", label: "연결됨", color: "text-green-500" };
+    case "fail":
+      return { dot: "bg-red-500", label: "실패", color: "text-red-500" };
+    case "testing":
+      return { dot: "bg-yellow-400 animate-pulse", label: "테스트 중...", color: "text-yellow-500" };
+    case "unconfigured":
+      return { dot: "bg-gray-400", label: "미설정", color: "text-gray-400" };
+    default:
+      return { dot: "bg-gray-300", label: "대기", color: "text-gray-400" };
+  }
+};
+
+interface ApiTestItem {
+  name: string;
+  key: string;
+  test: () => Promise<boolean>;
+  hasKey: () => boolean;
+}
+
+const ApiConnectionStatus = () => {
+  const [results, setResults] = useState<Record<string, ApiStatus>>({});
+  const [isTesting, setIsTesting] = useState(false);
+  const [lastTested, setLastTested] = useState<string | null>(null);
+
+  const updateResult = useCallback((name: string, status: ApiStatus) => {
+    setResults((prev) => ({ ...prev, [name]: status }));
+  }, []);
+
+  const apiTests: ApiTestItem[] = [
+    {
+      name: "Supabase",
+      key: "VITE_SUPABASE_URL",
+      hasKey: () => !!import.meta.env.VITE_SUPABASE_URL,
+      test: async () => {
+        const url = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (!url || !anonKey) return false;
+        const res = await fetch(`${url}/rest/v1/posts?select=id&limit=1`, {
+          headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+        });
+        return res.ok;
+      },
+    },
+    {
+      name: "Gemini (분석/번역)",
+      key: "sophia-api-gemini",
+      hasKey: () => !!localStorage.getItem("sophia-api-gemini"),
+      test: async () => {
+        const apiKey = localStorage.getItem("sophia-api-gemini");
+        if (!apiKey) return false;
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: "ping" }] }],
+            }),
+          }
+        );
+        return res.ok;
+      },
+    },
+    {
+      name: "OpenAI (블로그 AI)",
+      key: "sophia-api-openai",
+      hasKey: () => !!localStorage.getItem("sophia-api-openai"),
+      test: async () => {
+        // Just check key exists (actual test would consume credits)
+        return !!localStorage.getItem("sophia-api-openai");
+      },
+    },
+    {
+      name: "Yahoo Finance",
+      key: "자동 (프록시)",
+      hasKey: () => true,
+      test: async () => {
+        const data = await proxyFetch("yahoo-quote", { symbol: "^GSPC" });
+        return data !== null;
+      },
+    },
+    {
+      name: "NewsAPI (뉴스)",
+      key: "sophia-api-news",
+      hasKey: () => !!localStorage.getItem("sophia-api-news"),
+      test: async () => {
+        const apiKey = localStorage.getItem("sophia-api-news");
+        if (!apiKey) return false;
+        const data = await proxyFetch("news", { category: "business", country: "kr", apiKey });
+        return data !== null;
+      },
+    },
+    {
+      name: "공공데이터 (부동산/청약)",
+      key: "sophia-api-data",
+      hasKey: () => !!localStorage.getItem("sophia-api-data"),
+      test: async () => {
+        // Check key exists only (actual test needs specific params like district code)
+        return !!localStorage.getItem("sophia-api-data");
+      },
+    },
+    {
+      name: "카카오 Maps (장소)",
+      key: "sophia-api-kakao",
+      hasKey: () => !!localStorage.getItem("sophia-api-kakao"),
+      test: async () => {
+        const apiKey = localStorage.getItem("sophia-api-kakao");
+        if (!apiKey) return false;
+        const res = await fetch(
+          "https://dapi.kakao.com/v2/local/search/keyword.json?query=Seoul&size=1",
+          { headers: { Authorization: `KakaoAK ${apiKey}` } }
+        );
+        return res.ok;
+      },
+    },
+    {
+      name: "OpenWeatherMap (날씨)",
+      key: "sophia-api-weather",
+      hasKey: () => !!localStorage.getItem("sophia-api-weather"),
+      test: async () => {
+        const apiKey = localStorage.getItem("sophia-api-weather");
+        if (!apiKey) return false;
+        const data = await proxyFetch("weather", { city: "Seoul", apiKey });
+        return data !== null;
+      },
+    },
+    {
+      name: "Fear & Greed Index",
+      key: "자동",
+      hasKey: () => true,
+      test: async () => {
+        const res = await fetch("https://api.alternative.me/fng/?limit=1");
+        if (!res.ok) return false;
+        const data = await res.json();
+        return !!data?.data;
+      },
+    },
+    {
+      name: "환율 (ExchangeRate)",
+      key: "자동",
+      hasKey: () => true,
+      test: async () => {
+        const res = await fetch("https://open.er-api.com/v6/latest/USD");
+        if (!res.ok) return false;
+        const data = await res.json();
+        return data?.result === "success";
+      },
+    },
+  ];
+
+  const runAllTests = async () => {
+    setIsTesting(true);
+
+    // Set all to testing or unconfigured
+    const initial: Record<string, ApiStatus> = {};
+    for (const api of apiTests) {
+      initial[api.name] = api.hasKey() ? "testing" : "unconfigured";
+    }
+    setResults(initial);
+
+    // Run each test independently for animated results
+    const promises = apiTests.map(async (api) => {
+      if (!api.hasKey()) {
+        return; // already set to unconfigured
+      }
+      try {
+        const ok = await api.test();
+        updateResult(api.name, ok ? "ok" : "fail");
+      } catch {
+        updateResult(api.name, "fail");
+      }
+    });
+
+    await Promise.all(promises);
+    setLastTested(new Date().toLocaleString("ko-KR"));
+    setIsTesting(false);
+  };
+
+  return (
+    <div className="bg-card rounded-xl p-5 space-y-3 border border-border">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold flex items-center gap-2">
+          <Shield className="h-4 w-4 text-primary" />
+          API 연결 상태
+        </h3>
+        <button
+          onClick={runAllTests}
+          disabled={isTesting}
+          className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3 w-3 ${isTesting ? "animate-spin" : ""}`} />
+          연결 테스트
+        </button>
+      </div>
+      <div className="space-y-2">
+        {apiTests.map((api) => {
+          const status = results[api.name] ?? "idle";
+          const indicator = statusIndicator(status);
+          return (
+            <motion.div
+              key={api.name}
+              className="flex items-center justify-between py-1.5"
+              initial={false}
+              animate={
+                status === "ok" || status === "fail"
+                  ? { opacity: [0.5, 1], x: [4, 0] }
+                  : {}
+              }
+              transition={{ duration: 0.3 }}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${indicator.dot}`} />
+                <span className="text-xs">{api.name}</span>
+              </div>
+              <span className={`text-[10px] font-mono ${indicator.color}`}>
+                {indicator.label}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+      {lastTested && (
+        <p className="text-[10px] text-muted-foreground mt-1">
+          마지막 테스트: {lastTested}
+        </p>
+      )}
+      <p className="text-[10px] text-muted-foreground">
+        "연결 테스트" 버튼으로 실제 API 연결을 확인합니다. 미설정 항목은 위 섹션에서 키를 입력하세요.
+      </p>
     </div>
   );
 };
@@ -1073,44 +1317,8 @@ const SettingsView = () => {
         </div>
       </CollapsibleSection>
 
-      {/* API 연결 상태 */}
-      <div className="bg-card rounded-xl p-5 space-y-3 border border-border">
-        <h3 className="text-sm font-bold flex items-center gap-2">
-          <Shield className="h-4 w-4 text-primary" />
-          API 연결 상태
-        </h3>
-        <div className="space-y-2">
-          {[
-            { name: "Supabase", key: "VITE_SUPABASE_URL", check: () => !!import.meta.env.VITE_SUPABASE_URL },
-            { name: "Gemini (분석/번역)", key: "sophia-api-gemini", check: () => !!localStorage.getItem("sophia-api-gemini") },
-            { name: "OpenAI (블로그 AI)", key: "sophia-api-openai", check: () => !!localStorage.getItem("sophia-api-openai") },
-            { name: "Yahoo Finance", key: "자동", check: () => true },
-            { name: "Alpha Vantage (백업)", key: "sophia-api-stock", check: () => !!localStorage.getItem("sophia-api-stock") },
-            { name: "NewsAPI (뉴스)", key: "sophia-api-news", check: () => !!localStorage.getItem("sophia-api-news") },
-            { name: "공공데이터 (부동산/청약)", key: "sophia-api-data", check: () => !!localStorage.getItem("sophia-api-data") },
-            { name: "카카오 Maps (장소)", key: "sophia-api-kakao", check: () => !!localStorage.getItem("sophia-api-kakao") },
-            { name: "OpenWeatherMap (날씨)", key: "sophia-api-weather", check: () => !!localStorage.getItem("sophia-api-weather") },
-            { name: "Fear & Greed Index", key: "자동", check: () => true },
-            { name: "환율 (ExchangeRate)", key: "자동", check: () => true },
-          ].map((api) => {
-            const connected = api.check();
-            return (
-              <div key={api.name} className="flex items-center justify-between py-1.5">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-400"}`} />
-                  <span className="text-xs">{api.name}</span>
-                </div>
-                <span className={`text-[10px] font-mono ${connected ? "text-green-500" : "text-red-400"}`}>
-                  {connected ? "연결됨" : "미설정"}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        <p className="text-[10px] text-muted-foreground mt-2">
-          API 키를 위 섹션에서 입력하면 자동으로 연결됩니다. "자동"은 키 없이 동작합니다.
-        </p>
-      </div>
+      {/* API 연결 상태 - Live ping tests */}
+      <ApiConnectionStatus />
     </div>
   );
 };

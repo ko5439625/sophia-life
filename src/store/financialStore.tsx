@@ -102,10 +102,30 @@ export interface FinancialState {
 }
 
 // ---------------------------------------------------------------------------
-// Default / Initial Data (used when localStorage is empty)
+// Default / Initial Data
 // ---------------------------------------------------------------------------
 
-const DEFAULT_HOLDINGS: Holding[] = [
+// Real users start with a clean slate
+const DEFAULT_STATE: FinancialState = {
+  monthlyBudgets: [],
+  cashSavings: 0,
+  emergencyFund: 0,
+  holdings: [],
+  trades: [],
+  pensionFunds: [],
+  pensionBalance: 0,
+  ownedProperties: [],
+  expenses: [],
+  annualIncome1: 0,
+  annualIncome2: 0,
+  monthlyLoanPayment: 0,
+};
+
+// ---------------------------------------------------------------------------
+// Guest mock data (shown in guest/demo mode)
+// ---------------------------------------------------------------------------
+
+const GUEST_HOLDINGS: Holding[] = [
   { id: "1", name: "Samsung Electronics", category: "stock", quantity: 50, avgPrice: 68000, currentPrice: 72500 },
   { id: "2", name: "TIGER S&P500", category: "etf", quantity: 30, avgPrice: 15200, currentPrice: 16800 },
   { id: "3", name: "KODEX 200", category: "etf", quantity: 20, avgPrice: 35000, currentPrice: 36200 },
@@ -115,7 +135,7 @@ const DEFAULT_HOLDINGS: Holding[] = [
   { id: "7", name: "KG Gold ETF", category: "gold", quantity: 15, avgPrice: 12000, currentPrice: 13200 },
 ];
 
-const DEFAULT_TRADES: Trade[] = [
+const GUEST_TRADES: Trade[] = [
   { id: "t1", date: "2026-03-15", type: "buy", holdingName: "Samsung Electronics", quantity: 20, price: 68000, totalAmount: 1360000 },
   { id: "t2", date: "2026-03-10", type: "sell", holdingName: "LG Energy Solution", quantity: 5, price: 420000, totalAmount: 2100000, realizedPnl: 150000, destination: "cash" },
   { id: "t3", date: "2026-03-05", type: "buy", holdingName: "TIGER S&P500", quantity: 15, price: 15800, totalAmount: 237000 },
@@ -124,14 +144,14 @@ const DEFAULT_TRADES: Trade[] = [
   { id: "t6", date: "2026-02-15", type: "sell", holdingName: "KODEX 200", quantity: 10, price: 36500, totalAmount: 365000, realizedPnl: 15000, destination: "savings" },
 ];
 
-const DEFAULT_PENSION_FUNDS: PensionFund[] = [
+const GUEST_PENSION_FUNDS: PensionFund[] = [
   { id: "p1", accountType: "pension_savings", name: "Samsung TDF2050", quantity: 500, avgPrice: 12500, currentPrice: 14200 },
   { id: "p2", accountType: "irp", name: "TIGER S&P500 ETF", quantity: 300, avgPrice: 16800, currentPrice: 18500 },
   { id: "p3", accountType: "irp", name: "KODEX KR Bond ETF", quantity: 50, avgPrice: 105000, currentPrice: 107200 },
   { id: "p4", accountType: "dc", name: "TIGER Global REIT ETF", quantity: 400, avgPrice: 8500, currentPrice: 9100 },
 ];
 
-const DEFAULT_EXPENSES: Expense[] = mockTransactions.map((t) => ({
+const GUEST_EXPENSES: Expense[] = mockTransactions.map((t) => ({
   id: t.id,
   type: t.type,
   amount: t.amount,
@@ -140,16 +160,16 @@ const DEFAULT_EXPENSES: Expense[] = mockTransactions.map((t) => ({
   memo: t.memo,
 }));
 
-const DEFAULT_STATE: FinancialState = {
+export const guestMockState: FinancialState = {
   monthlyBudgets: mockMonthlyBudgets,
   cashSavings: 15500000,
   emergencyFund: 3500000,
-  holdings: DEFAULT_HOLDINGS,
-  trades: DEFAULT_TRADES,
-  pensionFunds: DEFAULT_PENSION_FUNDS,
-  pensionBalance: 0, // computed from pensionFunds
+  holdings: GUEST_HOLDINGS,
+  trades: GUEST_TRADES,
+  pensionFunds: GUEST_PENSION_FUNDS,
+  pensionBalance: 0,
   ownedProperties: [],
-  expenses: DEFAULT_EXPENSES,
+  expenses: GUEST_EXPENSES,
   annualIncome1: 30000000,
   annualIncome2: 30000000,
   monthlyLoanPayment: 0,
@@ -494,13 +514,16 @@ function saveToStorage(state: FinancialState) {
 // ---------------------------------------------------------------------------
 
 export function FinancialProvider({ children }: { children: ReactNode }) {
-  const initialState = loadFromStorage() ?? DEFAULT_STATE;
+  const isGuest = sessionStorage.getItem("sophia-guest") === "true";
+  const initialState = isGuest
+    ? guestMockState
+    : (loadFromStorage() ?? DEFAULT_STATE);
   const [state, dispatch] = useReducer(financialReducer, initialState);
   const supabaseReady = useRef(isSupabaseConfigured());
 
-  // Load from Supabase on mount (if configured)
+  // Load from Supabase on mount (if configured, skip for guests)
   useEffect(() => {
-    if (!supabaseReady.current) return;
+    if (!supabaseReady.current || isGuest) return;
     sync.loadFinancialData().then((data) => {
       if (data && Object.keys(data).length > 0) {
         dispatch({
