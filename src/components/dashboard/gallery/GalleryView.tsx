@@ -7,6 +7,7 @@ import {
   Lock,
   Globe,
   X,
+  Trash2,
 } from "lucide-react";
 
 interface Photo {
@@ -23,45 +24,7 @@ interface Album {
   photos: Photo[];
 }
 
-const mockAlbums: Album[] = [
-  {
-    id: "1",
-    title: "제주도 여행",
-    description: "2025년 가을 제주도 여행 기록",
-    isPublic: true,
-    photos: [
-      { id: "p1", url: "https://picsum.photos/seed/jeju1/400/400", alt: "제주 1" },
-      { id: "p2", url: "https://picsum.photos/seed/jeju2/400/400", alt: "제주 2" },
-      { id: "p3", url: "https://picsum.photos/seed/jeju3/400/400", alt: "제주 3" },
-      { id: "p4", url: "https://picsum.photos/seed/jeju4/400/400", alt: "제주 4" },
-      { id: "p5", url: "https://picsum.photos/seed/jeju5/400/400", alt: "제주 5" },
-      { id: "p6", url: "https://picsum.photos/seed/jeju6/400/400", alt: "제주 6" },
-    ],
-  },
-  {
-    id: "2",
-    title: "일상",
-    description: "소중한 일상 순간들",
-    isPublic: false,
-    photos: [
-      { id: "p7", url: "https://picsum.photos/seed/daily1/400/400", alt: "일상 1" },
-      { id: "p8", url: "https://picsum.photos/seed/daily2/400/400", alt: "일상 2" },
-      { id: "p9", url: "https://picsum.photos/seed/daily3/400/400", alt: "일상 3" },
-      { id: "p10", url: "https://picsum.photos/seed/daily4/400/400", alt: "일상 4" },
-    ],
-  },
-  {
-    id: "3",
-    title: "맛집 탐방",
-    description: "함께 방문한 맛집들",
-    isPublic: true,
-    photos: [
-      { id: "p11", url: "https://picsum.photos/seed/food1/400/400", alt: "음식 1" },
-      { id: "p12", url: "https://picsum.photos/seed/food2/400/400", alt: "음식 2" },
-      { id: "p13", url: "https://picsum.photos/seed/food3/400/400", alt: "음식 3" },
-    ],
-  },
-];
+const mockAlbums: Album[] = [];
 
 const GalleryView = () => {
   const [albums, setAlbums] = useState<Album[]>(mockAlbums);
@@ -84,6 +47,11 @@ const GalleryView = () => {
     setNewTitle("");
     setNewDescription("");
     setShowCreateForm(false);
+  };
+
+  const deleteAlbum = (albumId: string) => {
+    setAlbums(albums.filter((a) => a.id !== albumId));
+    if (selectedAlbum?.id === albumId) setSelectedAlbum(null);
   };
 
   const toggleAlbumVisibility = (albumId: string) => {
@@ -203,6 +171,13 @@ const GalleryView = () => {
                       ) : (
                         <Lock className="h-4 w-4 text-muted-foreground" />
                       )}
+                    </button>
+                    <button
+                      onClick={() => deleteAlbum(album.id)}
+                      className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors"
+                      title="앨범 삭제"
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                     </button>
                     <span className="text-xs text-muted-foreground font-mono">
                       {album.photos.length}장

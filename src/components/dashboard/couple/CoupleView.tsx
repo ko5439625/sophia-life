@@ -246,7 +246,10 @@ const CoupleView = () => {
                     type="date"
                     value={newDdayDate}
                     onChange={(e) => setNewDdayDate(e.target.value)}
+                    min="2000-01-01"
+                    max="2099-12-31"
                     className="bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 w-full sm:w-auto"
+                    style={{ minWidth: "150px" }}
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -453,18 +456,27 @@ const CoupleView = () => {
                         </div>
                         <p className="text-sm">{memo.message}</p>
                         <div className="flex items-center justify-between mt-1.5">
-                          <button
-                            onClick={() => toggleMemoPin(memo.id)}
-                            className={`flex items-center gap-1 text-[10px] font-medium transition-colors rounded-full px-1.5 py-0.5 ${
-                              memo.pinned
-                                ? "text-amber-500 bg-amber-500/10"
-                                : "text-muted-foreground/50 hover:text-muted-foreground"
-                            }`}
-                            title={memo.pinned ? "공지 해제" : "공지 등록"}
-                          >
-                            <Pin className="h-2.5 w-2.5" />
-                            {memo.pinned ? "공지 중" : "공지 등록"}
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => toggleMemoPin(memo.id)}
+                              className={`flex items-center gap-1 text-[10px] font-medium transition-colors rounded-full px-1.5 py-0.5 ${
+                                memo.pinned
+                                  ? "text-amber-500 bg-amber-500/10"
+                                  : "text-muted-foreground/50 hover:text-muted-foreground"
+                              }`}
+                              title={memo.pinned ? "공지 해제" : "공지 등록"}
+                            >
+                              <Pin className="h-2.5 w-2.5" />
+                              {memo.pinned ? "공지 중" : "공지 등록"}
+                            </button>
+                            <button
+                              onClick={() => setMemos(memos.filter((m) => m.id !== memo.id))}
+                              className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground/50 hover:text-destructive transition-colors rounded-full px-1.5 py-0.5"
+                              title="삭제"
+                            >
+                              <Trash2 className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
                           <p className="text-[10px] text-muted-foreground/60 font-mono">
                             {memo.timestamp}
                           </p>
