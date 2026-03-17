@@ -78,7 +78,7 @@ function extractRegions(items: SubscriptionInfo[]): string[] {
 // ---------------------------------------------------------------------------
 
 const GEMINI_ENDPOINT =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 async function callGemini(prompt: string): Promise<string> {
   const apiKey = localStorage.getItem("sophia-api-gemini");

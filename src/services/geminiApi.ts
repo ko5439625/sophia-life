@@ -41,7 +41,7 @@ export interface EconomicIndicators {
 // ---------------------------------------------------------------------------
 
 const GEMINI_ENDPOINT =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 function getApiKey(): string | null {
   return localStorage.getItem("sophia-api-gemini");
