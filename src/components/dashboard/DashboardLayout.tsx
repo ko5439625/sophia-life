@@ -10,11 +10,11 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
 } from "lucide-react";
 import ThemeToggle from "../ThemeToggle";
-import TypingLogo from "../blog/TypingLogo";
 import { useNavigate } from "react-router-dom";
+import ScheduleView from "./schedule/ScheduleView";
+import FinanceView from "./finance/FinanceView";
 
 const navItems = [
   { icon: Home, label: "홈", id: "home" },
@@ -34,6 +34,32 @@ const DashboardLayout = () => {
   const handleLogout = () => {
     sessionStorage.removeItem("sophia-auth");
     navigate("/");
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "schedule":
+        return <ScheduleView />;
+      case "finance":
+        return <FinanceView />;
+      default:
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+              {(() => {
+                const Icon = navItems.find((n) => n.id === activeTab)?.icon || Home;
+                return <Icon className="h-7 w-7 text-muted-foreground" />;
+              })()}
+            </div>
+            <h3 className="text-lg font-serif font-semibold mb-2">
+              {navItems.find((n) => n.id === activeTab)?.label}
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-md">
+              이 영역은 다음 Phase에서 구현됩니다.
+            </p>
+          </div>
+        );
+    }
   };
 
   const SidebarContent = () => (
@@ -92,12 +118,10 @@ const DashboardLayout = () => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-60 flex-shrink-0 bg-sidebar border-r border-sidebar-border flex-col">
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar overlay */}
       <AnimatePresence>
         {sidebarOpen && (
           <>
@@ -121,7 +145,6 @@ const DashboardLayout = () => {
         )}
       </AnimatePresence>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-border flex items-center justify-between px-4 md:px-6 bg-background">
           <button
@@ -136,27 +159,15 @@ const DashboardLayout = () => {
           <div className="w-10" />
         </header>
 
-        <main className="flex-1 p-6 md:p-8">
-          <div className="max-w-5xl mx-auto">
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+          <div className="max-w-3xl mx-auto">
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="flex flex-col items-center justify-center min-h-[400px] text-center"
             >
-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                {(() => {
-                  const Icon = navItems.find((n) => n.id === activeTab)?.icon || Home;
-                  return <Icon className="h-7 w-7 text-muted-foreground" />;
-                })()}
-              </div>
-              <h3 className="text-lg font-serif font-semibold mb-2">
-                {navItems.find((n) => n.id === activeTab)?.label}
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                이 영역은 Phase 2 이후에 구현됩니다. 대시보드의 각 기능이 이곳에 표시됩니다.
-              </p>
+              {renderContent()}
             </motion.div>
           </div>
         </main>
