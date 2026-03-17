@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 export function useTheme() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("sophia-theme") as "light" | "dark") || "light";
+      return (localStorage.getItem("sophia-theme") as "light" | "dark") || "dark";
     }
-    return "light";
+    return "dark";
   });
 
   useEffect(() => {

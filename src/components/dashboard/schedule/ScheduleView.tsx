@@ -5,7 +5,7 @@ import CalendarTab from "./CalendarTab";
 import PlannerTab from "./PlannerTab";
 
 const tabs = [
-  { id: "checklist", label: "오늘 체크리스트" },
+  { id: "checklist", label: "주간 계획" },
   { id: "calendar", label: "캘린더" },
   { id: "planner", label: "플래너" },
 ];
@@ -15,15 +15,15 @@ const ScheduleView = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-serif font-bold">일정 관리</h2>
+      <h2 className="text-xl sm:text-2xl font-sans font-bold">일정 관리</h2>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-muted rounded-lg p-1">
+      <div className="flex gap-1 bg-muted rounded-lg p-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 relative px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 relative px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors flex-shrink-0 ${
               activeTab === tab.id
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"

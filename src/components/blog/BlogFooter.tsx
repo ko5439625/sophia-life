@@ -9,7 +9,7 @@ const BlogFooter = () => (
     transition={{ duration: 0.6 }}
   >
     <p className="text-sm text-muted-foreground font-mono">
-      sophia.life <span className="text-primary">♡</span> made with love
+      Sophia.life <span className="text-primary">♡</span> made with love
     </p>
   </motion.footer>
 );

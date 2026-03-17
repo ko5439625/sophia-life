@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { BlogPost } from "@/lib/mockData";
 import { useNavigate } from "react-router-dom";
@@ -5,47 +6,86 @@ import { useNavigate } from "react-router-dom";
 interface ArticleCardProps {
   post: BlogPost;
   index: number;
+  onTagClick?: (tag: string) => void;
+  activeTag?: string | null;
 }
 
-const ArticleCard = ({ post, index }: ArticleCardProps) => {
+const ArticleCard = ({ post, index, onTagClick, activeTag }: ArticleCardProps) => {
   const navigate = useNavigate();
+  const [imgIndex, setImgIndex] = useState(0);
+  const hasMultiple = post.images.length > 1;
 
   return (
     <motion.article
-      className="blog-card bg-card rounded-lg overflow-hidden cursor-pointer group"
-      initial={{ opacity: 0, y: 30 }}
+      className="blog-card bg-card rounded-md overflow-hidden cursor-pointer group relative"
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
+      viewport={{ once: true, margin: "-30px" }}
       transition={{
-        duration: 0.5,
-        delay: index * 0.1,
+        duration: 0.4,
+        delay: index * 0.06,
         ease: [0.16, 1, 0.3, 1],
       }}
       onClick={() => navigate(`/post/${post.id}`)}
     >
-      <div className="aspect-[4/3] overflow-hidden">
+      {/* Image area */}
+      <div
+        className="aspect-square overflow-hidden relative"
+        onMouseEnter={() => { if (hasMultiple) setImgIndex(1); }}
+        onMouseLeave={() => setImgIndex(0)}
+      >
         <img
-          src={post.image}
+          src={post.images[imgIndex] || post.images[0]}
           alt={post.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
         />
+        {/* Image count badge */}
+        {hasMultiple && (
+          <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
+            +{post.images.length}
+          </div>
+        )}
       </div>
-      <div className="p-5">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs font-mono text-primary uppercase tracking-wider">
+
+      {/* Content */}
+      <div className="p-3">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <span className="text-[10px] font-mono text-primary uppercase tracking-wider">
             {post.category}
           </span>
-          <span className="text-xs text-muted-foreground font-mono tabular-nums">
+          <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
             {post.date}
           </span>
         </div>
-        <h3 className="text-lg font-serif font-semibold leading-snug mb-2 group-hover:translate-x-1 transition-transform duration-300">
+        <h3 className="text-sm font-sans font-semibold leading-snug mb-1.5 group-hover:translate-x-0.5 transition-transform duration-300 line-clamp-2">
           {post.title}
         </h3>
-        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2">
           {post.excerpt}
         </p>
+
+        {/* Tags */}
+        {post.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {post.tags.map((tag) => (
+              <button
+                key={tag}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTagClick?.(tag);
+                }}
+                className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
+                  activeTag === tag
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary"
+                }`}
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </motion.article>
   );

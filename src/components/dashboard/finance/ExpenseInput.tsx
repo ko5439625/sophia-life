@@ -1,32 +1,26 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { useFinancial, type Expense } from "../../../store/financialStore";
 
-interface Transaction {
-  id: string;
-  type: "income" | "expense";
-  amount: number;
-  category: string;
-  date: string;
-  memo: string;
-}
+// Keep mockTransactions export for backward compatibility (used by financialStore default init)
+export const mockTransactions = [
+  { id: "1", type: "expense" as const, amount: 15000, category: "식비", date: "2026-03-17", memo: "점심" },
+  { id: "2", type: "expense" as const, amount: 4500, category: "카페", date: "2026-03-17", memo: "아메리카노" },
+  { id: "3", type: "income" as const, amount: 3500000, category: "급여", date: "2026-03-15", memo: "3월 급여" },
+  { id: "4", type: "expense" as const, amount: 52000, category: "쇼핑", date: "2026-03-16", memo: "운동화" },
+  { id: "5", type: "expense" as const, amount: 8000, category: "교통", date: "2026-03-16", memo: "택시" },
+  { id: "6", type: "expense" as const, amount: 35000, category: "식비", date: "2026-03-15", memo: "저녁 외식" },
+  { id: "7", type: "expense" as const, amount: 120000, category: "생활", date: "2026-03-14", memo: "공과금" },
+  { id: "8", type: "expense" as const, amount: 25000, category: "문화", date: "2026-03-13", memo: "영화" },
+];
 
 const expenseCategories = ["식비", "교통", "쇼핑", "카페", "문화", "생활", "경조사", "용돈", "기타"];
 const incomeCategories = ["급여", "부수입", "투자", "기타"];
 
-export const mockTransactions: Transaction[] = [
-  { id: "1", type: "expense", amount: 15000, category: "식비", date: "2026-03-17", memo: "점심" },
-  { id: "2", type: "expense", amount: 4500, category: "카페", date: "2026-03-17", memo: "아메리카노" },
-  { id: "3", type: "income", amount: 3500000, category: "급여", date: "2026-03-15", memo: "3월 급여" },
-  { id: "4", type: "expense", amount: 52000, category: "쇼핑", date: "2026-03-16", memo: "운동화" },
-  { id: "5", type: "expense", amount: 8000, category: "교통", date: "2026-03-16", memo: "택시" },
-  { id: "6", type: "expense", amount: 35000, category: "식비", date: "2026-03-15", memo: "저녁 외식" },
-  { id: "7", type: "expense", amount: 120000, category: "생활", date: "2026-03-14", memo: "공과금" },
-  { id: "8", type: "expense", amount: 25000, category: "문화", date: "2026-03-13", memo: "영화" },
-];
-
 const ExpenseInput = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const { state, addExpense } = useFinancial();
+  const transactions = state.expenses;
   const [type, setType] = useState<"income" | "expense">("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
@@ -37,17 +31,15 @@ const ExpenseInput = () => {
 
   const handleAdd = () => {
     if (!amount || !category) return;
-    setTransactions([
-      {
-        id: Date.now().toString(),
-        type,
-        amount: parseInt(amount),
-        category,
-        date,
-        memo,
-      },
-      ...transactions,
-    ]);
+    const expense: Expense = {
+      id: Date.now().toString(),
+      type,
+      amount: parseInt(amount),
+      category,
+      date,
+      memo,
+    };
+    addExpense(expense);
     setAmount("");
     setCategory("");
     setMemo("");
@@ -117,7 +109,7 @@ const ExpenseInput = () => {
         </div>
 
         {/* Date + Memo */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-muted-foreground font-mono mb-1 block">날짜</label>
             <input

@@ -22,7 +22,7 @@ const HeroSection = ({ post }: HeroSectionProps) => {
       >
         <div className="aspect-[21/9] overflow-hidden">
           <img
-            src={post.image}
+            src={post.images[0]}
             alt={post.title}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
@@ -32,7 +32,7 @@ const HeroSection = ({ post }: HeroSectionProps) => {
           <span className="inline-block text-xs font-mono uppercase tracking-widest text-primary-foreground/80 mb-2">
             {post.category}
           </span>
-          <h1 className="text-2xl md:text-4xl font-serif font-bold text-primary-foreground mb-2 leading-tight">
+          <h1 className="text-2xl md:text-4xl font-sans font-bold text-primary-foreground mb-2 leading-tight">
             {post.title}
           </h1>
           <p className="text-sm text-primary-foreground/70 font-mono tabular-nums">

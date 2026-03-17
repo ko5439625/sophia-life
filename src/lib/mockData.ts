@@ -10,7 +10,8 @@ export interface BlogPost {
   excerpt: string;
   content: string;
   category: string;
-  image: string;
+  images: string[];
+  tags: string[];
   date: string;
   isPublic: boolean;
 }
@@ -24,7 +25,8 @@ export const mockPosts: BlogPost[] = [
     excerpt: "바쁜 일상 속에서 찾은 작은 평화. 창가에 앉아 햇살을 느끼며 하루를 시작하는 것만으로도 충분히 행복하다.",
     content: "바쁜 일상 속에서 찾은 작은 평화...",
     category: "일상",
-    image: heroBlog,
+    images: [heroBlog, blogDaily],
+    tags: ["커피", "아침", "힐링"],
     date: "2026-03-15",
     isPublic: true,
   },
@@ -34,7 +36,8 @@ export const mockPosts: BlogPost[] = [
     excerpt: "관광객이 모르는 프라하의 진짜 매력은 좁은 골목 사이에 숨어 있었다.",
     content: "프라하 여행기...",
     category: "여행",
-    image: blogTravel,
+    images: [blogTravel, heroBlog, blogMood],
+    tags: ["프라하", "유럽여행", "골목길", "사진"],
     date: "2026-03-10",
     isPublic: true,
   },
@@ -44,7 +47,8 @@ export const mockPosts: BlogPost[] = [
     excerpt: "계절의 색을 담은 파티시에의 작품. 한 입 베어물면 봄이 입안에 퍼진다.",
     content: "디저트 이야기...",
     category: "맛집",
-    image: blogFood,
+    images: [blogFood, blogDaily],
+    tags: ["디저트", "카페", "봄"],
     date: "2026-03-08",
     isPublic: true,
   },
@@ -54,7 +58,8 @@ export const mockPosts: BlogPost[] = [
     excerpt: "창가에 놓인 작은 화분들이 주는 위안. 매일 조금씩 자라는 모습을 보며 나도 성장한다.",
     content: "일상 이야기...",
     category: "일상",
-    image: blogDaily,
+    images: [blogDaily],
+    tags: ["식물", "반려식물", "일상"],
     date: "2026-03-05",
     isPublic: true,
   },
@@ -64,7 +69,8 @@ export const mockPosts: BlogPost[] = [
     excerpt: "하루의 끝, 바다 위로 펼쳐지는 황금빛 물결. 이 순간만큼은 모든 것이 완벽하다.",
     content: "감성 글...",
     category: "감성",
-    image: blogMood,
+    images: [blogMood, blogTravel],
+    tags: ["노을", "바다", "감성", "사진"],
     date: "2026-03-01",
     isPublic: true,
   },

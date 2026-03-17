@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { mockTransactions } from "./ExpenseInput";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { useFinancial } from "../../../store/financialStore";
 
 const CATEGORY_COLORS: Record<string, string> = {
   식비: "hsl(160, 100%, 22%)",
@@ -15,7 +15,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const ExpenseAnalysis = () => {
-  const expenses = mockTransactions.filter((t) => t.type === "expense");
+  const { state } = useFinancial();
+  const expenses = state.expenses.filter((t) => t.type === "expense");
   const totalExpense = expenses.reduce((sum, t) => sum + t.amount, 0);
 
   // Category breakdown
