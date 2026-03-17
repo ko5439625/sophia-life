@@ -511,6 +511,50 @@ export async function deleteWish(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Blog Posts
+// ---------------------------------------------------------------------------
+
+export interface PostRow {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  tags: string[];
+  is_public: boolean;
+  created_at: string;
+  images: string[];
+}
+
+export async function loadPosts(): Promise<PostRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false });
+    return (data || []) as PostRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadPosts error:", e);
+    return [];
+  }
+}
+
+export async function savePost(post: PostRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("posts").upsert(post);
+  } catch (e) {
+    console.error("[supabaseSync] savePost error:", e);
+  }
+}
+
+export async function deletePost(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("posts").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deletePost error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Bulk sync helpers for complex actions (sell/buy that touch multiple tables)
 // ---------------------------------------------------------------------------
 

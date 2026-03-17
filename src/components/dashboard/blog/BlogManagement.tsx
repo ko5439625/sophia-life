@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { enhanceBlogContent } from "../../../services/openaiApi";
 import { useGuestMode } from "../../../hooks/useGuestMode";
+import { loadPosts as loadPostsFromDB, savePost as savePostToDB, deletePost as deletePostFromDB } from "../../../services/supabaseSync";
 import {
   Plus,
   Edit3,
@@ -50,51 +51,7 @@ interface BlogPost {
 
 const defaultCategories = ["일상", "개발", "여행", "요리", "음악", "영화"];
 
-const mockPosts: BlogPost[] = [
-  {
-    id: "1",
-    title: "제주도 3박 4일 여행기",
-    content:
-      "제주도 여행\n\n첫날은 공항에서 렌터카를 빌려서 해안 도로를 따라 드라이브했다...",
-    category: "여행",
-    tags: ["제주도", "국내여행", "드라이브"],
-    isPublic: true,
-    createdAt: "2026-03-15",
-    images: [],
-  },
-  {
-    id: "2",
-    title: "Next.js 15 새로운 기능 정리",
-    content:
-      "Server Components\n\nNext.js 15에서 달라진 점들을 정리해보았다...",
-    category: "개발",
-    tags: ["Next.js", "React", "Frontend"],
-    isPublic: true,
-    createdAt: "2026-03-12",
-    images: [],
-  },
-  {
-    id: "3",
-    title: "주말 브런치 레시피 - 프렌치 토스트",
-    content: "재료\n- 식빵 4조각\n- 계란 2개\n- 우유 50ml...",
-    category: "요리",
-    tags: ["브런치", "레시피", "주말"],
-    isPublic: false,
-    createdAt: "2026-03-10",
-    images: [],
-  },
-  {
-    id: "4",
-    title: "오늘의 일기",
-    content:
-      "오늘은 날씨가 좋아서 공원에서 산책을 했다. 봄이 오고 있는 게 느껴진다...",
-    category: "일상",
-    tags: ["일기", "봄"],
-    isPublic: false,
-    createdAt: "2026-03-08",
-    images: [],
-  },
-];
+const mockPosts: BlogPost[] = [];
 
 const FONT_OPTIONS = [
   { label: "Pretendard", value: "'Pretendard Variable', sans-serif" },
@@ -792,7 +749,7 @@ const BLOG_CATEGORIES_KEY = "sophia-blog-categories";
 
 const BlogManagement = () => {
   const { isGuest } = useGuestMode();
-  const [posts, setPosts] = useState<BlogPost[]>(mockPosts);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem(BLOG_CATEGORIES_KEY);
@@ -805,6 +762,24 @@ const BlogManagement = () => {
   );
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+
+  // Load posts from Supabase
+  useEffect(() => {
+    loadPostsFromDB().then((rows) => {
+      if (rows.length > 0) {
+        setPosts(rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          content: r.content,
+          category: r.category,
+          tags: r.tags || [],
+          isPublic: r.is_public,
+          createdAt: r.created_at,
+          images: r.images || [],
+        })));
+      }
+    });
+  }, []);
 
   // Sync categories to localStorage
   useEffect(() => {
@@ -849,11 +824,9 @@ const BlogManagement = () => {
     isPublic: boolean;
   }) => {
     if (editingPost) {
-      setPosts(
-        posts.map((p) =>
-          p.id === editingPost.id ? { ...p, ...data } : p
-        )
-      );
+      const updated = { ...editingPost, ...data };
+      setPosts(posts.map((p) => (p.id === editingPost.id ? updated : p)));
+      savePostToDB({ id: updated.id, title: updated.title, content: updated.content, category: updated.category, tags: updated.tags, is_public: updated.isPublic, created_at: updated.createdAt, images: updated.images });
     } else {
       const newPost: BlogPost = {
         id: Date.now().toString(),
@@ -862,18 +835,21 @@ const BlogManagement = () => {
         images: [],
       };
       setPosts([newPost, ...posts]);
+      savePostToDB({ id: newPost.id, title: newPost.title, content: newPost.content, category: newPost.category, tags: newPost.tags, is_public: newPost.isPublic, created_at: newPost.createdAt, images: newPost.images });
     }
     cancelEditor();
   };
 
   const deletePost = (id: string) => {
     setPosts(posts.filter((p) => p.id !== id));
+    deletePostFromDB(id);
   };
 
   const togglePostVisibility = (id: string) => {
-    setPosts(
-      posts.map((p) => (p.id === id ? { ...p, isPublic: !p.isPublic } : p))
-    );
+    const updated = posts.map((p) => (p.id === id ? { ...p, isPublic: !p.isPublic } : p));
+    setPosts(updated);
+    const post = updated.find((p) => p.id === id);
+    if (post) savePostToDB({ id: post.id, title: post.title, content: post.content, category: post.category, tags: post.tags, is_public: post.isPublic, created_at: post.createdAt, images: post.images });
   };
 
   // ---------------------------------------------------------------------------
