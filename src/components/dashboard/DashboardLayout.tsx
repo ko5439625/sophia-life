@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import ThemeToggle from "../ThemeToggle";
 import { useNavigate } from "react-router-dom";
+import { useGuestMode } from "../../hooks/useGuestMode";
 import DashboardHome from "./home/DashboardHome";
 import ScheduleView from "./schedule/ScheduleView";
 import FinanceView from "./finance/FinanceView";
@@ -49,6 +50,7 @@ const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const { isGuest } = useGuestMode();
 
   // Allow child components to navigate to tabs
   const handleTabChange = (tabId: string) => {
@@ -117,10 +119,17 @@ const DashboardLayout = () => {
           onClick={() => navigate("/")}
           className="cursor-pointer hover:opacity-70 transition-opacity text-left"
         >
-          <span className="font-mono text-lg font-bold text-sidebar-foreground tracking-tight">
-            Sophia<span className="text-primary">.</span>life
-          </span>
-          <p className="text-[11px] text-sidebar-foreground/40 mt-1 tracking-wide">our life together ♡</p>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-lg font-bold text-sidebar-foreground tracking-tight">
+              Sophia<span className="text-primary">.</span>life
+            </span>
+            {isGuest && (
+              <span className="text-[9px] font-mono font-bold bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded">
+                GUEST
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-sidebar-foreground/40 mt-1 tracking-wide">{isGuest ? "게스트 모드" : "our life together ♡"}</p>
         </button>
       </div>
 

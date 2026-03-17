@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 import {
   PieChart,
   Pie,
@@ -248,6 +249,7 @@ function generateSimulationData(
 // ---------------------------------------------------------------------------
 
 const PensionView = () => {
+  const { isGuest, maskAmount } = useGuestMode();
   const [selectedAccount, setSelectedAccount] = useState<AccountType>("IRP");
   const [funds, setFunds] = useState<PensionFund[]>(initialFunds);
   const [showForm, setShowForm] = useState(false);
@@ -537,13 +539,13 @@ const PensionView = () => {
           <div className="bg-muted/30 rounded-lg p-3">
             <p className="text-[10px] text-muted-foreground">총 납입액</p>
             <p className="text-sm font-mono font-bold mt-0.5">
-              {formatKRW(account.totalDeposited)}원
+              {isGuest ? maskAmount(account.totalDeposited) : `${formatKRW(account.totalDeposited)}원`}
             </p>
           </div>
           <div className="bg-muted/30 rounded-lg p-3">
             <p className="text-[10px] text-muted-foreground">현재 평가액</p>
             <p className="text-sm font-mono font-bold mt-0.5">
-              {formatKRW(account.currentValue)}원
+              {isGuest ? maskAmount(account.currentValue) : `${formatKRW(account.currentValue)}원`}
             </p>
           </div>
         </div>
@@ -558,10 +560,7 @@ const PensionView = () => {
               isProfit ? "text-primary" : "text-destructive"
             }`}
           >
-            {isProfit ? "+" : ""}
-            {formatKRW(account.currentValue - account.totalDeposited)}원 (
-            {isProfit ? "+" : ""}
-            {totalReturnPct}%)
+            {isGuest ? `${maskAmount(account.currentValue - account.totalDeposited)} (${isProfit ? "+" : ""}${totalReturnPct}%)` : `${isProfit ? "+" : ""}${formatKRW(account.currentValue - account.totalDeposited)}원 (${isProfit ? "+" : ""}${totalReturnPct}%)`}
           </span>
         </div>
 
@@ -570,7 +569,7 @@ const PensionView = () => {
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">연간 납입 한도</span>
             <span className="font-mono">
-              {formatMan(account.annualDeposited)} / {formatMan(account.annualLimit)}
+              {isGuest ? "₩••• / ₩•••" : `${formatMan(account.annualDeposited)} / ${formatMan(account.annualLimit)}`}
             </span>
           </div>
           <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
@@ -582,7 +581,7 @@ const PensionView = () => {
             />
           </div>
           <p className="text-[10px] text-muted-foreground">
-            잔여 한도: {formatMan(account.annualLimit - account.annualDeposited)}
+            잔여 한도: {isGuest ? "₩•••••••" : formatMan(account.annualLimit - account.annualDeposited)}
           </p>
         </div>
 
@@ -591,7 +590,7 @@ const PensionView = () => {
           <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">
             <p className="text-[10px] text-muted-foreground">세액공제 예상 금액</p>
             <p className="text-sm font-mono font-bold text-primary mt-0.5">
-              {formatKRW(account.taxDeduction)}원
+              {isGuest ? maskAmount(account.taxDeduction) : `${formatKRW(account.taxDeduction)}원`}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">
               (납입액 x {(TAX_DEDUCTION_RATES[selectedAccount].rate * 100).toFixed(1)}%, 최대{" "}
@@ -627,11 +626,13 @@ const PensionView = () => {
                 <div className="flex items-center gap-1">
                   <input
                     type="text"
-                    value={formatKRW(dcInfo.monthlyEmployerContribution)}
+                    value={isGuest ? "•••••••" : formatKRW(dcInfo.monthlyEmployerContribution)}
                     onChange={(e) => {
+                      if (isGuest) return;
                       const val = parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0;
                       setDcInfo({ ...dcInfo, monthlyEmployerContribution: val });
                     }}
+                    readOnly={isGuest}
                     className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                   <span className="text-[10px] text-muted-foreground flex-shrink-0">원</span>
@@ -656,11 +657,13 @@ const PensionView = () => {
                 <div className="flex items-center gap-1">
                   <input
                     type="text"
-                    value={formatKRW(dcInfo.cumulativeDeposited)}
+                    value={isGuest ? "•••••••" : formatKRW(dcInfo.cumulativeDeposited)}
                     onChange={(e) => {
+                      if (isGuest) return;
                       const val = parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0;
                       setDcInfo({ ...dcInfo, cumulativeDeposited: val });
                     }}
+                    readOnly={isGuest}
                     className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                   <span className="text-[10px] text-muted-foreground flex-shrink-0">원</span>
@@ -673,11 +676,13 @@ const PensionView = () => {
                 <div className="flex items-center gap-1">
                   <input
                     type="text"
-                    value={formatKRW(dcInfo.currentBalance)}
+                    value={isGuest ? "•••••••" : formatKRW(dcInfo.currentBalance)}
                     onChange={(e) => {
+                      if (isGuest) return;
                       const val = parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0;
                       setDcInfo({ ...dcInfo, currentBalance: val });
                     }}
+                    readOnly={isGuest}
                     className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                   <span className="text-[10px] text-muted-foreground flex-shrink-0">원</span>
@@ -702,8 +707,7 @@ const PensionView = () => {
                 {dcReturnRate}%
               </span>
               <span className="text-[10px] font-mono text-muted-foreground">
-                ({isDcProfit ? "+" : ""}
-                {formatKRW(dcInfo.currentBalance - dcInfo.cumulativeDeposited)}원)
+                ({isGuest ? "₩•••" : `${isDcProfit ? "+" : ""}${formatKRW(dcInfo.currentBalance - dcInfo.cumulativeDeposited)}원`})
               </span>
             </div>
 
@@ -893,13 +897,13 @@ const PensionView = () => {
                               </div>
                               <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground font-mono">
                                 <span>{fund.quantity}좌</span>
-                                <span>매수 {formatKRW(fund.buyPrice)}</span>
-                                <span>현재 {formatKRW(fund.currentPrice)}</span>
+                                <span>매수 {isGuest ? "₩•••" : formatKRW(fund.buyPrice)}</span>
+                                <span>현재 {isGuest ? "₩•••" : formatKRW(fund.currentPrice)}</span>
                               </div>
                             </div>
                             <div className="text-right flex-shrink-0">
                               <p className="text-xs font-mono font-bold tabular-nums">
-                                {formatKRW(totalValue)}원
+                                {isGuest ? maskAmount(totalValue) : `${formatKRW(totalValue)}원`}
                               </p>
                               <p
                                 className={`text-[10px] font-mono tabular-nums ${
@@ -1141,13 +1145,13 @@ const PensionView = () => {
                         </div>
                         <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground font-mono">
                           <span>{fund.quantity}좌</span>
-                          <span>매수 {formatKRW(fund.buyPrice)}</span>
-                          <span>현재 {formatKRW(fund.currentPrice)}</span>
+                          <span>매수 {isGuest ? "₩•••" : formatKRW(fund.buyPrice)}</span>
+                          <span>현재 {isGuest ? "₩•••" : formatKRW(fund.currentPrice)}</span>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-xs font-mono font-bold tabular-nums">
-                          {formatKRW(totalValue)}원
+                          {isGuest ? maskAmount(totalValue) : `${formatKRW(totalValue)}원`}
                         </p>
                         <p
                           className={`text-[10px] font-mono tabular-nums ${
@@ -1417,7 +1421,7 @@ const PensionView = () => {
         {yearsToTarget && (
           <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground">
-              목표 금액 {formatKRW(targetAmount)}원 도달 예상
+              목표 금액 {isGuest ? maskAmount(targetAmount) : `${formatKRW(targetAmount)}원`} 도달 예상
             </p>
             <p className="text-lg font-mono font-bold text-primary mt-0.5">
               약 {yearsToTarget}년
@@ -1444,11 +1448,11 @@ const PensionView = () => {
                 tick={{ fontSize: 9 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v) => `${(v / 100000000).toFixed(1)}억`}
+                tickFormatter={(v) => isGuest ? "•••" : `${(v / 100000000).toFixed(1)}억`}
               />
               <Tooltip
                 formatter={(val: number, name: string) => [
-                  `${formatKRW(val)}원`,
+                  isGuest ? "₩•••••••" : `${formatKRW(val)}원`,
                   name === "value" ? "명목 금액" : name === "realValue" ? "실질 가치" : "목표",
                 ]}
                 contentStyle={{
@@ -1532,13 +1536,13 @@ const PensionView = () => {
               <div key={label} className="bg-muted/30 rounded-lg p-2 text-center">
                 <p className="text-[10px] text-muted-foreground">{label}</p>
                 <p className="text-xs font-mono font-bold mt-0.5">
-                  {val >= 100000000
+                  {isGuest ? "₩•••••••" : val >= 100000000
                     ? `${(val / 100000000).toFixed(1)}억`
                     : formatMan(val)}
                 </p>
                 {realVal !== undefined && (
                   <p className="text-[9px] font-mono text-[#FFB347] mt-0.5">
-                    실질 {realVal >= 100000000
+                    실질 {isGuest ? "₩•••••••" : realVal >= 100000000
                       ? `${(realVal / 100000000).toFixed(1)}억`
                       : formatMan(realVal)}
                   </p>
@@ -1629,7 +1633,7 @@ const PensionView = () => {
                 <p className="text-[10px] text-muted-foreground">30년 후 연금 잔고의 현재 가치</p>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-sm font-mono font-bold">
-                    {finalReal >= 100000000
+                    {isGuest ? maskAmount(finalReal) : finalReal >= 100000000
                       ? `${(finalReal / 100000000).toFixed(1)}억원`
                       : `${formatKRW(finalReal)}원`}
                   </p>
@@ -1644,7 +1648,7 @@ const PensionView = () => {
                   30년 후 300만원의 현재 가치
                 </p>
                 <p className="text-sm font-mono font-bold mt-1">
-                  ~{formatKRW(Math.round(currentValueOf300After30))}원
+                  {isGuest ? maskAmount(Math.round(currentValueOf300After30)) : `~${formatKRW(Math.round(currentValueOf300After30))}원`}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   물가상승률 {inflation}% 기준, 매년 화폐 가치가 줄어듭니다

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Plus, X, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, Lock } from "lucide-react";
+import { useGuestMode } from "@/hooks/useGuestMode";
 
 interface CalendarEvent {
   id: string;
@@ -21,6 +22,7 @@ const EMOJI_OPTIONS = [
 const DAYS = ["\uC77C", "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"];
 
 const CalendarTab = () => {
+  const { isGuest } = useGuestMode();
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -179,6 +181,16 @@ const CalendarTab = () => {
       </div>
     </motion.div>
   );
+
+  if (isGuest) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+        <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

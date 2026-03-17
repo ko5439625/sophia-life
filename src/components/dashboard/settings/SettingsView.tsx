@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 import {
   Lock,
   Tag,
@@ -92,6 +93,8 @@ const CollapsibleSection = ({
 // ---------------------------------------------------------------------------
 
 const SettingsView = () => {
+  const { isGuest } = useGuestMode();
+
   // PIN
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -360,6 +363,16 @@ const SettingsView = () => {
   const removeExpenseCategory = (cat: string) => {
     setExpenseCategories(expenseCategories.filter((c) => c !== cat));
   };
+
+  if (isGuest) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+        <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground">설정은 비공개입니다</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

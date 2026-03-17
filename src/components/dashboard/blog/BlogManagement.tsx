@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { enhanceBlogContent } from "../../../services/openaiApi";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 import {
   Plus,
   Edit3,
@@ -790,6 +791,7 @@ const PostEditor = ({
 const BLOG_CATEGORIES_KEY = "sophia-blog-categories";
 
 const BlogManagement = () => {
+  const { isGuest } = useGuestMode();
   const [posts, setPosts] = useState<BlogPost[]>(mockPosts);
   const [categories, setCategories] = useState<string[]>(() => {
     try {
@@ -877,6 +879,16 @@ const BlogManagement = () => {
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
+
+  if (isGuest) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+        <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground">블로그 관리는 비공개입니다</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

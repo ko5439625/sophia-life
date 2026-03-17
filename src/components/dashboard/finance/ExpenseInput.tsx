@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { Plus, ArrowUpCircle, ArrowDownCircle, Lock } from "lucide-react";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 import { useFinancial, type Expense } from "../../../store/financialStore";
 
 // Keep mockTransactions export for backward compatibility (used by financialStore default init)
@@ -19,6 +20,7 @@ const expenseCategories = ["식비", "교통", "쇼핑", "카페", "문화", "�
 const incomeCategories = ["급여", "부수입", "투자", "기타"];
 
 const ExpenseInput = () => {
+  const { isGuest } = useGuestMode();
   const { state, addExpense } = useFinancial();
   const transactions = state.expenses;
   const [type, setType] = useState<"income" | "expense">("expense");
@@ -47,6 +49,16 @@ const ExpenseInput = () => {
 
   const formatAmount = (n: number) =>
     new Intl.NumberFormat("ko-KR").format(n) + "원";
+
+  if (isGuest) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+        <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

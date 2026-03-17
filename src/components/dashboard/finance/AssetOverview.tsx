@@ -27,9 +27,11 @@ import {
   formatCompact,
 } from "./budgetData";
 import { useFinancial } from "../../../store/financialStore";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 
 const AssetOverview = () => {
   const { state, totalCash, totalInvestment, totalPension, totalNetWorth } = useFinancial();
+  const { isGuest, maskAmount } = useGuestMode();
   const assetHistory = useMemo(() => deriveAssetHistory(state.monthlyBudgets), [state.monthlyBudgets]);
 
   const latest = assetHistory[assetHistory.length - 1];
@@ -64,7 +66,7 @@ const AssetOverview = () => {
       >
         <p className="text-sm text-muted-foreground mb-1">총 자산</p>
         <div className="flex items-end gap-3">
-          <span className="text-2xl sm:text-3xl font-mono font-extrabold break-all">{formatKRW(latest.total)}원</span>
+          <span className="text-2xl sm:text-3xl font-mono font-extrabold break-all">{isGuest ? maskAmount(latest.total) : `${formatKRW(latest.total)}원`}</span>
           <span className={`flex items-center gap-1 text-sm font-mono font-medium ${isUp ? "text-primary" : "text-destructive"}`}>
             {isUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
             {isUp ? "+" : ""}{changeRate}%
@@ -86,7 +88,7 @@ const AssetOverview = () => {
             <span className="text-xs text-muted-foreground">현금자산</span>
             <span className="text-[10px] text-primary font-mono ml-auto">{cashPct}%</span>
           </div>
-          <p className="text-xl font-mono font-bold text-primary">{formatCompact(latest.cash)}원</p>
+          <p className="text-xl font-mono font-bold text-primary">{isGuest ? maskAmount(latest.cash) : `${formatCompact(latest.cash)}원`}</p>
           <p className="text-xs text-muted-foreground mt-1">
             전월 대비 <span className={Number(cashChangeRate) >= 0 ? "text-primary" : "text-destructive"}>
               {Number(cashChangeRate) >= 0 ? "+" : ""}{cashChangeRate}%
@@ -105,7 +107,7 @@ const AssetOverview = () => {
             <span className="text-xs text-muted-foreground">투자자산</span>
             <span className="text-[10px] text-accent font-mono ml-auto">{investPct}%</span>
           </div>
-          <p className="text-xl font-mono font-bold text-accent">{formatCompact(latest.investment)}원</p>
+          <p className="text-xl font-mono font-bold text-accent">{isGuest ? maskAmount(latest.investment) : `${formatCompact(latest.investment)}원`}</p>
           <p className="text-xs text-muted-foreground mt-1">
             전월 대비 <span className={Number(investChangeRate) >= 0 ? "text-primary" : "text-destructive"}>
               {Number(investChangeRate) >= 0 ? "+" : ""}{investChangeRate}%
@@ -141,7 +143,7 @@ const AssetOverview = () => {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => [`${formatKRW(value)}원`, ""]}
+                    formatter={(value: number) => [isGuest ? "₩•••••••" : `${formatKRW(value)}원`, ""]}
                     contentStyle={{
                       background: "hsl(var(--card))",
                       border: "1px solid hsl(var(--border))",
@@ -163,7 +165,7 @@ const AssetOverview = () => {
                 <div key={d.name} className="text-center">
                   <p className="text-[10px] text-muted-foreground">{d.name}</p>
                   <p className="text-[10px] sm:text-xs font-mono font-bold" style={{ color: d.color }}>
-                    {formatCompact(d.value)}원
+                    {isGuest ? "₩•••" : `${formatCompact(d.value)}원`}
                   </p>
                 </div>
               ))}
@@ -197,7 +199,7 @@ const AssetOverview = () => {
                     tickLine={false}
                   />
                   <YAxis
-                    tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`}
+                    tickFormatter={(v) => isGuest ? "•••" : `${(v / 10000).toFixed(0)}만`}
                     tick={{ fontSize: 10, fill: "#8B949E" }}
                     axisLine={false}
                     tickLine={false}
@@ -210,11 +212,11 @@ const AssetOverview = () => {
                         emergency: "비상금",
                         investment: "투자",
                       };
-                      return [`${formatKRW(value)}원`, labels[name] || name];
+                      return [isGuest ? "₩•••••••" : `${formatKRW(value)}원`, labels[name] || name];
                     }}
                     labelFormatter={(label) => {
                       const point = assetHistory.find((h) => h.month === label);
-                      return point ? `${label}  ·  총 자산: ${formatKRW(point.total)}원` : label;
+                      return point ? `${label}  ·  총 자산: ${isGuest ? "₩•••••••" : `${formatKRW(point.total)}원`}` : label;
                     }}
                     contentStyle={{
                       background: "hsl(var(--card))",
@@ -281,9 +283,9 @@ const AssetOverview = () => {
             <Banknote className="h-5 w-5 text-primary" />
             <span className="text-xs text-muted-foreground">누적 저축</span>
           </div>
-          <p className="text-lg font-mono font-bold text-primary">{formatCompact(latest.savings)}원</p>
+          <p className="text-lg font-mono font-bold text-primary">{isGuest ? maskAmount(latest.savings) : `${formatCompact(latest.savings)}원`}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            월 +{formatCompact(latest.savings - prev.savings)}원
+            월 +{isGuest ? "₩•••••••" : `${formatCompact(latest.savings - prev.savings)}원`}
           </p>
         </motion.div>
 
@@ -297,9 +299,9 @@ const AssetOverview = () => {
             <ShieldCheck className="h-5 w-5 text-yellow-500" />
             <span className="text-xs text-muted-foreground">비상금</span>
           </div>
-          <p className="text-lg font-mono font-bold text-yellow-500">{formatCompact(latest.emergency)}원</p>
+          <p className="text-lg font-mono font-bold text-yellow-500">{isGuest ? maskAmount(latest.emergency) : `${formatCompact(latest.emergency)}원`}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            월 +{formatCompact(latest.emergency - prev.emergency)}원
+            월 +{isGuest ? "₩•••••••" : `${formatCompact(latest.emergency - prev.emergency)}원`}
           </p>
         </motion.div>
       </div>
@@ -325,15 +327,15 @@ const AssetOverview = () => {
                 <div>
                   <span className="text-sm font-mono text-muted-foreground">{m.month}</span>
                   <p className="text-xs text-muted-foreground/60 mt-0.5">
-                    +저축 {formatCompact(monthlySavings)} / +비상 {formatCompact(monthlyEmergency)}
+                    +저축 {isGuest ? "₩•••" : formatCompact(monthlySavings)} / +비상 {isGuest ? "₩•••" : formatCompact(monthlyEmergency)}
                   </p>
                 </div>
                 <div className="flex gap-4 items-center">
                   <div className="text-right">
-                    <span className="text-sm font-mono tabular-nums font-medium">{formatCompact(m.total)}원</span>
+                    <span className="text-sm font-mono tabular-nums font-medium">{isGuest ? "₩•••••••" : `${formatCompact(m.total)}원`}</span>
                     <div className="flex gap-2 mt-0.5">
-                      <span className="text-[10px] text-primary font-mono">현금 {formatCompact(m.cash)}</span>
-                      <span className="text-[10px] text-accent font-mono">투자 {formatCompact(m.investment)}</span>
+                      <span className="text-[10px] text-primary font-mono">현금 {isGuest ? "₩•••" : formatCompact(m.cash)}</span>
+                      <span className="text-[10px] text-accent font-mono">투자 {isGuest ? "₩•••" : formatCompact(m.investment)}</span>
                     </div>
                   </div>
                 </div>

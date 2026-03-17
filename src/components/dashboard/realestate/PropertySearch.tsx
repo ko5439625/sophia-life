@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGuestMode } from "@/hooks/useGuestMode";
 import {
   Search,
   SlidersHorizontal,
@@ -26,6 +27,7 @@ import {
   TrendingUp,
   Baby,
   MessageSquare,
+  Lock,
 } from "lucide-react";
 import {
   getAllApartments,
@@ -282,6 +284,7 @@ const ReportSkeleton = () => (
 // ---------------------------------------------------------------------------
 
 const PropertySearch = () => {
+  const { isGuest } = useGuestMode();
   const { totalCash, totalNetWorth, state } = useFinancial();
   const annualIncome = state.annualIncome1 + state.annualIncome2;
 
@@ -581,6 +584,16 @@ ${property.memo ? `- 메모: ${property.memo}` : ""}
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
+
+  if (isGuest) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+        <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
+import { Lock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useFinancial } from "../../../store/financialStore";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 
 const CATEGORY_COLORS: Record<string, string> = {
   식비: "hsl(160, 100%, 22%)",
@@ -15,7 +17,18 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const ExpenseAnalysis = () => {
+  const { isGuest } = useGuestMode();
   const { state } = useFinancial();
+
+  if (isGuest) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+        <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+      </div>
+    );
+  }
   const expenses = state.expenses.filter((t) => t.type === "expense");
   const totalExpense = expenses.reduce((sum, t) => sum + t.amount, 0);
 

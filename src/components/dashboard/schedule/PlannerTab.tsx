@@ -13,7 +13,9 @@ import {
   Trash2,
   Edit3,
   Save,
+  Lock,
 } from "lucide-react";
+import { useGuestMode } from "@/hooks/useGuestMode";
 
 interface PlanItem {
   id: string;
@@ -74,6 +76,7 @@ const getDayCount = (start: string, end: string): number => {
 };
 
 const PlannerTab = () => {
+  const { isGuest } = useGuestMode();
   const [plans, setPlans] = useState<Plan[]>(mockPlans);
   const [expandedPlan, setExpandedPlan] = useState<string | null>("1");
   const [selectedYear, setSelectedYear] = useState(2026);
@@ -222,6 +225,16 @@ const PlannerTab = () => {
     const monthEnd = new Date(selectedYear, selectedMonth, 0);
     return start <= monthEnd && end >= monthStart;
   });
+
+  if (isGuest) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+        <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

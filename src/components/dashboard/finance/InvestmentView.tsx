@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { formatKRW } from "./budgetData";
 import { useFinancial, type Holding } from "../../../store/financialStore";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -83,6 +84,7 @@ const InvestmentView = () => {
     totalPension,
     totalNetWorth,
   } = useFinancial();
+  const { isGuest, maskAmount } = useGuestMode();
 
   const holdings = state.holdings;
   const trades = state.trades;
@@ -275,7 +277,7 @@ const InvestmentView = () => {
           {/* Value + return */}
           <div>
             <p className="text-xl font-mono font-extrabold">
-              {formatKRW(totalCurrent)}원
+              {isGuest ? maskAmount(totalCurrent) : `${formatKRW(totalCurrent)}원`}
             </p>
             <div className="flex items-center gap-1.5 mt-1">
               {isProfit ? (
@@ -314,7 +316,7 @@ const InvestmentView = () => {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(val: number) => [`${formatKRW(val)}원`, "평가액"]}
+                    formatter={(val: number) => [isGuest ? "₩•••••••" : `${formatKRW(val)}원`, "평가액"]}
                     contentStyle={{
                       background: "hsl(var(--card))",
                       border: "1px solid hsl(var(--border))",
@@ -364,7 +366,7 @@ const InvestmentView = () => {
                     <span className="text-[10px] truncate">{h.name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] font-mono">{formatKRW(totalValue)}</span>
+                    <span className="text-[10px] font-mono">{isGuest ? "₩•••" : formatKRW(totalValue)}</span>
                     <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>
                       {isUp ? "+" : ""}{returnPct}%
                     </span>
@@ -396,7 +398,7 @@ const InvestmentView = () => {
           {/* Value + return */}
           <div>
             <p className="text-xl font-mono font-extrabold">
-              {formatKRW(pensionCurrent)}원
+              {isGuest ? maskAmount(pensionCurrent) : `${formatKRW(pensionCurrent)}원`}
             </p>
             <div className="flex items-center gap-1.5 mt-1">
               {isPensionProfit ? (
@@ -435,7 +437,7 @@ const InvestmentView = () => {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(val: number) => [`${formatKRW(val)}원`, "평가액"]}
+                    formatter={(val: number) => [isGuest ? "₩•••••••" : `${formatKRW(val)}원`, "평가액"]}
                     contentStyle={{
                       background: "hsl(var(--card))",
                       border: "1px solid hsl(var(--border))",
@@ -485,7 +487,7 @@ const InvestmentView = () => {
                     <span className="text-[10px] truncate">{h.name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] font-mono">{formatKRW(totalValue)}</span>
+                    <span className="text-[10px] font-mono">{isGuest ? "₩•••" : formatKRW(totalValue)}</span>
                     <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>
                       {isUp ? "+" : ""}{returnPct}%
                     </span>
@@ -513,12 +515,12 @@ const InvestmentView = () => {
           </div>
           <div className="text-right">
             <p className="text-lg font-mono font-extrabold">
-              {formatKRW(combinedTotal)}원
+              {isGuest ? maskAmount(combinedTotal) : `${formatKRW(combinedTotal)}원`}
             </p>
             <div className="flex items-center justify-end gap-3 mt-0.5 text-[10px] text-muted-foreground font-mono">
-              <span>투자 {formatKRW(totalInvestment)}</span>
+              <span>투자 {isGuest ? "₩•••" : formatKRW(totalInvestment)}</span>
               <span>+</span>
-              <span>연금 {formatKRW(totalPension)}</span>
+              <span>연금 {isGuest ? "₩•••" : formatKRW(totalPension)}</span>
             </div>
           </div>
         </div>
@@ -696,7 +698,7 @@ const InvestmentView = () => {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-sm font-mono font-bold tabular-nums">
-                      {formatKRW(totalValue)}원
+                      {isGuest ? maskAmount(totalValue) : `${formatKRW(totalValue)}원`}
                     </p>
                     <p
                       className={`text-xs font-mono tabular-nums ${
@@ -777,7 +779,7 @@ const InvestmentView = () => {
                             <div className="bg-background rounded-lg p-2 text-center">
                               <p className="text-[9px] text-muted-foreground">매도 금액</p>
                               <p className="text-xs font-mono font-bold mt-0.5">
-                                {formatKRW(sellTotal)}원
+                                {isGuest ? maskAmount(sellTotal) : `${formatKRW(sellTotal)}원`}
                               </p>
                             </div>
                             <div className="bg-background rounded-lg p-2 text-center">
@@ -787,8 +789,7 @@ const InvestmentView = () => {
                                   isSellProfit ? "text-primary" : "text-destructive"
                                 }`}
                               >
-                                {isSellProfit ? "+" : ""}
-                                {formatKRW(sellPnl)}원
+                                {isGuest ? maskAmount(sellPnl) : `${isSellProfit ? "+" : ""}${formatKRW(sellPnl)}원`}
                               </p>
                             </div>
                             <div className="bg-background rounded-lg p-2 text-center">
@@ -866,13 +867,13 @@ const InvestmentView = () => {
           <div className="bg-muted/30 rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground">총 실현 수익</p>
             <p className="text-sm font-mono font-bold text-primary mt-0.5">
-              +{formatKRW(tradeSummary.totalGains)}원
+              {isGuest ? maskAmount(tradeSummary.totalGains) : `+${formatKRW(tradeSummary.totalGains)}원`}
             </p>
           </div>
           <div className="bg-muted/30 rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground">총 실현 손실</p>
             <p className="text-sm font-mono font-bold text-destructive mt-0.5">
-              {formatKRW(tradeSummary.totalLosses)}원
+              {isGuest ? maskAmount(tradeSummary.totalLosses) : `${formatKRW(tradeSummary.totalLosses)}원`}
             </p>
           </div>
           <div className="bg-muted/30 rounded-lg p-3 text-center">
@@ -882,8 +883,7 @@ const InvestmentView = () => {
                 tradeSummary.netPnl >= 0 ? "text-primary" : "text-destructive"
               }`}
             >
-              {tradeSummary.netPnl >= 0 ? "+" : ""}
-              {formatKRW(tradeSummary.netPnl)}원
+              {isGuest ? maskAmount(tradeSummary.netPnl) : `${tradeSummary.netPnl >= 0 ? "+" : ""}${formatKRW(tradeSummary.netPnl)}원`}
             </p>
           </div>
         </div>
@@ -955,7 +955,7 @@ const InvestmentView = () => {
                 {/* Amount + PnL */}
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs font-mono font-bold tabular-nums">
-                    {formatKRW(trade.totalAmount)}원
+                    {isGuest ? maskAmount(trade.totalAmount) : `${formatKRW(trade.totalAmount)}원`}
                   </p>
                   {!isBuy && trade.realizedPnl !== undefined && (
                     <p
@@ -963,8 +963,7 @@ const InvestmentView = () => {
                         isPnlProfit ? "text-primary" : "text-destructive"
                       }`}
                     >
-                      {isPnlProfit ? "+" : ""}
-                      {formatKRW(pnl)}원
+                      {isGuest ? "₩•••" : `${isPnlProfit ? "+" : ""}${formatKRW(pnl)}원`}
                     </p>
                   )}
                 </div>

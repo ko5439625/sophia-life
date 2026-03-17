@@ -11,9 +11,11 @@ import {
   formatKRW,
 } from "./budgetData";
 import { useFinancial } from "../../../store/financialStore";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 
 const BudgetPlan = () => {
   const { state, updateBudget } = useFinancial();
+  const { isGuest, maskAmount } = useGuestMode();
   const budgets = state.monthlyBudgets;
 
   // Current month as "YYYY-MM"
@@ -173,8 +175,9 @@ const BudgetPlan = () => {
             <div className="relative">
               <input
                 type="text"
-                value={formatKRW(salary1)}
-                onChange={(e) => setSalary1(parseInt(e.target.value.replace(/,/g, "")) || 0)}
+                value={isGuest ? "•••••••" : formatKRW(salary1)}
+                onChange={(e) => !isGuest && setSalary1(parseInt(e.target.value.replace(/,/g, "")) || 0)}
+                readOnly={isGuest}
                 className="w-full bg-background border border-border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base sm:text-lg font-mono tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">원</span>
@@ -185,8 +188,9 @@ const BudgetPlan = () => {
             <div className="relative">
               <input
                 type="text"
-                value={formatKRW(salary2)}
-                onChange={(e) => setSalary2(parseInt(e.target.value.replace(/,/g, "")) || 0)}
+                value={isGuest ? "•••••••" : formatKRW(salary2)}
+                onChange={(e) => !isGuest && setSalary2(parseInt(e.target.value.replace(/,/g, "")) || 0)}
+                readOnly={isGuest}
                 className="w-full bg-background border border-border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-base sm:text-lg font-mono tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">원</span>
@@ -195,7 +199,7 @@ const BudgetPlan = () => {
         </div>
         <div className="flex justify-between items-center pt-2 border-t border-border">
           <span className="text-sm text-muted-foreground">총 월수입</span>
-          <span className="text-base sm:text-xl font-mono font-bold text-primary">{formatKRW(totalIncome)}원</span>
+          <span className="text-base sm:text-xl font-mono font-bold text-primary">{isGuest ? maskAmount(totalIncome) : `${formatKRW(totalIncome)}원`}</span>
         </div>
       </div>
 
@@ -254,7 +258,7 @@ const BudgetPlan = () => {
                     <span className="text-sm font-medium">{b.name}</span>
                     <span className="text-xs text-muted-foreground">{pct}%</span>
                   </div>
-                  {editMode ? (
+                  {editMode && !isGuest ? (
                     <div className="relative">
                       <input
                         type="text"
@@ -276,7 +280,7 @@ const BudgetPlan = () => {
                         />
                       </div>
                       <span className="text-sm font-mono tabular-nums w-24 text-right">
-                        {formatKRW(b.amount)}원
+                        {isGuest ? maskAmount(b.amount) : `${formatKRW(b.amount)}원`}
                       </span>
                     </div>
                   )}
@@ -297,7 +301,7 @@ const BudgetPlan = () => {
               <span className="text-lg leading-none mt-0.5">⚠️</span>
               <div className="flex-1">
                 <p className="text-sm font-medium text-yellow-500">
-                  {formatKRW(remaining)}원이 미배분 상태입니다. 비상금 또는 기타에 배분하세요.
+                  {isGuest ? maskAmount(remaining) : `${formatKRW(remaining)}원`}이 미배분 상태입니다. 비상금 또는 기타에 배분하세요.
                 </p>
                 <div className="flex gap-2 mt-2">
                   <button
@@ -352,7 +356,7 @@ const BudgetPlan = () => {
             >
               <span className="text-lg leading-none">🚫</span>
               <p className="text-sm font-medium text-red-500">
-                예산이 {formatKRW(Math.abs(remaining))}원 초과되었습니다.
+                예산이 {isGuest ? maskAmount(Math.abs(remaining)) : `${formatKRW(Math.abs(remaining))}원`} 초과되었습니다.
               </p>
             </motion.div>
           )}
@@ -361,7 +365,7 @@ const BudgetPlan = () => {
             <span className={`text-lg font-mono font-bold ${
               remaining === 0 ? "text-green-500" : remaining > 0 ? "text-yellow-500" : "text-red-500"
             }`}>
-              {remaining >= 0 ? "+" : ""}{formatKRW(remaining)}원
+              {isGuest ? maskAmount(remaining) : `${remaining >= 0 ? "+" : ""}${formatKRW(remaining)}원`}
             </span>
           </div>
         </div>
@@ -373,21 +377,21 @@ const BudgetPlan = () => {
           <PiggyBank className="h-5 w-5 text-primary mx-auto mb-2" />
           <p className="text-[11px] text-muted-foreground mb-1">저축 (현금)</p>
           <p className="text-base font-mono font-bold text-primary">
-            {formatKRW(budget.find((b) => b.id === "savings")?.amount || 0)}원
+            {isGuest ? maskAmount(budget.find((b) => b.id === "savings")?.amount || 0) : `${formatKRW(budget.find((b) => b.id === "savings")?.amount || 0)}원`}
           </p>
         </div>
         <div className="bg-card rounded-xl p-4 text-center">
           <TrendingUp className="h-5 w-5 text-accent mx-auto mb-2" />
           <p className="text-[11px] text-muted-foreground mb-1">투자</p>
           <p className="text-base font-mono font-bold text-accent">
-            {formatKRW(budget.find((b) => b.id === "investment")?.amount || 0)}원
+            {isGuest ? maskAmount(budget.find((b) => b.id === "investment")?.amount || 0) : `${formatKRW(budget.find((b) => b.id === "investment")?.amount || 0)}원`}
           </p>
         </div>
         <div className="bg-card rounded-xl p-4 text-center">
           <ShieldCheck className="h-5 w-5 text-yellow-500 mx-auto mb-2" />
           <p className="text-[11px] text-muted-foreground mb-1">비상금</p>
           <p className="text-base font-mono font-bold text-yellow-500">
-            {formatKRW(budget.find((b) => b.id === "emergency")?.amount || 0)}원
+            {isGuest ? maskAmount(budget.find((b) => b.id === "emergency")?.amount || 0) : `${formatKRW(budget.find((b) => b.id === "emergency")?.amount || 0)}원`}
           </p>
         </div>
       </div>
@@ -436,17 +440,17 @@ const BudgetPlan = () => {
                     <div>
                       <span className="text-sm font-mono font-medium">{formatMonthLabel(pb.month)}</span>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        수입 {formatKRW(income)}원
+                        수입 {isGuest ? maskAmount(income) : `${formatKRW(income)}원`}
                       </p>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-mono tabular-nums">{formatKRW(total)}원</span>
+                      <span className="text-sm font-mono tabular-nums">{isGuest ? maskAmount(total) : `${formatKRW(total)}원`}</span>
                       <div className="flex gap-3 mt-0.5">
                         <span className="text-xs text-primary font-mono tabular-nums">
-                          저축 {formatKRW(savingsAmt)}
+                          저축 {isGuest ? "₩•••" : formatKRW(savingsAmt)}
                         </span>
                         <span className="text-xs text-accent font-mono tabular-nums">
-                          비상 {formatKRW(emergencyAmt)}
+                          비상 {isGuest ? "₩•••" : formatKRW(emergencyAmt)}
                         </span>
                       </div>
                     </div>

@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Check, Heart, MapPin, Gift, Sparkles, Trash2, Search, Loader2, Send, User, Smile, Pin } from "lucide-react";
+import { Plus, Check, Heart, MapPin, Gift, Sparkles, Trash2, Search, Loader2, Send, User, Smile, Pin, Lock } from "lucide-react";
 import GalleryView from "../gallery/GalleryView";
 import { searchPlaces } from "../../../services/kakaoApi";
 import type { PlaceResult } from "../../../services/kakaoApi";
 import { loadMemos, saveMemos } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 
 interface Dday {
   id: string;
@@ -50,6 +51,7 @@ const categoryIcons = {
 };
 
 const CoupleView = () => {
+  const { isGuest, maskText } = useGuestMode();
   const [activeTab, setActiveTab] = useState("dday");
   const [ddays, setDdays] = useState<Dday[]>(initialDdays);
   const [wishes, setWishes] = useState<WishItem[]>(initialWishes);
@@ -209,7 +211,15 @@ const CoupleView = () => {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.3 }}
         >
-          {activeTab === "dday" && (
+          {isGuest && (
+            <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+              <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+            </div>
+          )}
+
+          {!isGuest && activeTab === "dday" && (
             <div className="space-y-4">
               {/* Add D-day form */}
               <div className="bg-card rounded-xl p-5 space-y-3">
@@ -279,7 +289,7 @@ const CoupleView = () => {
                         <div>
                           <p className="text-sm font-medium">{dday.title}</p>
                           <p className="text-xs text-muted-foreground font-mono">
-                            {dday.date}
+                            {isGuest ? "••••-••-••" : dday.date}
                           </p>
                         </div>
                       </div>
@@ -293,7 +303,7 @@ const CoupleView = () => {
                               : "text-primary"
                           }`}
                         >
-                          {getDday(dday.date)}
+                          {isGuest ? "D-•••" : getDday(dday.date)}
                         </span>
                         <button
                           onClick={() => deleteDday(dday.id)}
@@ -308,11 +318,11 @@ const CoupleView = () => {
             </div>
           )}
 
-          {activeTab === "gallery" && (
+          {!isGuest && activeTab === "gallery" && (
             <GalleryView />
           )}
 
-          {activeTab === "memo" && (
+          {!isGuest && activeTab === "memo" && (
             <div className="space-y-4">
               {/* Add memo form */}
               <div className="bg-card rounded-xl p-4 space-y-3">
@@ -464,7 +474,7 @@ const CoupleView = () => {
             </div>
           )}
 
-          {activeTab === "wishlist" && (
+          {!isGuest && activeTab === "wishlist" && (
             <div className="space-y-4">
               {/* Add wish form */}
               <div className="bg-card rounded-xl p-5 space-y-3">

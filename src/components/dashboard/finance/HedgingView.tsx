@@ -32,11 +32,13 @@ import {
   Mountain,
   CloudRain,
   MessageSquare,
+  Lock,
 } from "lucide-react";
 import { getFearGreedIndex, getStockQuote, getHistoricalData } from "../../../services/marketApi";
 import { analyzeHedging } from "../../../services/geminiApi";
 import type { HedgingAnalysis } from "../../../services/geminiApi";
 import { useFinancial } from "../../../store/financialStore";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 
 // ---------------------------------------------------------------------------
 // Constants & Mock Data
@@ -580,6 +582,7 @@ const HEDGING_CATEGORY_COLORS: Record<string, string> = {
 };
 
 const HedgingView = () => {
+  const { isGuest } = useGuestMode();
   const { state, totalCash, totalInvestment, totalPension, totalNetWorth } = useFinancial();
 
   // Compute real portfolio allocation for "현재 배분" donut
@@ -1320,49 +1323,58 @@ ${personalSituation}
             <p className="text-xs font-medium text-center mb-2 text-muted-foreground">
               현재 배분
             </p>
-            <div className="w-full aspect-square max-w-[160px] mx-auto">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={computedAllocation}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="40%"
-                    outerRadius="70%"
-                    paddingAngle={2}
-                    dataKey="value"
-                    animationDuration={800}
-                  >
-                    {computedAllocation.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(val: number) => [`${val}%`, "비중"]}
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 8,
-                      fontSize: 11,
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-1 mt-2">
-              {computedAllocation.map((item) => (
-                <div key={item.name} className="flex items-center gap-1.5">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-[10px] flex-1 text-foreground">{item.name}</span>
-                  <span className="text-[10px] font-mono text-foreground/60">
-                    {item.value}%
-                  </span>
+            {isGuest ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Lock className="h-6 w-6 text-muted-foreground/30 mb-2" />
+                <p className="text-[10px] text-muted-foreground">비공개</p>
+              </div>
+            ) : (
+              <>
+                <div className="w-full aspect-square max-w-[160px] mx-auto">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={computedAllocation}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius="40%"
+                        outerRadius="70%"
+                        paddingAngle={2}
+                        dataKey="value"
+                        animationDuration={800}
+                      >
+                        {computedAllocation.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(val: number) => [`${val}%`, "비중"]}
+                        contentStyle={{
+                          background: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: 8,
+                          fontSize: 11,
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-1 mt-2">
+                  {computedAllocation.map((item) => (
+                    <div key={item.name} className="flex items-center gap-1.5">
+                      <div
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-[10px] flex-1 text-foreground">{item.name}</span>
+                      <span className="text-[10px] font-mono text-foreground/60">
+                        {item.value}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Arrow between */}
@@ -1608,6 +1620,15 @@ ${personalSituation}
           <MessageSquare className="h-4 w-4 text-accent" />
           <h3 className="text-sm font-medium">내 상황 맞춤 분석</h3>
         </div>
+
+        {isGuest ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Lock className="h-6 w-6 text-muted-foreground/30 mb-2" />
+            <p className="text-xs text-muted-foreground">비공개 콘텐츠입니다</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+          </div>
+        ) : (
+        <>
         <p className="text-xs text-muted-foreground">
           개인 상황을 구체적으로 작성하면 현재 시장 데이터와 결합하여 맞춤 분석해드립니다.
         </p>
@@ -1699,6 +1720,8 @@ ${personalSituation}
               새로운 상황 분석하기
             </button>
           </motion.div>
+        )}
+        </>
         )}
       </motion.div>
     </div>

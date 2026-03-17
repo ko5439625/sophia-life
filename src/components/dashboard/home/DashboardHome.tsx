@@ -27,6 +27,7 @@ import type { NewsArticle } from "../../../services/newsApi";
 import { getPinnedMemos } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useFinancial } from "../../../store/financialStore";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 
 interface DashboardHomeProps {
   onNavigate?: (tabId: string) => void;
@@ -245,6 +246,7 @@ function generateAlerts(
 
 const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
   const { state, getMonthlyExpenseTotal } = useFinancial();
+  const { isGuest, maskAmount } = useGuestMode();
   const [checklist, setChecklist] = useState(mockChecklist);
   const [pinnedMemos, setPinnedMemos] = useState<CoupleMemo[]>([]);
 
@@ -473,7 +475,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
       >
         <div className="flex items-start justify-between">
           <div className="space-y-1.5">
-            <h2 className="text-xl sm:text-2xl font-bold">안녕하세요, 소피아 님!</h2>
+            <h2 className="text-xl sm:text-2xl font-bold">{isGuest ? "안녕하세요, 게스트 님!" : "안녕하세요, 소피아 님!"}</h2>
             {weather && weather.description ? (
               <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                 <Cloud className="h-3.5 w-3.5" />
@@ -508,7 +510,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
               const dayLabel = nearest.diffDays === 0 ? "오늘" : nearest.diffDays === 1 ? "내일" : `${nearest.diffDays}일 후`;
               return (
                 <p className="text-sm text-primary font-medium">
-                  {dayLabel} {nearest.title} 일정이 있습니다.
+                  {isGuest ? `${dayLabel} 일정이 있습니다.` : `${dayLabel} ${nearest.title} 일정이 있습니다.`}
                 </p>
               );
             })()}
@@ -856,7 +858,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-base">{event.emoji}</span>
-                  <span className="text-sm">{event.title}</span>
+                  <span className="text-sm">{isGuest ? "일정이 있습니다" : event.title}</span>
                 </div>
                 <span className="text-xs font-mono text-primary font-medium">
                   {getDday(event.date)}
@@ -884,7 +886,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
             </h3>
           </div>
           <p className="text-xl sm:text-2xl font-mono font-bold tabular-nums mb-1 break-all">
-            {formatAmount(monthlyExpenseUsed)}
+            {isGuest ? maskAmount(monthlyExpenseUsed) : formatAmount(monthlyExpenseUsed)}
           </p>
           <p className="text-xs text-muted-foreground">
             {(() => {
@@ -897,53 +899,55 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
               });
               const top = Array.from(catMap.entries()).sort((a, b) => b[1] - a[1])[0];
               return top
-                ? <>최다 카테고리: <span className="text-foreground font-medium">{top[0]}</span> ({formatAmount(top[1])})</>
+                ? <>최다 카테고리: <span className="text-foreground font-medium">{top[0]}</span> ({isGuest ? maskAmount(top[1]) : formatAmount(top[1])})</>
                 : "지출 내역 없음";
             })()}
           </p>
         </motion.div>
 
-        {/* 속닥속닥 - pinned memos */}
-        <motion.div
-          custom={7}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          className="bg-card rounded-xl p-5 cursor-pointer hover:ring-1 hover:ring-primary/20 transition-all"
-          onClick={() => onNavigate?.("couple")}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-pink-400" />
-              <h3 className="text-sm font-mono text-muted-foreground">
-                속닥속닥
-              </h3>
+        {/* 속닥속닥 - pinned memos (hidden for guest) */}
+        {!isGuest && (
+          <motion.div
+            custom={7}
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            className="bg-card rounded-xl p-5 cursor-pointer hover:ring-1 hover:ring-primary/20 transition-all"
+            onClick={() => onNavigate?.("couple")}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4 text-pink-400" />
+                <h3 className="text-sm font-mono text-muted-foreground">
+                  속닥속닥
+                </h3>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
             </div>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-          </div>
-          {pinnedMemos.length > 0 ? (
-            <div className="space-y-2">
-              {pinnedMemos.slice(0, 3).map((memo, idx) => (
-                <div
-                  key={memo.id}
-                  className="bg-yellow-400/10 border border-yellow-400/20 rounded-lg p-3"
-                  style={{ transform: `rotate(${idx % 2 === 0 ? "-0.5" : "0.3"}deg)` }}
-                >
-                  <p className="text-sm mb-1">{memo.message}</p>
-                  <p className="text-xs text-muted-foreground font-mono text-right">
-                    - {memo.author}, {memo.timestamp}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-sm text-muted-foreground">
-                속닥속닥에서 공지를 등록해보세요
-              </p>
-            </div>
-          )}
-        </motion.div>
+            {pinnedMemos.length > 0 ? (
+              <div className="space-y-2">
+                {pinnedMemos.slice(0, 3).map((memo, idx) => (
+                  <div
+                    key={memo.id}
+                    className="bg-yellow-400/10 border border-yellow-400/20 rounded-lg p-3"
+                    style={{ transform: `rotate(${idx % 2 === 0 ? "-0.5" : "0.3"}deg)` }}
+                  >
+                    <p className="text-sm mb-1">{memo.message}</p>
+                    <p className="text-xs text-muted-foreground font-mono text-right">
+                      - {memo.author}, {memo.timestamp}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">
+                  속닥속닥에서 공지를 등록해보세요
+                </p>
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );

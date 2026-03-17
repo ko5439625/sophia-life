@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import { formatKRW } from "./budgetData";
 import { useFinancial } from "../../../store/financialStore";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 import {
   searchApartments,
   searchApartmentsByRegion,
@@ -304,6 +305,7 @@ interface AddressPopupData {
 
 const ApartmentView = () => {
   const { totalCash, state } = useFinancial();
+  const { isGuest, maskAmount } = useGuestMode();
   const [query, setQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(() => {
@@ -478,7 +480,7 @@ const ApartmentView = () => {
         {/* Current assets */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">현재 총 자산 (자동)</span>
-          <span className="text-sm font-mono font-bold text-primary">{formatMan(totalAssets)}</span>
+          <span className="text-sm font-mono font-bold text-primary">{isGuest ? "₩•••••••" : formatMan(totalAssets)}</span>
         </div>
 
         {/* LTV */}
@@ -566,11 +568,11 @@ const ApartmentView = () => {
         <div className="space-y-2 pt-2 border-t border-border">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">최대 대출금</span>
-            <span className="font-mono font-bold">{formatKRW(result.maxLoan)}원</span>
+            <span className="font-mono font-bold">{isGuest ? maskAmount(result.maxLoan) : `${formatKRW(result.maxLoan)}원`}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">필요 자기자본</span>
-            <span className="font-mono font-bold">{formatKRW(result.selfFund)}원</span>
+            <span className="font-mono font-bold">{isGuest ? maskAmount(result.selfFund) : `${formatKRW(result.selfFund)}원`}</span>
           </div>
 
           <div className="bg-background/50 rounded-lg p-3 space-y-1.5 border border-border/50">
@@ -582,33 +584,33 @@ const ApartmentView = () => {
             {gracePeriod > 0 && (
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">거치기간 월 납부 (이자만)</span>
-                <span className="font-mono font-bold">{formatKRW(result.graceMonthlyPayment)}원</span>
+                <span className="font-mono font-bold">{isGuest ? maskAmount(result.graceMonthlyPayment) : `${formatKRW(result.graceMonthlyPayment)}원`}</span>
               </div>
             )}
 
             {repaymentType === "equal_payment" ? (
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">월 상환금 (고정)</span>
-                <span className="font-mono font-bold">{formatKRW(result.monthlyPayment)}원</span>
+                <span className="font-mono font-bold">{isGuest ? maskAmount(result.monthlyPayment) : `${formatKRW(result.monthlyPayment)}원`}</span>
               </div>
             ) : (
               <>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">초기 월 상환금</span>
-                  <span className="font-mono font-bold">{formatKRW(result.firstMonthPayment)}원</span>
+                  <span className="font-mono font-bold">{isGuest ? maskAmount(result.firstMonthPayment) : `${formatKRW(result.firstMonthPayment)}원`}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">
                     {repaymentType === "equal_principal" ? "최종 월 상환금" : "후기 월 상환금"}
                   </span>
-                  <span className="font-mono font-bold">{formatKRW(result.lastMonthPayment)}원</span>
+                  <span className="font-mono font-bold">{isGuest ? maskAmount(result.lastMonthPayment) : `${formatKRW(result.lastMonthPayment)}원`}</span>
                 </div>
               </>
             )}
 
             <div className="flex justify-between text-xs pt-1 border-t border-border/30">
               <span className="text-muted-foreground">총 이자</span>
-              <span className="font-mono font-bold text-destructive/80">{formatKRW(result.totalInterest)}원</span>
+              <span className="font-mono font-bold text-destructive/80">{isGuest ? maskAmount(result.totalInterest) : `${formatKRW(result.totalInterest)}원`}</span>
             </div>
           </div>
 
@@ -629,11 +631,11 @@ const ApartmentView = () => {
             }`}
           >
             <p className={`text-sm font-sans font-bold ${result.canBuy ? "text-primary" : "text-destructive"}`}>
-              {result.canBuy ? "구매 가능" : `부족 금액: ${formatKRW(result.shortage)}원`}
+              {result.canBuy ? "구매 가능" : isGuest ? `부족 금액: ${maskAmount(result.shortage)}` : `부족 금액: ${formatKRW(result.shortage)}원`}
             </p>
             {result.canBuy && (
               <p className="text-xs text-muted-foreground mt-1">
-                자기자본 여유: {formatKRW(totalAssets * 10000 - result.selfFund)}원
+                자기자본 여유: {isGuest ? maskAmount(totalAssets * 10000 - result.selfFund) : `${formatKRW(totalAssets * 10000 - result.selfFund)}원`}
               </p>
             )}
           </motion.div>

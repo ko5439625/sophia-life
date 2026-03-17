@@ -8,7 +8,9 @@ import {
   Trash2,
   Camera,
   BarChart3,
+  Lock,
 } from "lucide-react";
+import { useGuestMode } from "../../../hooks/useGuestMode";
 import {
   RadarChart,
   Radar,
@@ -124,6 +126,7 @@ const tabs = [
 ];
 
 const RealEstateHub = () => {
+  const { isGuest } = useGuestMode();
   const [activeTab, setActiveTab] = useState("analysis");
   const [inspections, setInspections] = useState<Inspection[]>(initialInspections);
   const [showForm, setShowForm] = useState(false);
@@ -229,7 +232,14 @@ const RealEstateHub = () => {
         transition={{ duration: 0.3 }}
       >
         {activeTab === "analysis" && <ApartmentView />}
-        {activeTab === "inspection" && (
+        {activeTab === "inspection" && isGuest && (
+          <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+            <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+            <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+          </div>
+        )}
+        {activeTab === "inspection" && !isGuest && (
           <div className="space-y-6">
             {/* Add button */}
             <div className="flex items-center justify-between">
@@ -679,7 +689,14 @@ const RealEstateHub = () => {
             )}
           </div>
         )}
-        {activeTab === "property-search" && <PropertySearch />}
+        {activeTab === "property-search" && isGuest && (
+          <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+            <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+            <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+          </div>
+        )}
+        {activeTab === "property-search" && !isGuest && <PropertySearch />}
         {activeTab === "subscription" && <SubscriptionView />}
       </motion.div>
     </div>
