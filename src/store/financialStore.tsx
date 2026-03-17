@@ -524,6 +524,8 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
   // Load from Supabase on mount (if configured, skip for guests)
   useEffect(() => {
     if (!supabaseReady.current || isGuest) return;
+    // Load API keys first (so services can use them immediately)
+    sync.loadApiKeysFromSupabase();
     sync.loadFinancialData().then((data) => {
       if (data && Object.keys(data).length > 0) {
         dispatch({

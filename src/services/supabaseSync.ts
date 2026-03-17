@@ -313,6 +313,41 @@ export async function deleteOwnedProperty(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// API Keys sync (cross-device)
+// ---------------------------------------------------------------------------
+
+export async function loadApiKeysFromSupabase(): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    const { data } = await supabase
+      .from("user_settings")
+      .select("api_keys")
+      .limit(1)
+      .single();
+
+    if (data?.api_keys && typeof data.api_keys === "object") {
+      const keys = data.api_keys as Record<string, string>;
+      const keyMap: Record<string, string> = {
+        kakao: "sophia-api-kakao",
+        news: "sophia-api-news",
+        stock: "sophia-api-stock",
+        data: "sophia-api-data",
+        weather: "sophia-api-weather",
+        openai: "sophia-api-openai",
+        gemini: "sophia-api-gemini",
+      };
+      for (const [key, storageKey] of Object.entries(keyMap)) {
+        if (keys[key]) {
+          localStorage.setItem(storageKey, keys[key]);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[supabaseSync] loadApiKeys error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Bulk sync helpers for complex actions (sell/buy that touch multiple tables)
 // ---------------------------------------------------------------------------
 
