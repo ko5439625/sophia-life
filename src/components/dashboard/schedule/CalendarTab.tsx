@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, Lock } from "lucide-react";
 import { useGuestMode } from "@/hooks/useGuestMode";
+import { loadEvents, saveEvent, deleteEvent as deleteEventSync } from "@/services/supabaseSync";
 
 interface CalendarEvent {
   id: string;
@@ -27,12 +28,23 @@ const CalendarTab = () => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [events, setEvents] = useState<CalendarEvent[]>([
-    { id: "1", title: "\uACB0\uD63C\uAE30\uB150\uC77C", date: "2026-03-20", emoji: "\u2764\uFE0F", isShared: true },
-    { id: "2", title: "\uCE58\uACFC \uC608\uC57D", date: "2026-03-18", time: "14:00", emoji: "\u{1F3E5}", isShared: false },
-    { id: "3", title: "\uBD80\uBAA8\uB2D8 \uC800\uB155", date: "2026-03-22", time: "18:30", emoji: "\u{1F37D}\uFE0F", isShared: true },
-    { id: "4", title: "\uC81C\uC8FC\uB3C4 \uC5EC\uD589", date: "2026-03-28", emoji: "\u2708\uFE0F", isShared: true },
-  ]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    loadEvents().then((rows) => {
+      if (rows.length > 0) {
+        setEvents(rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          date: r.date,
+          time: r.time || undefined,
+          emoji: r.emoji,
+          isShared: r.is_shared,
+        })));
+      }
+    });
+  }, []);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [addingForDate, setAddingForDate] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -96,6 +108,7 @@ const CalendarTab = () => {
       isShared: false,
     };
     setEvents([...events, newEvent]);
+    saveEvent({ id: newEvent.id, title: newEvent.title, date: newEvent.date, time: newEvent.time || null, emoji: newEvent.emoji, is_shared: newEvent.isShared });
     setNewTitle("");
     setNewTime("");
     setNewEmoji("\u{1F4DD}");
@@ -104,6 +117,7 @@ const CalendarTab = () => {
 
   const handleDeleteEvent = (id: string) => {
     setEvents(events.filter((e) => e.id !== id));
+    deleteEventSync(id);
   };
 
   const startAdding = (forDate: string) => {

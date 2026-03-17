@@ -348,6 +348,169 @@ export async function loadApiKeysFromSupabase(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Todos (체크리스트)
+// ---------------------------------------------------------------------------
+
+export interface TodoRow {
+  id: string;
+  title: string;
+  memo: string;
+  is_done: boolean;
+  date: string;
+}
+
+export async function loadTodos(): Promise<TodoRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("todos").select("*").order("date");
+    return (data || []) as TodoRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadTodos error:", e);
+    return [];
+  }
+}
+
+export async function saveTodo(todo: TodoRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("todos").upsert(todo);
+  } catch (e) {
+    console.error("[supabaseSync] saveTodo error:", e);
+  }
+}
+
+export async function deleteTodo(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("todos").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteTodo error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Events (캘린더 일정)
+// ---------------------------------------------------------------------------
+
+export interface EventRow {
+  id: string;
+  title: string;
+  date: string;
+  time: string | null;
+  emoji: string;
+  is_shared: boolean;
+}
+
+export async function loadEvents(): Promise<EventRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("events").select("*").order("date");
+    return (data || []) as EventRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadEvents error:", e);
+    return [];
+  }
+}
+
+export async function saveEvent(event: EventRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("events").upsert(event);
+  } catch (e) {
+    console.error("[supabaseSync] saveEvent error:", e);
+  }
+}
+
+export async function deleteEvent(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("events").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteEvent error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// D-days
+// ---------------------------------------------------------------------------
+
+export interface DdayRow {
+  id: string;
+  title: string;
+  emoji: string;
+  date: string;
+}
+
+export async function loadDdays(): Promise<DdayRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("ddays").select("*").order("date");
+    return (data || []) as DdayRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadDdays error:", e);
+    return [];
+  }
+}
+
+export async function saveDday(dday: DdayRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("ddays").upsert(dday);
+  } catch (e) {
+    console.error("[supabaseSync] saveDday error:", e);
+  }
+}
+
+export async function deleteDday(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("ddays").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteDday error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Wishes (위시리스트)
+// ---------------------------------------------------------------------------
+
+export interface WishRow {
+  id: string;
+  title: string;
+  category: string;
+  is_done: boolean;
+}
+
+export async function loadWishes(): Promise<WishRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("wishes").select("*");
+    return (data || []) as WishRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadWishes error:", e);
+    return [];
+  }
+}
+
+export async function saveWish(wish: WishRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("wishes").upsert(wish);
+  } catch (e) {
+    console.error("[supabaseSync] saveWish error:", e);
+  }
+}
+
+export async function deleteWish(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("wishes").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteWish error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Bulk sync helpers for complex actions (sell/buy that touch multiple tables)
 // ---------------------------------------------------------------------------
 

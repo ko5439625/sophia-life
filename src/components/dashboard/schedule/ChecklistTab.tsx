@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, Trash2, ChevronLeft, ChevronRight, ChevronDown, Lock } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useGuestMode } from "@/hooks/useGuestMode";
+import { loadTodos, saveTodo, deleteTodo as deleteTodoSync } from "@/services/supabaseSync";
 
 interface Todo {
   id: string;
@@ -34,29 +35,25 @@ function addDays(d: Date, n: number): Date {
   return r;
 }
 
-// Spread mock data across the current week
-function generateMockTodos(): Todo[] {
-  const monday = getMonday(new Date());
-  return [
-    { id: "1", title: "아침 운동 30분", memo: "", isDone: false, date: formatDateKey(monday) },
-    { id: "2", title: "장보기 - 우유, 계란, 빵", memo: "근처 마트", isDone: true, date: formatDateKey(monday) },
-    { id: "3", title: "블로그 글 작성", memo: "여행 후기", isDone: false, date: formatDateKey(addDays(monday, 1)) },
-    { id: "4", title: "코드 리뷰", memo: "", isDone: true, date: formatDateKey(addDays(monday, 1)) },
-    { id: "5", title: "팀 미팅 준비", memo: "발표 자료", isDone: false, date: formatDateKey(addDays(monday, 2)) },
-    { id: "6", title: "저녁 요리하기", memo: "", isDone: false, date: formatDateKey(addDays(monday, 2)) },
-    { id: "7", title: "영어 공부 1시간", memo: "", isDone: true, date: formatDateKey(addDays(monday, 3)) },
-    { id: "8", title: "택배 수령", memo: "", isDone: false, date: formatDateKey(addDays(monday, 3)) },
-    { id: "9", title: "카페 방문", memo: "새로 오픈한 곳", isDone: false, date: formatDateKey(addDays(monday, 4)) },
-    { id: "10", title: "운동복 빨래", memo: "", isDone: false, date: formatDateKey(addDays(monday, 5)) },
-    { id: "11", title: "넷플릭스 영화", memo: "", isDone: false, date: formatDateKey(addDays(monday, 5)) },
-    { id: "12", title: "다음 주 계획 세우기", memo: "", isDone: false, date: formatDateKey(addDays(monday, 6)) },
-  ];
-}
-
 const ChecklistTab = () => {
   const { isGuest } = useGuestMode();
   const isMobile = useIsMobile();
-  const [todos, setTodos] = useState<Todo[]>(generateMockTodos);
+  const [todos, setTodos] = useState<Todo[]>([]);
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    loadTodos().then((rows) => {
+      if (rows.length > 0) {
+        setTodos(rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          memo: r.memo,
+          isDone: r.is_done,
+          date: r.date,
+        })));
+      }
+    });
+  }, []);
   const [weekOffset, setWeekOffset] = useState(0);
   const [newTitles, setNewTitles] = useState<Record<string, string>>({});
 
@@ -106,26 +103,29 @@ const ChecklistTab = () => {
   }, [todos, weekDays]);
 
   const toggleTodo = (id: string) => {
-    setTodos(todos.map((t) => (t.id === id ? { ...t, isDone: !t.isDone } : t)));
+    const updated = todos.map((t) => (t.id === id ? { ...t, isDone: !t.isDone } : t));
+    setTodos(updated);
+    const todo = updated.find((t) => t.id === id);
+    if (todo) saveTodo({ id: todo.id, title: todo.title, memo: todo.memo, is_done: todo.isDone, date: todo.date });
   };
 
   const deleteTodo = (id: string) => {
     setTodos(todos.filter((t) => t.id !== id));
+    deleteTodoSync(id);
   };
 
   const addTodo = (dateKey: string) => {
     const title = (newTitles[dateKey] || "").trim();
     if (!title) return;
-    setTodos([
-      ...todos,
-      {
-        id: Date.now().toString(),
-        title,
-        memo: "",
-        isDone: false,
-        date: dateKey,
-      },
-    ]);
+    const newTodo: Todo = {
+      id: Date.now().toString(),
+      title,
+      memo: "",
+      isDone: false,
+      date: dateKey,
+    };
+    setTodos([...todos, newTodo]);
+    saveTodo({ id: newTodo.id, title: newTodo.title, memo: newTodo.memo, is_done: false, date: dateKey });
     setNewTitles({ ...newTitles, [dateKey]: "" });
   };
 

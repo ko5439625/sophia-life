@@ -7,6 +7,7 @@ import type { PlaceResult } from "../../../services/kakaoApi";
 import { loadMemos, saveMemos } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
+import { loadDdays, saveDday, deleteDday as deleteDdaySync, loadWishes, saveWish, deleteWish as deleteWishSync } from "../../../services/supabaseSync";
 
 interface Dday {
   id: string;
@@ -29,20 +30,9 @@ const tabs = [
   { id: "gallery", label: "갤러리" },
 ];
 
-const initialDdays: Dday[] = [
-  { id: "1", title: "\uCC98\uC74C \uB9CC\uB09C \uB0A0", emoji: "\u{1F496}", date: "2024-05-15" },
-  { id: "2", title: "\uACB0\uD63C\uAE30\uB150\uC77C", emoji: "\u{1F48D}", date: "2025-11-08" },
-  { id: "3", title: "sophia \uC0DD\uC77C", emoji: "\u{1F382}", date: "2026-04-15" },
-  { id: "4", title: "\uCCAB \uC5EC\uD589 \uAE30\uB150\uC77C", emoji: "\u2708\uFE0F", date: "2024-08-22" },
-];
+const initialDdays: Dday[] = [];
 
-const initialWishes: WishItem[] = [
-  { id: "1", title: "\uB2CC\uD150\uB3C4 \uC2A4\uC704\uCE58 2", category: "\uBB3C\uAC74", isDone: false },
-  { id: "2", title: "\uC81C\uC8FC\uB3C4 \uC6B0\uB3C4 \uC5EC\uD589", category: "\uC7A5\uC18C", isDone: true },
-  { id: "3", title: "\uD30C\uC778\uB2E4\uC774\uB2DD \uCF54\uC2A4 \uC694\uB9AC", category: "\uACBD\uD5D8", isDone: false },
-  { id: "4", title: "\uCEE4\uD50C \uC2A4\uD30C", category: "\uACBD\uD5D8", isDone: false },
-  { id: "5", title: "\uACF5\uAE30\uCCAD\uC815\uAE30", category: "\uBB3C\uAC74", isDone: true },
-];
+const initialWishes: WishItem[] = [];
 
 const categoryIcons = {
   "\uBB3C\uAC74": Gift,
@@ -58,6 +48,23 @@ const CoupleView = () => {
   const [memos, setMemos] = useState<CoupleMemo[]>(() => loadMemos());
   const [newMemoText, setNewMemoText] = useState("");
   const [newMemoAuthor, setNewMemoAuthor] = useState<"sophia" | "partner">("sophia");
+
+  // Load D-days and wishes from Supabase
+  useEffect(() => {
+    loadDdays().then((rows) => {
+      if (rows.length > 0) setDdays(rows);
+    });
+    loadWishes().then((rows) => {
+      if (rows.length > 0) {
+        setWishes(rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          category: r.category as WishItem["category"],
+          isDone: r.is_done,
+        })));
+      }
+    });
+  }, []);
 
   // Persist memos to localStorage whenever they change
   useEffect(() => {
@@ -127,15 +134,14 @@ const CoupleView = () => {
 
   const addDday = () => {
     if (!newDdayTitle.trim() || !newDdayDate) return;
-    setDdays([
-      ...ddays,
-      {
-        id: Date.now().toString(),
-        title: newDdayTitle.trim(),
-        emoji: newDdayEmoji,
-        date: newDdayDate,
-      },
-    ]);
+    const newItem: Dday = {
+      id: Date.now().toString(),
+      title: newDdayTitle.trim(),
+      emoji: newDdayEmoji,
+      date: newDdayDate,
+    };
+    setDdays([...ddays, newItem]);
+    saveDday(newItem);
     setNewDdayTitle("");
     setNewDdayEmoji("\u2764\uFE0F");
     setNewDdayDate("");
@@ -143,30 +149,32 @@ const CoupleView = () => {
 
   const deleteDday = (id: string) => {
     setDdays(ddays.filter((d) => d.id !== id));
+    deleteDdaySync(id);
   };
 
   const addWish = () => {
     if (!newWishTitle.trim()) return;
-    setWishes([
-      ...wishes,
-      {
-        id: Date.now().toString(),
-        title: newWishTitle.trim(),
-        category: newWishCategory,
-        isDone: false,
-      },
-    ]);
+    const newItem: WishItem = {
+      id: Date.now().toString(),
+      title: newWishTitle.trim(),
+      category: newWishCategory,
+      isDone: false,
+    };
+    setWishes([...wishes, newItem]);
+    saveWish({ id: newItem.id, title: newItem.title, category: newItem.category, is_done: false });
     setNewWishTitle("");
   };
 
   const toggleWish = (id: string) => {
-    setWishes(
-      wishes.map((w) => (w.id === id ? { ...w, isDone: !w.isDone } : w))
-    );
+    const updated = wishes.map((w) => (w.id === id ? { ...w, isDone: !w.isDone } : w));
+    setWishes(updated);
+    const wish = updated.find((w) => w.id === id);
+    if (wish) saveWish({ id: wish.id, title: wish.title, category: wish.category, is_done: wish.isDone });
   };
 
   const deleteWish = (id: string) => {
     setWishes(wishes.filter((w) => w.id !== id));
+    deleteWishSync(id);
   };
 
   const emojiOptions = ["\u2764\uFE0F", "\u{1F496}", "\u{1F48D}", "\u{1F382}", "\u2708\uFE0F", "\u{1F3E0}", "\u{1F31F}", "\u{1F389}", "\u{1F37D}\uFE0F", "\u{1F3B5}"];
