@@ -1,5 +1,8 @@
-// Shared memo store using localStorage for pinned memo persistence
+// Shared memo store - Supabase synced
 // Used by CoupleView (속닥속닥) and DashboardHome
+
+import { loadMemosFromDB, saveMemoToDB, deleteMemoFromDB } from "../services/supabaseSync";
+import type { MemoRow } from "../services/supabaseSync";
 
 export interface CoupleMemo {
   id: string;
@@ -11,22 +14,44 @@ export interface CoupleMemo {
 
 const STORAGE_KEY = "sophia-couple-memos";
 
-export const initialMemos: CoupleMemo[] = [
-  { id: "1", author: "sophia", message: "오늘 점심 맛있는 거 먹자! ❤️", timestamp: "2026-03-17 09:30", pinned: true },
-  { id: "2", author: "partner", message: "좋아~ 뭐 먹을까? 파스타 어때?", timestamp: "2026-03-17 09:35", pinned: false },
-  { id: "3", author: "sophia", message: "주말에 한강 산책 가자!", timestamp: "2026-03-16 20:10", pinned: false },
-  { id: "4", author: "partner", message: "우리 결혼기념일 선물 뭐가 좋을까 고민 중...", timestamp: "2026-03-15 18:45", pinned: false },
-  { id: "5", author: "sophia", message: "오늘 퇴근하면서 케이크 사갈게 🎰", timestamp: "2026-03-15 14:20", pinned: false },
-];
+function toMemo(r: MemoRow): CoupleMemo {
+  return {
+    id: r.id,
+    author: r.author as CoupleMemo["author"],
+    message: r.message,
+    timestamp: r.timestamp,
+    pinned: r.pinned,
+  };
+}
 
+function toRow(m: CoupleMemo): MemoRow {
+  return {
+    id: m.id,
+    author: m.author,
+    message: m.message,
+    timestamp: m.timestamp,
+    pinned: m.pinned,
+  };
+}
+
+// Load: Supabase first, then localStorage fallback
+export async function loadMemosAsync(): Promise<CoupleMemo[]> {
+  const rows = await loadMemosFromDB();
+  if (rows.length > 0) {
+    const memos = rows.map(toMemo);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+    return memos;
+  }
+  return loadMemos();
+}
+
+// Sync load (localStorage only, for initial render)
 export function loadMemos(): CoupleMemo[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return JSON.parse(stored);
-  } catch {
-    // ignore parse errors
-  }
-  return initialMemos;
+  } catch { /* ignore */ }
+  return [];
 }
 
 export function saveMemos(memos: CoupleMemo[]): void {
@@ -36,4 +61,17 @@ export function saveMemos(memos: CoupleMemo[]): void {
 export function getPinnedMemos(): CoupleMemo[] {
   const memos = loadMemos();
   return memos.filter((m) => m.pinned);
+}
+
+// Supabase CRUD
+export async function addMemoToDB(memo: CoupleMemo): Promise<void> {
+  await saveMemoToDB(toRow(memo));
+}
+
+export async function updateMemoInDB(memo: CoupleMemo): Promise<void> {
+  await saveMemoToDB(toRow(memo));
+}
+
+export async function removeMemoFromDB(id: string): Promise<void> {
+  await deleteMemoFromDB(id);
 }

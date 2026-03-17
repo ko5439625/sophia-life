@@ -511,6 +511,47 @@ export async function deleteWish(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Memos (속닥속닥)
+// ---------------------------------------------------------------------------
+
+export interface MemoRow {
+  id: string;
+  author: string;
+  message: string;
+  timestamp: string;
+  pinned: boolean;
+}
+
+export async function loadMemosFromDB(): Promise<MemoRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("memos").select("*").order("timestamp", { ascending: false });
+    return (data || []) as MemoRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadMemos error:", e);
+    return [];
+  }
+}
+
+export async function saveMemoToDB(memo: MemoRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("memos").upsert(memo);
+  } catch (e) {
+    console.error("[supabaseSync] saveMemo error:", e);
+  }
+}
+
+export async function deleteMemoFromDB(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("memos").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteMemo error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Blog Posts
 // ---------------------------------------------------------------------------
 

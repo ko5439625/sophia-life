@@ -4,7 +4,7 @@ import { Plus, Check, Heart, MapPin, Gift, Sparkles, Trash2, Search, Loader2, Se
 import GalleryView from "../gallery/GalleryView";
 import { searchPlaces } from "../../../services/kakaoApi";
 import type { PlaceResult } from "../../../services/kakaoApi";
-import { loadMemos, saveMemos } from "../../../lib/memoStore";
+import { loadMemos, saveMemos, loadMemosAsync, addMemoToDB, updateMemoInDB, removeMemoFromDB } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 import { loadDdays, saveDday, deleteDday as deleteDdaySync, loadWishes, saveWish, deleteWish as deleteWishSync } from "../../../services/supabaseSync";
@@ -49,7 +49,7 @@ const CoupleView = () => {
   const [newMemoText, setNewMemoText] = useState("");
   const [newMemoAuthor, setNewMemoAuthor] = useState<"sophia" | "partner">("sophia");
 
-  // Load D-days and wishes from Supabase
+  // Load D-days, wishes, memos from Supabase
   useEffect(() => {
     loadDdays().then((rows) => {
       if (rows.length > 0) setDdays(rows);
@@ -64,6 +64,9 @@ const CoupleView = () => {
         })));
       }
     });
+    loadMemosAsync().then((m) => {
+      if (m.length > 0) setMemos(m);
+    });
   }, []);
 
   // Persist memos to localStorage whenever they change
@@ -72,7 +75,27 @@ const CoupleView = () => {
   }, [memos]);
 
   const toggleMemoPin = (id: string) => {
-    setMemos(memos.map((m) => (m.id === id ? { ...m, pinned: !m.pinned } : m)));
+    const updated = memos.map((m) => (m.id === id ? { ...m, pinned: !m.pinned } : m));
+    setMemos(updated);
+    const memo = updated.find((m) => m.id === id);
+    if (memo) updateMemoInDB(memo);
+  };
+
+  const handleDeleteMemo = (id: string) => {
+    setMemos(memos.filter((m) => m.id !== id));
+    removeMemoFromDB(id);
+  };
+
+  const handleAddMemo = (author: "sophia" | "partner", message: string) => {
+    const newMemo: CoupleMemo = {
+      id: Date.now().toString(),
+      author,
+      message,
+      timestamp: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
+      pinned: false,
+    };
+    setMemos([newMemo, ...memos]);
+    addMemoToDB(newMemo);
   };
 
   // D-day form
@@ -410,22 +433,7 @@ const CoupleView = () => {
                     onChange={(e) => setNewMemoText(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && newMemoText.trim()) {
-                        setMemos([
-                          {
-                            id: Date.now().toString(),
-                            author: newMemoAuthor,
-                            message: newMemoText.trim(),
-                            timestamp: new Date().toLocaleString("ko-KR", {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }),
-                            pinned: false,
-                          },
-                          ...memos,
-                        ]);
+                        handleAddMemo(newMemoAuthor, newMemoText.trim());
                         setNewMemoText("");
                       }
                     }}
@@ -434,22 +442,7 @@ const CoupleView = () => {
                   <button
                     onClick={() => {
                       if (!newMemoText.trim()) return;
-                      setMemos([
-                        {
-                          id: Date.now().toString(),
-                          author: newMemoAuthor,
-                          message: newMemoText.trim(),
-                          timestamp: new Date().toLocaleString("ko-KR", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }),
-                          pinned: false,
-                        },
-                        ...memos,
-                      ]);
+                      handleAddMemo(newMemoAuthor, newMemoText.trim());
                       setNewMemoText("");
                     }}
                     className="bg-primary text-primary-foreground rounded-full p-2.5 hover:opacity-90 transition-opacity"
@@ -508,7 +501,7 @@ const CoupleView = () => {
                               {memo.pinned ? "공지 중" : "공지 등록"}
                             </button>
                             <button
-                              onClick={() => setMemos(memos.filter((m) => m.id !== memo.id))}
+                              onClick={() => handleDeleteMemo(memo.id)}
                               className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground/50 hover:text-destructive transition-colors rounded-full px-1.5 py-0.5"
                               title="삭제"
                             >
