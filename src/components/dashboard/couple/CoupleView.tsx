@@ -79,6 +79,18 @@ const CoupleView = () => {
   const [newDdayTitle, setNewDdayTitle] = useState("");
   const [newDdayEmoji, setNewDdayEmoji] = useState("\u2764\uFE0F");
   const [newDdayDate, setNewDdayDate] = useState("");
+  const [ddayYear, setDdayYear] = useState("");
+  const [ddayMonth, setDdayMonth] = useState("");
+  const [ddayDay, setDdayDay] = useState("");
+
+  // Sync year/month/day selects to newDdayDate
+  useEffect(() => {
+    if (ddayYear && ddayMonth && ddayDay) {
+      setNewDdayDate(`${ddayYear}-${ddayMonth.padStart(2, "0")}-${ddayDay.padStart(2, "0")}`);
+    } else {
+      setNewDdayDate("");
+    }
+  }, [ddayYear, ddayMonth, ddayDay]);
 
   // Wish form
   const [newWishTitle, setNewWishTitle] = useState("");
@@ -145,6 +157,9 @@ const CoupleView = () => {
     setNewDdayTitle("");
     setNewDdayEmoji("\u2764\uFE0F");
     setNewDdayDate("");
+    setDdayYear("");
+    setDdayMonth("");
+    setDdayDay("");
   };
 
   const deleteDday = (id: string) => {
@@ -242,15 +257,38 @@ const CoupleView = () => {
                     onChange={(e) => setNewDdayTitle(e.target.value)}
                     className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
                   />
-                  <input
-                    type="date"
-                    value={newDdayDate}
-                    onChange={(e) => setNewDdayDate(e.target.value)}
-                    min="2000-01-01"
-                    max="2099-12-31"
-                    className="bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 w-full sm:w-auto"
-                    style={{ minWidth: "150px" }}
-                  />
+                  <div className="flex gap-1 items-center">
+                    <select
+                      value={ddayYear}
+                      onChange={(e) => setDdayYear(e.target.value)}
+                      className="bg-background border border-border rounded-lg px-2 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      <option value="">년</option>
+                      {Array.from({ length: 30 }, (_, i) => 2020 + i).map((y) => (
+                        <option key={y} value={String(y)}>{y}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={ddayMonth}
+                      onChange={(e) => setDdayMonth(e.target.value)}
+                      className="bg-background border border-border rounded-lg px-2 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      <option value="">월</option>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                        <option key={m} value={String(m)}>{m}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={ddayDay}
+                      onChange={(e) => setDdayDay(e.target.value)}
+                      className="bg-background border border-border rounded-lg px-2 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      <option value="">일</option>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                        <option key={d} value={String(d)}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground font-mono">
