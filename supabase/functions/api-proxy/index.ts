@@ -12,6 +12,17 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+/** Safe JSON fetch - returns parsed JSON or error object, never throws on non-ok */
+async function safeFetchJson(url: string, options?: RequestInit): Promise<{ data: unknown; ok: boolean; status: number }> {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    return { data: { error: `HTTP ${res.status}`, message: text }, ok: false, status: res.status };
+  }
+  const data = await res.json();
+  return { data, ok: true, status: res.status };
+}
+
 serve(async (req) => {
   // CORS preflight
   if (req.method === "OPTIONS") {
@@ -27,28 +38,46 @@ serve(async (req) => {
       // ====== Yahoo Finance ======
       case "yahoo-quote": {
         const { symbol } = params;
-        const res = await fetch(
+        const result = await safeFetchJson(
           `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`
         );
-        data = await res.json();
+        if (!result.ok) {
+          return new Response(JSON.stringify(result.data), {
+            status: 200, // Return 200 so client can handle gracefully
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        data = result.data;
         break;
       }
 
       case "yahoo-historical": {
         const { symbol, range } = params;
-        const res = await fetch(
+        const result = await safeFetchJson(
           `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=${range || "1y"}`
         );
-        data = await res.json();
+        if (!result.ok) {
+          return new Response(JSON.stringify(result.data), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        data = result.data;
         break;
       }
 
       case "yahoo-news": {
         const { query } = params;
-        const res = await fetch(
+        const result = await safeFetchJson(
           `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query || "economy")}&newsCount=10`
         );
-        data = await res.json();
+        if (!result.ok) {
+          return new Response(JSON.stringify(result.data), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        data = result.data;
         break;
       }
 
@@ -110,6 +139,17 @@ serve(async (req) => {
         const { city, apiKey } = params;
         const res = await fetch(
           `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city || "Seoul")}&appid=${apiKey}&units=metric&lang=kr`
+        );
+        data = await res.json();
+        break;
+      }
+
+      // ====== 카카오 Maps ======
+      case "kakao-search": {
+        const { query, apiKey } = params;
+        const res = await fetch(
+          `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=15`,
+          { headers: { Authorization: `KakaoAK ${apiKey}` } }
         );
         data = await res.json();
         break;

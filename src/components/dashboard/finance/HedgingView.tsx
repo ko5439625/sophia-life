@@ -610,7 +610,7 @@ const HedgingView = () => {
       .sort((a, b) => b.value - a.value);
   })();
 
-  const [fearGreedValue, setFearGreedValue] = useState(68);
+  const [fearGreedValue, setFearGreedValue] = useState(42);
   const [loading, setLoading] = useState(true);
   const [nasdaqData, setNasdaqData] = useState(defaultNasdaqData);
   const [kospiData, setKospiData] = useState(defaultKospiData);
