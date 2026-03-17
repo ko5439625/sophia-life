@@ -10,12 +10,12 @@ const container = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.2 },
+    transition: { staggerChildren: 0.08, delayChildren: 0.3 },
   },
 };
 
 const child = {
-  hidden: { opacity: 0, y: 4 },
+  hidden: { opacity: 0, y: 8 },
   visible: {
     opacity: 1,
     y: 0,
@@ -26,7 +26,7 @@ const child = {
 const TypingLogo = ({ onLogoClick }: TypingLogoProps) => {
   return (
     <motion.span
-      className="font-mono text-xl font-semibold tracking-tight text-navy dark:text-foreground cursor-pointer select-none"
+      className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-navy dark:text-foreground cursor-pointer select-none"
       variants={container}
       initial="hidden"
       animate="visible"
@@ -41,7 +41,7 @@ const TypingLogo = ({ onLogoClick }: TypingLogoProps) => {
         className="inline-block typing-cursor text-primary ml-0.5"
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 1, 0] }}
-        transition={{ duration: 1, repeat: 3, delay: 0.8 }}
+        transition={{ duration: 0.8, repeat: 4, delay: 1.2 }}
       >
         _
       </motion.span>
