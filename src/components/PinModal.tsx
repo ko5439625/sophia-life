@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Delete, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const CORRECT_PIN = "1234"; // TODO: move to env/db
+const CORRECT_PIN = "1002";
 
 interface PinModalProps {
   open: boolean;

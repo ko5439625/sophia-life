@@ -12,7 +12,7 @@ const BlogHeader = () => {
     clickCountRef.current += 1;
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     
-    if (clickCountRef.current >= 10) {
+    if (clickCountRef.current >= 5) {
       clickCountRef.current = 0;
       setShowPin(true);
     } else {
