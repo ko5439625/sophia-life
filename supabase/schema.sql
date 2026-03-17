@@ -248,6 +248,21 @@ create table if not exists favorite_apartments (
 );
 
 -- ============================================================
+-- 17. 자산 - 보유 부동산
+-- ============================================================
+create table if not exists owned_properties (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) on delete cascade,
+  name text not null,
+  address text default '',
+  purchase_price numeric default 0,
+  current_value numeric default 0,
+  purchase_date date,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- ============================================================
 -- Row Level Security (RLS) - 모든 테이블에 적용
 -- ============================================================
 alter table posts enable row level security;
@@ -266,6 +281,7 @@ alter table albums enable row level security;
 alter table memos enable row level security;
 alter table user_settings enable row level security;
 alter table favorite_apartments enable row level security;
+alter table owned_properties enable row level security;
 
 -- RLS Policies: 본인 데이터만 접근 가능
 -- (PIN 인증 방식이라 auth 없이 사용할 수도 있으므로,
@@ -287,6 +303,7 @@ create policy "Allow all access" on albums for all using (true) with check (true
 create policy "Allow all access" on memos for all using (true) with check (true);
 create policy "Allow all access" on user_settings for all using (true) with check (true);
 create policy "Allow all access" on favorite_apartments for all using (true) with check (true);
+create policy "Allow all access" on owned_properties for all using (true) with check (true);
 
 -- 블로그 공개 글은 비인증 사용자도 읽기 가능
 create policy "Public posts readable" on posts for select using (is_public = true);

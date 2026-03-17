@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 import { proxyFetch } from "../../../services/proxyFetch";
+import { supabase } from "../../../lib/supabase";
 import {
   Lock,
   Tag,
@@ -406,23 +407,61 @@ const SettingsView = () => {
   });
   const [aiApiMessage, setAiApiMessage] = useState<string | null>(null);
 
-  // Load API keys from localStorage on mount
+  // Load API keys: Supabase → localStorage (cross-device sync)
   useEffect(() => {
-    try {
-      setApiKeys({
+    const loadKeys = async () => {
+      // 1. Load from localStorage first (instant)
+      const localApiKeys = {
         kakao: localStorage.getItem("sophia-api-kakao") || "",
         news: localStorage.getItem("sophia-api-news") || "",
         stock: localStorage.getItem("sophia-api-stock") || "",
         data: localStorage.getItem("sophia-api-data") || "",
         weather: localStorage.getItem("sophia-api-weather") || "",
-      });
-      setAiApiKeys({
+      };
+      const localAiKeys = {
         openai: localStorage.getItem("sophia-api-openai") || "",
         gemini: localStorage.getItem("sophia-api-gemini") || "",
-      });
-    } catch (e) {
-      console.warn("Failed to load API keys from localStorage:", e);
-    }
+      };
+      setApiKeys(localApiKeys);
+      setAiApiKeys(localAiKeys);
+
+      // 2. Then sync from Supabase (cross-device)
+      if (!supabase) return;
+      try {
+        const { data } = await supabase
+          .from("user_settings")
+          .select("api_keys")
+          .limit(1)
+          .single();
+
+        if (data?.api_keys && typeof data.api_keys === "object") {
+          const remote = data.api_keys as Record<string, string>;
+          const merged = {
+            kakao: remote.kakao || localApiKeys.kakao,
+            news: remote.news || localApiKeys.news,
+            stock: remote.stock || localApiKeys.stock,
+            data: remote.data || localApiKeys.data,
+            weather: remote.weather || localApiKeys.weather,
+          };
+          const mergedAi = {
+            openai: remote.openai || localAiKeys.openai,
+            gemini: remote.gemini || localAiKeys.gemini,
+          };
+          setApiKeys(merged);
+          setAiApiKeys(mergedAi);
+          // Update localStorage with remote values
+          Object.entries(merged).forEach(([k, v]) => {
+            if (v) localStorage.setItem(`sophia-api-${k}`, v);
+          });
+          Object.entries(mergedAi).forEach(([k, v]) => {
+            if (v) localStorage.setItem(`sophia-api-${k}`, v);
+          });
+        }
+      } catch (e) {
+        console.warn("[Settings] Supabase API key sync failed:", e);
+      }
+    };
+    loadKeys();
   }, []);
 
   // Category lock PIN
@@ -529,6 +568,18 @@ const SettingsView = () => {
     setTimeout(() => setPersonalInfoMessage(null), 3000);
   };
 
+  // Sync all API keys to Supabase
+  const syncApiKeysToSupabase = async (allKeys: Record<string, string>) => {
+    if (!supabase) return;
+    try {
+      await supabase
+        .from("user_settings")
+        .upsert({ id: "default", api_keys: allKeys });
+    } catch (e) {
+      console.warn("[Settings] Supabase API key save failed:", e);
+    }
+  };
+
   const handleSaveApiKeys = () => {
     try {
       localStorage.setItem("sophia-api-kakao", apiKeys.kakao);
@@ -536,7 +587,9 @@ const SettingsView = () => {
       localStorage.setItem("sophia-api-stock", apiKeys.stock);
       localStorage.setItem("sophia-api-data", apiKeys.data);
       localStorage.setItem("sophia-api-weather", apiKeys.weather);
-      setApiMessage("API 키가 저장되었습니다.");
+      // Sync to Supabase (merge with AI keys)
+      syncApiKeysToSupabase({ ...apiKeys, ...aiApiKeys });
+      setApiMessage("API 키가 저장되었습니다. (클라우드 동기화 완료)");
     } catch (e) {
       console.warn("Failed to save API keys:", e);
       setApiMessage("저장 실패");
@@ -548,7 +601,9 @@ const SettingsView = () => {
     try {
       localStorage.setItem("sophia-api-openai", aiApiKeys.openai);
       localStorage.setItem("sophia-api-gemini", aiApiKeys.gemini);
-      setAiApiMessage("AI API 키가 저장되었습니다.");
+      // Sync to Supabase (merge with data keys)
+      syncApiKeysToSupabase({ ...apiKeys, ...aiApiKeys });
+      setAiApiMessage("AI API 키가 저장되었습니다. (클라우드 동기화 완료)");
     } catch (e) {
       console.warn("Failed to save AI API keys:", e);
       setAiApiMessage("저장 실패");

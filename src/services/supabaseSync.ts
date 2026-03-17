@@ -166,7 +166,7 @@ export async function loadFinancialData(): Promise<Partial<FinancialState> | nul
       await Promise.all([
         supabase.from("holdings").select("*"),
         supabase.from("trades").select("*"),
-        supabase.from("expenses").select("*"),
+        supabase.from("finances").select("*"),
         supabase.from("budgets").select("*"),
         supabase.from("pension_funds").select("*"),
         supabase.from("user_settings").select("*").limit(1).single(),
@@ -216,7 +216,7 @@ export async function loadFinancialData(): Promise<Partial<FinancialState> | nul
 export async function saveExpense(expense: Expense): Promise<void> {
   if (!isReady() || !supabase) return;
   try {
-    await supabase.from("expenses").upsert(expenseToRow(expense));
+    await supabase.from("finances").upsert(expenseToRow(expense));
   } catch (err) {
     console.error("[supabaseSync] saveExpense error:", err);
   }
@@ -225,7 +225,7 @@ export async function saveExpense(expense: Expense): Promise<void> {
 export async function deleteExpense(id: string): Promise<void> {
   if (!isReady() || !supabase) return;
   try {
-    await supabase.from("expenses").delete().eq("id", id);
+    await supabase.from("finances").delete().eq("id", id);
   } catch (err) {
     console.error("[supabaseSync] deleteExpense error:", err);
   }
