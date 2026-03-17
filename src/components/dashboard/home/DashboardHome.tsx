@@ -36,7 +36,7 @@ interface DashboardHomeProps {
 
 const mockChecklist: { id: string; title: string; isDone: boolean }[] = [];
 
-const events: { id: string; title: string; emoji: string; date: string }[] = [];
+const initialEvents: { id: string; title: string; emoji: string; date: string }[] = [];
 
 // Pinned memos are loaded from shared memo store
 
@@ -240,7 +240,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
   const { state, getMonthlyExpenseTotal } = useFinancial();
   const { isGuest, maskAmount } = useGuestMode();
   const [checklist, setChecklist] = useState(mockChecklist);
-  const [events, setEvents] = useState(events);
+  const [events, setEvents] = useState(initialEvents);
   const [pinnedMemos, setPinnedMemos] = useState<CoupleMemo[]>([]);
 
   // Load checklist, events, pinned memos from Supabase
