@@ -1072,6 +1072,45 @@ const SettingsView = () => {
           </button>
         </div>
       </CollapsibleSection>
+
+      {/* API 연결 상태 */}
+      <div className="bg-card rounded-xl p-5 space-y-3 border border-border">
+        <h3 className="text-sm font-bold flex items-center gap-2">
+          <Shield className="h-4 w-4 text-primary" />
+          API 연결 상태
+        </h3>
+        <div className="space-y-2">
+          {[
+            { name: "Supabase", key: "VITE_SUPABASE_URL", check: () => !!import.meta.env.VITE_SUPABASE_URL },
+            { name: "Gemini (분석/번역)", key: "sophia-api-gemini", check: () => !!localStorage.getItem("sophia-api-gemini") },
+            { name: "OpenAI (블로그 AI)", key: "sophia-api-openai", check: () => !!localStorage.getItem("sophia-api-openai") },
+            { name: "Yahoo Finance", key: "자동", check: () => true },
+            { name: "Alpha Vantage (백업)", key: "sophia-api-stock", check: () => !!localStorage.getItem("sophia-api-stock") },
+            { name: "NewsAPI (뉴스)", key: "sophia-api-news", check: () => !!localStorage.getItem("sophia-api-news") },
+            { name: "공공데이터 (부동산/청약)", key: "sophia-api-data", check: () => !!localStorage.getItem("sophia-api-data") },
+            { name: "카카오 Maps (장소)", key: "sophia-api-kakao", check: () => !!localStorage.getItem("sophia-api-kakao") },
+            { name: "OpenWeatherMap (날씨)", key: "sophia-api-weather", check: () => !!localStorage.getItem("sophia-api-weather") },
+            { name: "Fear & Greed Index", key: "자동", check: () => true },
+            { name: "환율 (ExchangeRate)", key: "자동", check: () => true },
+          ].map((api) => {
+            const connected = api.check();
+            return (
+              <div key={api.name} className="flex items-center justify-between py-1.5">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-400"}`} />
+                  <span className="text-xs">{api.name}</span>
+                </div>
+                <span className={`text-[10px] font-mono ${connected ? "text-green-500" : "text-red-400"}`}>
+                  {connected ? "연결됨" : "미설정"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-2">
+          API 키를 위 섹션에서 입력하면 자동으로 연결됩니다. "자동"은 키 없이 동작합니다.
+        </p>
+      </div>
     </div>
   );
 };
