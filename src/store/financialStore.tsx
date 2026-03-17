@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import {
@@ -13,6 +14,8 @@ import {
   defaultCategories,
 } from "@/components/dashboard/finance/budgetData";
 import { mockTransactions } from "@/components/dashboard/finance/ExpenseInput";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import * as sync from "@/services/supabaseSync";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -493,8 +496,22 @@ function saveToStorage(state: FinancialState) {
 export function FinancialProvider({ children }: { children: ReactNode }) {
   const initialState = loadFromStorage() ?? DEFAULT_STATE;
   const [state, dispatch] = useReducer(financialReducer, initialState);
+  const supabaseReady = useRef(isSupabaseConfigured());
 
-  // Persist on every state change
+  // Load from Supabase on mount (if configured)
+  useEffect(() => {
+    if (!supabaseReady.current) return;
+    sync.loadFinancialData().then((data) => {
+      if (data && Object.keys(data).length > 0) {
+        dispatch({
+          type: "LOAD_STATE",
+          payload: { ...DEFAULT_STATE, ...data },
+        });
+      }
+    });
+  }, []);
+
+  // Persist on every state change (localStorage always, as fallback)
   useEffect(() => {
     saveToStorage(state);
   }, [state]);
@@ -504,24 +521,47 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
 
   // --- Action callbacks (stable references) ---
   const addExpense = useCallback(
-    (expense: Expense) => dispatch({ type: "ADD_EXPENSE", payload: expense }),
+    (expense: Expense) => {
+      dispatch({ type: "ADD_EXPENSE", payload: expense });
+      if (supabaseReady.current) sync.saveExpense(expense);
+    },
     []
   );
   const removeExpense = useCallback(
-    (id: string) => dispatch({ type: "REMOVE_EXPENSE", payload: id }),
+    (id: string) => {
+      dispatch({ type: "REMOVE_EXPENSE", payload: id });
+      if (supabaseReady.current) sync.deleteExpense(id);
+    },
     []
   );
   const addHolding = useCallback(
-    (holding: Holding) => dispatch({ type: "ADD_HOLDING", payload: holding }),
+    (holding: Holding) => {
+      dispatch({ type: "ADD_HOLDING", payload: holding });
+      if (supabaseReady.current) sync.saveHolding(holding);
+    },
     []
   );
   const updateHolding = useCallback(
-    (id: string, data: Partial<Holding>) =>
-      dispatch({ type: "UPDATE_HOLDING", payload: { id, data } }),
-    []
+    (id: string, data: Partial<Holding>) => {
+      dispatch({ type: "UPDATE_HOLDING", payload: { id, data } });
+      // We need the merged holding for Supabase; derive it inline
+      if (supabaseReady.current) {
+        // Find the current holding and merge – use a setTimeout to let the
+        // reducer run first, then read from latest state via a microtask.
+        // However, since we have `data` and `id`, we can reconstruct:
+        // Actually safer to just upsert partial – let the next full state
+        // persist handle it. Instead we do a quick lookup.
+        const merged = state.holdings.find((h) => h.id === id);
+        if (merged) sync.saveHolding({ ...merged, ...data });
+      }
+    },
+    [state.holdings]
   );
   const removeHolding = useCallback(
-    (id: string) => dispatch({ type: "REMOVE_HOLDING", payload: id }),
+    (id: string) => {
+      dispatch({ type: "REMOVE_HOLDING", payload: id });
+      if (supabaseReady.current) sync.deleteHolding(id);
+    },
     []
   );
   const sellHolding = useCallback(
@@ -530,48 +570,139 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
       quantity: number,
       sellPrice: number,
       destination: "cash" | "reinvest" | "savings"
-    ) =>
+    ) => {
       dispatch({
         type: "SELL_HOLDING",
         payload: { id, quantity, sellPrice, destination },
-      }),
-    []
+      });
+      // Complex action: the reducer creates a trade and updates holdings + cash.
+      // We sync the full resulting holdings + new trade after state settles.
+      // Use a microtask so the reducer runs first.
+      if (supabaseReady.current) {
+        const holding = state.holdings.find((h) => h.id === id);
+        if (holding) {
+          const realizedPnl = (sellPrice - holding.avgPrice) * quantity;
+          const trade: Trade = {
+            id: `t-${Date.now()}`,
+            date: new Date().toISOString().split("T")[0],
+            type: "sell",
+            holdingName: holding.name,
+            quantity,
+            price: sellPrice,
+            totalAmount: sellPrice * quantity,
+            realizedPnl,
+            destination,
+          };
+          const updatedHoldings =
+            quantity >= holding.quantity
+              ? state.holdings.filter((h) => h.id !== id)
+              : state.holdings.map((h) =>
+                  h.id === id ? { ...h, quantity: h.quantity - quantity } : h
+                );
+          const cashDelta =
+            destination === "cash" || destination === "savings"
+              ? sellPrice * quantity
+              : 0;
+          sync.syncHoldingsAndTrades(
+            updatedHoldings,
+            trade,
+            state.cashSavings + cashDelta
+          );
+          // If holding was fully sold, also delete it from Supabase
+          if (quantity >= holding.quantity) {
+            sync.deleteHolding(id);
+          }
+        }
+      }
+    },
+    [state.holdings, state.cashSavings]
   );
   const buyHolding = useCallback(
-    (holding: Holding) => dispatch({ type: "BUY_HOLDING", payload: holding }),
-    []
+    (holding: Holding) => {
+      dispatch({ type: "BUY_HOLDING", payload: holding });
+      if (supabaseReady.current) {
+        const cost = holding.avgPrice * holding.quantity;
+        const trade: Trade = {
+          id: `t-${Date.now()}`,
+          date: new Date().toISOString().split("T")[0],
+          type: "buy",
+          holdingName: holding.name,
+          quantity: holding.quantity,
+          price: holding.avgPrice,
+          totalAmount: cost,
+        };
+        // Merge logic mirrors reducer
+        const existing = state.holdings.find((h) => h.name === holding.name);
+        let finalHolding: Holding;
+        if (existing) {
+          const totalQty = existing.quantity + holding.quantity;
+          const newAvg =
+            (existing.avgPrice * existing.quantity +
+              holding.avgPrice * holding.quantity) /
+            totalQty;
+          finalHolding = {
+            ...existing,
+            quantity: totalQty,
+            avgPrice: Math.round(newAvg),
+            currentPrice: holding.currentPrice || existing.currentPrice,
+          };
+        } else {
+          finalHolding = holding;
+        }
+        sync.saveHolding(finalHolding);
+        sync.saveTrade(trade);
+        sync.saveSettings({ cashSavings: Math.max(0, state.cashSavings - cost) });
+      }
+    },
+    [state.holdings, state.cashSavings]
   );
   const updateBudget = useCallback(
-    (month: string, budget: MonthlyBudget) =>
-      dispatch({ type: "UPDATE_BUDGET", payload: { month, budget } }),
+    (month: string, budget: MonthlyBudget) => {
+      dispatch({ type: "UPDATE_BUDGET", payload: { month, budget } });
+      if (supabaseReady.current) sync.saveBudget(month, budget);
+    },
     []
   );
   const addPensionFund = useCallback(
-    (fund: PensionFund) =>
-      dispatch({ type: "ADD_PENSION_FUND", payload: fund }),
+    (fund: PensionFund) => {
+      dispatch({ type: "ADD_PENSION_FUND", payload: fund });
+      if (supabaseReady.current) sync.savePensionFund(fund);
+    },
     []
   );
   const updatePensionFund = useCallback(
-    (id: string, data: Partial<PensionFund>) =>
-      dispatch({ type: "UPDATE_PENSION_FUND", payload: { id, data } }),
-    []
+    (id: string, data: Partial<PensionFund>) => {
+      dispatch({ type: "UPDATE_PENSION_FUND", payload: { id, data } });
+      if (supabaseReady.current) {
+        const merged = state.pensionFunds.find((f) => f.id === id);
+        if (merged) sync.savePensionFund({ ...merged, ...data });
+      }
+    },
+    [state.pensionFunds]
   );
   const updateSettings = useCallback(
     (
       settings: Partial<
         Pick<FinancialState, "annualIncome1" | "annualIncome2" | "monthlyLoanPayment" | "cashSavings" | "emergencyFund">
       >
-    ) => dispatch({ type: "UPDATE_SETTINGS", payload: settings }),
+    ) => {
+      dispatch({ type: "UPDATE_SETTINGS", payload: settings });
+      if (supabaseReady.current) sync.saveSettings(settings);
+    },
     []
   );
   const addOwnedProperty = useCallback(
-    (property: OwnedProperty) =>
-      dispatch({ type: "ADD_OWNED_PROPERTY", payload: property }),
+    (property: OwnedProperty) => {
+      dispatch({ type: "ADD_OWNED_PROPERTY", payload: property });
+      if (supabaseReady.current) sync.saveOwnedProperty(property);
+    },
     []
   );
   const removeOwnedProperty = useCallback(
-    (id: string) =>
-      dispatch({ type: "REMOVE_OWNED_PROPERTY", payload: id }),
+    (id: string) => {
+      dispatch({ type: "REMOVE_OWNED_PROPERTY", payload: id });
+      if (supabaseReady.current) sync.deleteOwnedProperty(id);
+    },
     []
   );
 
