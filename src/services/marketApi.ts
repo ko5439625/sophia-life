@@ -2,6 +2,7 @@
 // Yahoo Finance is the primary data source (no API key needed).
 // Alpha Vantage and open.er-api.com serve as fallbacks.
 
+import { proxyFetch } from "./proxyFetch";
 import {
   getQuote as yahooGetQuote,
   getHistorical as yahooGetHistorical,
@@ -94,11 +95,11 @@ export async function getFearGreedIndex(): Promise<FearGreedResult> {
 }
 
 // ---------------------------------------------------------------------------
-// Stock Quotes: Yahoo Finance (primary) → Alpha Vantage (fallback) → mock
+// Stock Quotes: proxy → Yahoo Finance → Alpha Vantage → mock
 // ---------------------------------------------------------------------------
 
 async function yahooGetStockQuote(symbol: string): Promise<StockQuote> {
-  // Fetch quote from Yahoo
+  // Fetch quote from Yahoo (already uses proxy internally)
   const quote = await yahooGetQuote(symbol);
 
   // Also fetch 30 days of historical data for chart
@@ -200,7 +201,7 @@ function mockGetStockQuote(symbol: string): StockQuote {
 }
 
 export async function getStockQuote(symbol: string): Promise<StockQuote> {
-  // 1. Try Yahoo Finance (no key needed)
+  // 1. Try Yahoo Finance (internally uses proxy → direct → mock)
   try {
     return await yahooGetStockQuote(symbol);
   } catch (e) {
@@ -231,21 +232,56 @@ export async function getKoreanStockQuote(symbol: string): Promise<StockQuote> {
 }
 
 // ---------------------------------------------------------------------------
-// Historical Data (for charts)
+// Historical Data (for charts): proxy → Yahoo → mock
 // ---------------------------------------------------------------------------
 
 export async function getHistoricalData(
   symbol: string,
   range: string = "1y",
 ): Promise<HistoricalDataPoint[]> {
-  // 1. Try Yahoo Finance
+  // 1. Try Supabase proxy
+  try {
+    const proxyResult = await proxyFetch<{
+      chart?: {
+        result?: Array<{
+          timestamp?: number[];
+          indicators?: { quote?: Array<{ close?: number[]; volume?: number[] }> };
+        }>;
+      };
+    }>("yahoo-historical", { symbol, range });
+
+    if (proxyResult) {
+      const result = proxyResult.chart?.result?.[0];
+      if (result) {
+        const timestamps: number[] = result.timestamp || [];
+        const closes: number[] = result.indicators?.quote?.[0]?.close || [];
+        const volumes: number[] = result.indicators?.quote?.[0]?.volume || [];
+        const data: HistoricalDataPoint[] = [];
+        for (let i = 0; i < timestamps.length; i++) {
+          const closeVal = closes[i];
+          if (closeVal == null || isNaN(closeVal)) continue;
+          const d = new Date(timestamps[i] * 1000);
+          data.push({
+            date: d.toISOString().split("T")[0],
+            close: Math.round(closeVal * 100) / 100,
+            volume: volumes[i] || 0,
+          });
+        }
+        if (data.length > 0) return data;
+      }
+    }
+  } catch (e) {
+    console.warn(`[getHistoricalData] proxy failed for ${symbol}:`, e);
+  }
+
+  // 2. Try Yahoo Finance direct
   try {
     return await yahooGetHistorical(symbol, range);
   } catch (e) {
     console.warn(`Yahoo historical data failed for ${symbol}:`, e);
   }
 
-  // 2. Fall back to mock data
+  // 3. Fall back to mock data
   const mockData: HistoricalDataPoint[] = [];
   const now = new Date();
   const days = range === "1mo" ? 30 : range === "3mo" ? 90 : range === "6mo" ? 180 : range === "5y" ? 1825 : 365;
@@ -270,7 +306,7 @@ export async function getHistoricalData(
 }
 
 // ---------------------------------------------------------------------------
-// Exchange Rate: Yahoo Finance (primary) → open.er-api (fallback) → mock
+// Exchange Rate: proxy → Yahoo → open.er-api → mock
 // ---------------------------------------------------------------------------
 
 async function realGetExchangeRate(
@@ -304,7 +340,7 @@ export async function getExchangeRate(
   from: string,
   to: string,
 ): Promise<ExchangeRateResult> {
-  // 1. Try Yahoo Finance (has change data)
+  // 1. Try Yahoo Finance (has change data, internally uses proxy → direct → mock)
   try {
     const result = await getYahooExchangeRate(from, to);
     return result;

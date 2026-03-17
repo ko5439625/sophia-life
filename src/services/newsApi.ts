@@ -2,6 +2,8 @@
 // NewsAPI free tier does NOT allow client-side requests (CORS blocked).
 // A backend proxy is required for production use.
 
+import { proxyFetch } from "./proxyFetch";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -28,7 +30,7 @@ function getApiKey(): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Real API function
+// Real API function (direct fetch)
 // ---------------------------------------------------------------------------
 
 async function realGetNews(
@@ -223,18 +225,57 @@ function mockGetNews(
 }
 
 // ---------------------------------------------------------------------------
-// Unified export (try real API, fall back to mock)
+// Unified export: proxy → direct → mock
 // ---------------------------------------------------------------------------
 
 export async function getNews(
   category?: string,
   country?: string,
 ): Promise<NewsArticle[]> {
+  const apiKey = getApiKey();
+  const resolvedCountry = country || "kr";
+  const cat = category || "general";
+  const isEnglish = resolvedCountry === "us";
+
+  // 1. Try Supabase proxy
   try {
-    if (!getApiKey()) return mockGetNews(category, country);
-    return await realGetNews(category, country);
+    const proxyResult = await proxyFetch<{
+      status?: string;
+      articles?: Array<{
+        title?: string;
+        description?: string;
+        source?: { name?: string };
+        url?: string;
+        publishedAt?: string;
+        urlToImage?: string | null;
+      }>;
+    }>("news", { category: cat, country: resolvedCountry, apiKey: apiKey || "" });
+
+    if (proxyResult && proxyResult.articles) {
+      return proxyResult.articles.map((article) => ({
+        title: article.title || "",
+        description: article.description || "",
+        source: article.source?.name || "Unknown",
+        url: article.url || "",
+        publishedAt: article.publishedAt || new Date().toISOString(),
+        urlToImage: article.urlToImage || null,
+        category: cat,
+        isEnglish,
+      }));
+    }
   } catch (e) {
-    console.warn("News API failed, using mock:", e);
-    return mockGetNews(category, country);
+    console.warn("[getNews] proxy failed:", e);
   }
+
+  // 2. Try direct API (requires API key)
+  try {
+    if (apiKey) {
+      return await realGetNews(category, country);
+    }
+  } catch (e) {
+    console.warn("News API direct failed, using mock:", e);
+  }
+
+  // 3. Mock fallback
+  return mockGetNews(category, country);
 }

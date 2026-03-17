@@ -1,6 +1,8 @@
 // NOTE: Some APIs require a backend proxy to avoid CORS. For development, use mock data.
 // 국토교통부 API returns XML and may require a backend proxy for CORS.
 
+import { proxyFetch } from "./proxyFetch";
+
 export interface ApartmentTransaction {
   id: string;
   aptName: string; // 아파트명
@@ -170,28 +172,13 @@ function getApiKey(): string | null {
 }
 
 /**
- * Fetch real apartment transactions from 국토교통부 API.
- * The API returns XML, which we parse via DOMParser.
+ * Parse XML response from 국토교통부 API into ApartmentTransaction[]
  */
-async function realFetchTransactions(
+function parseMolitXml(
+  xmlText: string,
   regionCode: string,
   yearMonth: string,
-): Promise<ApartmentTransaction[]> {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("No 국토교통부 API key");
-
-  const params = new URLSearchParams({
-    serviceKey: apiKey,
-    LAWD_CD: regionCode,
-    DEAL_YMD: yearMonth,
-    pageNo: "1",
-    numOfRows: "100",
-  });
-
-  const res = await fetch(`${MOLIT_ENDPOINT}?${params.toString()}`);
-  if (!res.ok) throw new Error(`국토교통부 API error ${res.status}`);
-
-  const xmlText = await res.text();
+): ApartmentTransaction[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlText, "text/xml");
 
@@ -223,20 +210,72 @@ async function realFetchTransactions(
 }
 
 /**
- * Unified fetch: tries real API first, falls back to returning empty array.
+ * Fetch real apartment transactions from 국토교통부 API (direct).
+ */
+async function realFetchTransactions(
+  regionCode: string,
+  yearMonth: string,
+): Promise<ApartmentTransaction[]> {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("No 국토교통부 API key");
+
+  const params = new URLSearchParams({
+    serviceKey: apiKey,
+    LAWD_CD: regionCode,
+    DEAL_YMD: yearMonth,
+    pageNo: "1",
+    numOfRows: "100",
+  });
+
+  const res = await fetch(`${MOLIT_ENDPOINT}?${params.toString()}`);
+  if (!res.ok) throw new Error(`국토교통부 API error ${res.status}`);
+
+  const xmlText = await res.text();
+  return parseMolitXml(xmlText, regionCode, yearMonth);
+}
+
+/**
+ * Unified fetch: proxy → direct → empty array.
  * For full mock data, use searchApartments / getAllApartments below.
  */
 export async function fetchRealTransactions(
   regionCode: string,
   yearMonth: string,
 ): Promise<ApartmentTransaction[]> {
+  const apiKey = getApiKey();
+
+  // 1. Try Supabase proxy
   try {
-    if (!getApiKey()) return [];
-    return await realFetchTransactions(regionCode, yearMonth);
+    const proxyResult = await proxyFetch<{ xml?: string; data?: ApartmentTransaction[] }>(
+      "molit-trade",
+      { regionCode, yearMonth, apiKey: apiKey || "" },
+    );
+
+    if (proxyResult) {
+      // If the proxy returns pre-parsed data
+      if (proxyResult.data && Array.isArray(proxyResult.data) && proxyResult.data.length > 0) {
+        return proxyResult.data;
+      }
+      // If the proxy returns raw XML
+      if (proxyResult.xml) {
+        return parseMolitXml(proxyResult.xml, regionCode, yearMonth);
+      }
+    }
+  } catch (e) {
+    console.warn("[fetchRealTransactions] proxy failed:", e);
+  }
+
+  // 2. Try direct API
+  try {
+    if (apiKey) {
+      return await realFetchTransactions(regionCode, yearMonth);
+    }
   } catch (e) {
     console.warn("국토교통부 API failed:", e);
-    return [];
   }
+
+  // 3. Mock fallback (empty array - callers use searchApartments for mock data)
+  return [];
 }
 
 // ---------------------------------------------------------------------------

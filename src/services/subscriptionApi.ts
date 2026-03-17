@@ -2,6 +2,8 @@
 // 분양 정보 API - 청약홈 공공 API
 // ---------------------------------------------------------------------------
 
+import { proxyFetch } from "./proxyFetch";
+
 export interface SubscriptionInfo {
   id: string;
   houseName: string;        // 주택명
@@ -40,7 +42,7 @@ function getApiKey(): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Real API fetch
+// Real API fetch (direct)
 // ---------------------------------------------------------------------------
 
 const APT_SUBSCRIPTION_ENDPOINT =
@@ -70,53 +72,70 @@ function parseDate(raw: string | undefined): string {
   return raw;
 }
 
+function mapApiItems(items: ApiResponseItem[]): SubscriptionInfo[] {
+  return items.map((item, idx) => ({
+    id: item.PBLANC_NO ?? `api-${idx}`,
+    houseName: item.HOUSE_NM ?? "알 수 없음",
+    region: item.SUBSCRPT_AREA_CODE_NM ?? "",
+    houseType: item.HOUSE_SECD_NM ?? "아파트",
+    totalSupply: item.TOT_SUPLY_HSHLDCO ?? 0,
+    applyStartDate: parseDate(item.RCEPT_BGNDE),
+    applyEndDate: parseDate(item.RCEPT_ENDDE),
+    announcementDate: parseDate(item.PRZWNER_PRESNATN_DE),
+    moveInDate: item.MVN_PREARNGE_YM ?? "",
+    constructorName: item.CNSTRCT_ENTRPS_NM ?? item.BSNS_MBY_NM ?? "",
+    priceRange: "",
+  }));
+}
+
 export async function fetchSubscriptions(): Promise<SubscriptionInfo[]> {
   const apiKey = getApiKey();
-  if (!apiKey) {
-    console.warn("No API key found, using mock data");
-    return getMockSubscriptions();
-  }
 
+  // 1. Try Supabase proxy
   try {
-    const params = new URLSearchParams({
-      serviceKey: apiKey,
-      page: "1",
-      perPage: "30",
-    });
+    const proxyResult = await proxyFetch<{
+      data?: ApiResponseItem[];
+      currentCount?: number;
+    }>("subscription", { apiKey: apiKey || "", page: 1 });
 
-    const res = await fetch(`${APT_SUBSCRIPTION_ENDPOINT}?${params.toString()}`, {
-      headers: { accept: "application/json" },
-    });
-
-    if (!res.ok) {
-      console.warn("Subscription API error, falling back to mock data");
-      return getMockSubscriptions();
+    if (proxyResult && proxyResult.data && proxyResult.data.length > 0) {
+      return mapApiItems(proxyResult.data);
     }
-
-    const json = await res.json();
-    const items: ApiResponseItem[] = json.data ?? [];
-
-    if (items.length === 0) {
-      return getMockSubscriptions();
-    }
-
-    return items.map((item, idx) => ({
-      id: item.PBLANC_NO ?? `api-${idx}`,
-      houseName: item.HOUSE_NM ?? "알 수 없음",
-      region: item.SUBSCRPT_AREA_CODE_NM ?? "",
-      houseType: item.HOUSE_SECD_NM ?? "아파트",
-      totalSupply: item.TOT_SUPLY_HSHLDCO ?? 0,
-      applyStartDate: parseDate(item.RCEPT_BGNDE),
-      applyEndDate: parseDate(item.RCEPT_ENDDE),
-      announcementDate: parseDate(item.PRZWNER_PRESNATN_DE),
-      moveInDate: item.MVN_PREARNGE_YM ?? "",
-      constructorName: item.CNSTRCT_ENTRPS_NM ?? item.BSNS_MBY_NM ?? "",
-      priceRange: "",
-    }));
-  } catch (err) {
-    console.warn("Subscription API fetch failed:", err);
-    return getMockSubscriptions();
+  } catch (e) {
+    console.warn("[fetchSubscriptions] proxy failed:", e);
   }
+
+  // 2. Try direct API
+  if (apiKey) {
+    try {
+      const params = new URLSearchParams({
+        serviceKey: apiKey,
+        page: "1",
+        perPage: "30",
+      });
+
+      const res = await fetch(`${APT_SUBSCRIPTION_ENDPOINT}?${params.toString()}`, {
+        headers: { accept: "application/json" },
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const items: ApiResponseItem[] = json.data ?? [];
+
+        if (items.length > 0) {
+          return mapApiItems(items);
+        }
+      } else {
+        console.warn("Subscription API error:", res.status);
+      }
+    } catch (err) {
+      console.warn("Subscription API fetch failed:", err);
+    }
+  }
+
+  // 3. Mock fallback
+  console.warn("Using mock subscription data");
+  return getMockSubscriptions();
 }
 
 // ---------------------------------------------------------------------------
