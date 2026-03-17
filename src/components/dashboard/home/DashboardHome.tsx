@@ -28,6 +28,7 @@ import { getPinnedMemos } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
+import { loadTodos, loadEvents } from "../../../services/supabaseSync";
 
 interface DashboardHomeProps {
   onNavigate?: (tabId: string) => void;
@@ -35,7 +36,7 @@ interface DashboardHomeProps {
 
 const mockChecklist: { id: string; title: string; isDone: boolean }[] = [];
 
-const mockEvents: { id: string; title: string; emoji: string; date: string }[] = [];
+const events: { id: string; title: string; emoji: string; date: string }[] = [];
 
 // Pinned memos are loaded from shared memo store
 
@@ -64,7 +65,7 @@ function generateAlerts(
   fearGreedValue: number | null,
   stockQuotes: Record<string, StockQuote>,
   exchangeRate: ExchangeRateResult | null,
-  events: typeof mockEvents,
+  events: { id: string; title: string; emoji: string; date: string }[],
   budgetUsed: number,
   budgetTotal: number,
 ): Alert[] {
@@ -239,11 +240,33 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
   const { state, getMonthlyExpenseTotal } = useFinancial();
   const { isGuest, maskAmount } = useGuestMode();
   const [checklist, setChecklist] = useState(mockChecklist);
+  const [events, setEvents] = useState(events);
   const [pinnedMemos, setPinnedMemos] = useState<CoupleMemo[]>([]);
 
-  // Load pinned memos
+  // Load checklist, events, pinned memos from Supabase
   useEffect(() => {
     setPinnedMemos(getPinnedMemos());
+
+    // Load today's todos
+    loadTodos().then((rows) => {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayTodos = rows
+        .filter((r) => r.date === todayStr)
+        .map((r) => ({ id: r.id, title: r.title, isDone: r.is_done }));
+      if (todayTodos.length > 0) setChecklist(todayTodos);
+    });
+
+    // Load upcoming events
+    loadEvents().then((rows) => {
+      if (rows.length > 0) {
+        setEvents(rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          emoji: r.emoji,
+          date: r.date,
+        })));
+      }
+    });
   }, []);
 
   // Market data state
@@ -372,7 +395,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
       fearGreed?.value ?? null,
       stockQuotes,
       exchangeRate,
-      mockEvents,
+      events,
       monthlyExpenseUsed,
       monthlyBudgetTotal,
     );
@@ -487,7 +510,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
             {(() => {
               const todayDate = new Date();
               todayDate.setHours(0, 0, 0, 0);
-              const upcomingEvents = mockEvents
+              const upcomingEvents = events
                 .map((event) => {
                   const target = new Date(event.date);
                   target.setHours(0, 0, 0, 0);
@@ -854,7 +877,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
             </h3>
           </div>
           <div className="space-y-2.5">
-            {mockEvents.map((event) => (
+            {events.map((event) => (
               <div
                 key={event.id}
                 className="flex items-center justify-between"
