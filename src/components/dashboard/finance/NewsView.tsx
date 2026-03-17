@@ -206,7 +206,8 @@ const NewsView = () => {
       setAiSummary(result);
     } catch (e) {
       console.warn("AI summary failed:", e);
-      setAiError("AI 요약에 실패했어요. Gemini API 키를 확인해주세요.");
+      const errMsg = e instanceof Error ? e.message : String(e);
+      setAiError(`AI 요약에 실패했어요: ${errMsg}`);
     }
     setAiLoading(false);
   };

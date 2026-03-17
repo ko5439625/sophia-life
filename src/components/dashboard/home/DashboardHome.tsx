@@ -416,9 +416,10 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
   };
 
   // Fear & Greed derived values
-  const fearGreedValue = fearGreed?.value ?? 42;
-  const fearGreedKoLabel = fearGreedValue <= 25 ? "극단적 공포" : fearGreedValue <= 45 ? "공포" : fearGreedValue <= 55 ? "중립" : fearGreedValue <= 75 ? "탐욕" : "극단적 탐욕";
-  const fearGreedColor = fearGreedValue <= 25 ? "#ef4444" : fearGreedValue <= 45 ? "#f97316" : fearGreedValue <= 55 ? "#eab308" : fearGreedValue <= 75 ? "#84cc16" : "#22c55e";
+  const fearGreedValue = fearGreed?.value ?? null;
+  const fearGreedDisplay = fearGreedValue ?? 0;
+  const fearGreedKoLabel = fearGreedValue === null ? "--" : fearGreedValue <= 25 ? "극단적 공포" : fearGreedValue <= 45 ? "공포" : fearGreedValue <= 55 ? "중립" : fearGreedValue <= 75 ? "탐욕" : "극단적 탐욕";
+  const fearGreedColor = fearGreedValue === null ? "#6b7280" : fearGreedValue <= 25 ? "#ef4444" : fearGreedValue <= 45 ? "#f97316" : fearGreedValue <= 55 ? "#eab308" : fearGreedValue <= 75 ? "#84cc16" : "#22c55e";
 
   const fearGreedExplanations = [
     { range: "0-25", label: "극단적 공포", desc: "시장 패닉, 매수 기회 가능성", color: "#ef4444", min: 0, max: 25 },
@@ -595,13 +596,20 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
           </div>
           {/* Clean gauge display */}
           <div className="flex flex-col items-center space-y-3">
+            {marketLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                <span className="text-xs text-muted-foreground ml-2">불러오는 중...</span>
+              </div>
+            ) : (
+            <>
             {/* Large number */}
             <div className="text-center">
               <p
                 className="text-4xl sm:text-5xl font-mono font-extrabold tabular-nums"
                 style={{ color: fearGreedColor }}
               >
-                {fearGreedValue}
+                {fearGreedValue ?? "--"}
               </p>
               <p
                 className="text-sm font-medium mt-1"
@@ -620,15 +628,17 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
                 <div className="flex-1 bg-[#22c55e] rounded-r-full" />
               </div>
               {/* Indicator position */}
+              {fearGreedValue !== null && (
               <div className="relative h-2">
                 <motion.div
                   className="absolute -top-0.5 w-2 h-2 rounded-full bg-foreground border border-background shadow"
                   initial={{ left: "0%" }}
-                  animate={{ left: `${Math.min(Math.max(fearGreedValue, 2), 98)}%` }}
+                  animate={{ left: `${Math.min(Math.max(fearGreedDisplay, 2), 98)}%` }}
                   transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                   style={{ transform: "translateX(-50%)" }}
                 />
               </div>
+              )}
             </div>
             {/* Explanation */}
             <div className="w-full space-y-1 mt-2">
@@ -652,6 +662,8 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
                 );
               })}
             </div>
+            </>
+            )}
           </div>
         </motion.div>
 
