@@ -34,6 +34,7 @@ const PinModal = ({ open, onClose }: PinModalProps) => {
         setStatus("success");
         setTimeout(() => {
           sessionStorage.setItem("sophia-auth", "true");
+          localStorage.setItem("sophia-device-auth", "true");
           navigate("/dashboard");
           onClose();
         }, 800);

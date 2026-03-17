@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import BlogHeader from "@/components/blog/BlogHeader";
 import CategoryTabs from "@/components/blog/CategoryTabs";
 import ArticleCard from "@/components/blog/ArticleCard";
@@ -11,6 +12,15 @@ import { mockPosts } from "@/lib/mockData";
 const DEFAULT_LOCKED_CATEGORIES = ["감성"];
 
 const Index = () => {
+  const navigate = useNavigate();
+
+  // 이전에 PIN 인증한 기기면 바로 대시보드로
+  useEffect(() => {
+    if (localStorage.getItem("sophia-device-auth") === "true") {
+      sessionStorage.setItem("sophia-auth", "true");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate]);
   const [activeCategory, setActiveCategory] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);

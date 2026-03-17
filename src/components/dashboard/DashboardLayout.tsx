@@ -57,6 +57,7 @@ const DashboardLayout = () => {
 
   const handleLogout = () => {
     sessionStorage.removeItem("sophia-auth");
+    localStorage.removeItem("sophia-device-auth");
     navigate("/");
   };
 
