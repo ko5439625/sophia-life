@@ -180,6 +180,49 @@ function mockTranslateText(text: string, _from: string, to: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// News summary
+// ---------------------------------------------------------------------------
+
+export interface NewsSummary {
+  headline: string;
+  sections: { category: string; summary: string }[];
+  keyTakeaway: string;
+}
+
+async function realSummarizeNews(
+  articles: { title: string; category: string; source: string }[],
+): Promise<NewsSummary> {
+  const grouped: Record<string, string[]> = {};
+  for (const a of articles) {
+    if (!grouped[a.category]) grouped[a.category] = [];
+    grouped[a.category].push(`[${a.source}] ${a.title}`);
+  }
+
+  const sections = Object.entries(grouped)
+    .map(([cat, titles]) => `## ${cat}\n${titles.slice(0, 15).join("\n")}`)
+    .join("\n\n");
+
+  const prompt = `당신은 뉴스 브리핑 전문가입니다. 아래 오늘의 뉴스 헤드라인들을 분석해서 핵심 이슈를 요약해주세요.
+미국 뉴스는 한국어로 번역해서 요약하세요.
+
+${sections}
+
+다음 JSON 형식으로만 응답하세요 (설명 없이, 모든 텍스트는 한국어로):
+{
+  "headline": "오늘의 핵심 이슈 한 줄 요약",
+  "sections": [
+    { "category": "카테고리명", "summary": "해당 카테고리 주요 이슈 2-3줄 요약" }
+  ],
+  "keyTakeaway": "전체적으로 주목할 포인트 1-2문장"
+}`;
+
+  const text = await callGemini(prompt);
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Failed to parse Gemini news summary");
+  return JSON.parse(jsonMatch[0]) as NewsSummary;
+}
+
+// ---------------------------------------------------------------------------
 // Unified exports (try real API, fall back to mock)
 // ---------------------------------------------------------------------------
 
@@ -205,6 +248,13 @@ export async function analyzeEconomy(
     console.warn("Gemini analyzeEconomy failed, using mock:", e);
     return mockAnalyzeEconomy(indicators);
   }
+}
+
+export async function summarizeNews(
+  articles: { title: string; category: string; source: string }[],
+): Promise<NewsSummary> {
+  if (!getApiKey()) throw new Error("No Gemini API key");
+  return await realSummarizeNews(articles);
 }
 
 export async function translateText(

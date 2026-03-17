@@ -8,10 +8,13 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { getNews } from "../../../services/newsApi";
-import { translateText } from "../../../services/geminiApi";
+import { translateText, summarizeNews } from "../../../services/geminiApi";
 import type { NewsArticle } from "../../../services/newsApi";
+import type { NewsSummary } from "../../../services/geminiApi";
 
 interface NewsItem {
   id: string;
@@ -60,6 +63,9 @@ const NewsView = () => {
   const [page, setPage] = useState(1);
   /** How many 7-day windows to include (1 = last 7 days, 2 = last 14 days, ...) */
   const [windowCount, setWindowCount] = useState(1);
+  const [aiSummary, setAiSummary] = useState<NewsSummary | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAllNews = async () => {
@@ -186,6 +192,25 @@ const NewsView = () => {
     setWindowCount((prev) => prev + 1);
   };
 
+  const handleAiAnalyze = async () => {
+    if (aiLoading || newsData.length === 0) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const articles = newsData.slice(0, 60).map((n) => ({
+        title: n.title,
+        category: n.category,
+        source: n.source,
+      }));
+      const result = await summarizeNews(articles);
+      setAiSummary(result);
+    } catch (e) {
+      console.warn("AI summary failed:", e);
+      setAiError("AI 요약에 실패했어요. Gemini API 키를 확인해주세요.");
+    }
+    setAiLoading(false);
+  };
+
   return (
     <div className="space-y-5">
       {/* Category tabs */}
@@ -212,16 +237,76 @@ const NewsView = () => {
         ))}
       </div>
 
-      {/* News count & date range */}
-      <div className="flex items-center gap-2">
-        <Newspaper className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground font-mono">
-          {filteredNews.length}건의 뉴스
-          <span className="ml-1 text-muted-foreground/60">
-            (최근 {DAYS_WINDOW * windowCount}일)
+      {/* News count & AI analyze button */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Newspaper className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground font-mono">
+            {filteredNews.length}건의 뉴스
+            <span className="ml-1 text-muted-foreground/60">
+              (최근 {DAYS_WINDOW * windowCount}일)
+            </span>
           </span>
-        </span>
+        </div>
+        {!loading && newsData.length > 0 && (
+          <button
+            onClick={handleAiAnalyze}
+            disabled={aiLoading}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+          >
+            {aiLoading ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                분석 중...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3.5 w-3.5" />
+                AI 분석
+              </>
+            )}
+          </button>
+        )}
       </div>
+
+      {/* AI Summary Card */}
+      {aiError && (
+        <div className="bg-destructive/10 text-destructive text-xs rounded-xl p-3">
+          {aiError}
+        </div>
+      )}
+      {aiSummary && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-primary/5 border border-primary/10 rounded-xl p-4 space-y-3"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold text-primary">오늘의 뉴스 AI 브리핑</span>
+            </div>
+            <button
+              onClick={() => setAiSummary(null)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <p className="text-sm font-medium">{aiSummary.headline}</p>
+          <div className="space-y-2">
+            {aiSummary.sections.map((s, i) => (
+              <div key={i} className="pl-3 border-l-2 border-primary/20">
+                <span className="text-[10px] font-semibold text-primary/70">{s.category}</span>
+                <p className="text-xs text-muted-foreground mt-0.5">{s.summary}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-foreground/80 bg-primary/5 rounded-lg p-2">
+            {aiSummary.keyTakeaway}
+          </p>
+        </motion.div>
+      )}
 
       {/* News list */}
       <div className="space-y-3">
