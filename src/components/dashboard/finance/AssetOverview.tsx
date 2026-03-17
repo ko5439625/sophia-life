@@ -34,12 +34,13 @@ const AssetOverview = () => {
   const { isGuest, maskAmount } = useGuestMode();
   const assetHistory = useMemo(() => deriveAssetHistory(state.monthlyBudgets), [state.monthlyBudgets]);
 
-  const latest = assetHistory[assetHistory.length - 1];
-  const prev = assetHistory[assetHistory.length - 2];
-  const changeRate = (((latest.total - prev.total) / prev.total) * 100).toFixed(1);
+  const defaultPoint = { total: 0, cash: 0, investment: 0, emergency: 0, month: "" };
+  const latest = assetHistory[assetHistory.length - 1] ?? defaultPoint;
+  const prev = assetHistory[assetHistory.length - 2] ?? defaultPoint;
+  const changeRate = prev.total > 0 ? (((latest.total - prev.total) / prev.total) * 100).toFixed(1) : "0.0";
   const isUp = latest.total >= prev.total;
 
-  const cashChangeRate = (((latest.cash - prev.cash) / prev.cash) * 100).toFixed(1);
+  const cashChangeRate = prev.cash > 0 ? (((latest.cash - prev.cash) / prev.cash) * 100).toFixed(1) : "0.0";
   const investChangeRate = prev.investment > 0
     ? (((latest.investment - prev.investment) / prev.investment) * 100).toFixed(1)
     : "0.0";
