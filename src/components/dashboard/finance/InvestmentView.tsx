@@ -91,13 +91,40 @@ const InvestmentView = () => {
   const pensionFunds = state.pensionFunds;
 
   const [showForm, setShowForm] = useState(false);
+  const [priceLoading, setPriceLoading] = useState(false);
   const [newHolding, setNewHolding] = useState({
     name: "",
+    symbol: "", // e.g. "005930.KS" for Samsung, "AAPL" for Apple
     category: "stock" as Holding["category"],
     quantity: "",
     avgPrice: "",
     currentPrice: "",
   });
+
+  // Auto-fetch current prices for all holdings
+  const fetchCurrentPrices = async () => {
+    setPriceLoading(true);
+    const { getQuote } = await import("../../../services/yahooFinanceApi");
+    for (const h of holdings) {
+      // Extract symbol from name if format "이름 (SYMBOL)"
+      const symbolMatch = h.name.match(/\(([^)]+)\)$/);
+      const symbol = symbolMatch?.[1];
+      if (!symbol) continue;
+      try {
+        const quote = await getQuote(symbol);
+        if (quote.price > 0 && quote.price !== h.currentPrice) {
+          state.holdings.forEach((sh) => {
+            if (sh.id === h.id) sh.currentPrice = quote.price;
+          });
+        }
+      } catch (e) {
+        console.warn(`Price fetch failed for ${symbol}:`, e);
+      }
+    }
+    // Force re-render by dispatching settings update
+    setPriceLoading(false);
+    window.location.reload(); // Simple reload to reflect updated prices
+  };
 
   // Sell state
   const [sellingId, setSellingId] = useState<string | null>(null);
@@ -184,9 +211,13 @@ const InvestmentView = () => {
 
   const handleAddHolding = () => {
     if (!newHolding.name.trim()) return;
+    // Include symbol in name for price lookup: "삼성전자 (005930.KS)"
+    const displayName = newHolding.symbol
+      ? `${newHolding.name} (${newHolding.symbol})`
+      : newHolding.name;
     const h: Holding = {
       id: crypto.randomUUID(),
-      name: newHolding.name,
+      name: displayName,
       category: newHolding.category,
       quantity: parseFloat(newHolding.quantity) || 0,
       avgPrice: parseInt(newHolding.avgPrice.replace(/,/g, "")) || 0,
@@ -195,6 +226,7 @@ const InvestmentView = () => {
     storeBuyHolding(h);
     setNewHolding({
       name: "",
+      symbol: "",
       category: "stock",
       quantity: "",
       avgPrice: "",
@@ -348,7 +380,18 @@ const InvestmentView = () => {
 
           {/* Holdings list (compact) */}
           <div className="space-y-1.5 pt-2 border-t border-border">
-            <p className="text-[10px] text-muted-foreground font-medium">보유 종목</p>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-muted-foreground font-medium">보유 종목</p>
+              {holdings.length > 0 && (
+                <button
+                  onClick={fetchCurrentPrices}
+                  disabled={priceLoading}
+                  className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+                >
+                  {priceLoading ? "업데이트 중..." : "📊 현재가 업데이트"}
+                </button>
+              )}
+            </div>
             {holdings.map((h) => {
               const totalValue = h.currentPrice * h.quantity;
               const invested = h.avgPrice * h.quantity;
@@ -564,6 +607,21 @@ const InvestmentView = () => {
                     placeholder="삼성전자"
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    종목코드 (현재가 자동조회)
+                  </label>
+                  <input
+                    type="text"
+                    value={newHolding.symbol}
+                    onChange={(e) =>
+                      setNewHolding({ ...newHolding, symbol: e.target.value.toUpperCase() })
+                    }
+                    placeholder="005930.KS / AAPL"
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">한국: 005930.KS (코스피) / 035720.KQ (코스닥) · 미국: AAPL, TSLA</p>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">

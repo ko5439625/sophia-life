@@ -169,7 +169,7 @@ export async function loadFinancialData(): Promise<Partial<FinancialState> | nul
         supabase.from("finances").select("*"),
         supabase.from("budgets").select("*"),
         supabase.from("pension_funds").select("*"),
-        supabase.from("user_settings").select("*").limit(1).single(),
+        supabase.from("user_settings").select("*").limit(1).maybeSingle(),
         supabase.from("owned_properties").select("*"),
       ]);
 
@@ -261,7 +261,21 @@ export async function saveTrade(trade: Trade): Promise<void> {
 export async function saveBudget(month: string, budget: MonthlyBudget): Promise<void> {
   if (!isReady() || !supabase) return;
   try {
-    await supabase.from("budgets").upsert(budgetToRow(month, budget));
+    // Check if budget for this month already exists
+    const { data: existing } = await supabase
+      .from("budgets")
+      .select("id")
+      .eq("month", month)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      // Update existing
+      await supabase.from("budgets").update(budgetToRow(month, budget)).eq("id", existing.id);
+    } else {
+      // Insert new
+      await supabase.from("budgets").insert({ id: crypto.randomUUID(), ...budgetToRow(month, budget) });
+    }
   } catch (err) {
     console.error("[supabaseSync] saveBudget error:", err);
   }
