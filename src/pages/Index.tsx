@@ -15,6 +15,13 @@ function stripHtml(html: string): string {
   return tmp.textContent || tmp.innerText || "";
 }
 
+function extractImagesFromHtml(html: string): string[] {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  const imgs = tmp.querySelectorAll("img");
+  return Array.from(imgs).map((img) => img.src).filter((src) => src && !src.startsWith("blob:"));
+}
+
 // Default locked categories - can be managed from settings
 const DEFAULT_LOCKED_CATEGORIES = ["감성"];
 
@@ -44,7 +51,7 @@ const Index = () => {
           excerpt: stripHtml(r.content).slice(0, 100),
           content: r.content,
           category: r.category,
-          images: r.images || [],
+          images: (r.images && r.images.length > 0) ? r.images : extractImagesFromHtml(r.content),
           tags: r.tags || [],
           date: r.created_at?.slice(0, 10) || "",
           isPublic: r.is_public,

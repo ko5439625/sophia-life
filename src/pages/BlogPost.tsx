@@ -92,70 +92,52 @@ const BlogPost = () => {
           </div>
         )}
 
-        {/* Image gallery */}
-        <div className="rounded-lg overflow-hidden mb-10 relative">
-          <AnimatePresence mode="wait">
-            <motion.img
-              key={currentImg}
-              src={post.images[currentImg]}
-              alt={`${post.title} - ${currentImg + 1}`}
-              className="w-full object-cover"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            />
-          </AnimatePresence>
+        {/* Image gallery - only show if images array has valid URLs */}
+        {post.images.length > 0 && post.images[0] && !post.images[0].startsWith("blob:") && (
+          <>
+            <div className="rounded-lg overflow-hidden mb-10 relative">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={currentImg}
+                  src={post.images[currentImg]}
+                  alt={`${post.title} - ${currentImg + 1}`}
+                  className="w-full object-cover"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                />
+              </AnimatePresence>
 
-          {/* Navigation arrows */}
-          {hasMultipleImages && (
-            <>
-              <button
-                onClick={() => setCurrentImg((prev) => (prev === 0 ? post.images.length - 1 : prev - 1))}
-                className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setCurrentImg((prev) => (prev === post.images.length - 1 ? 0 : prev + 1))}
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-
-              {/* Dots indicator */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                {post.images.map((_, i) => (
+              {hasMultipleImages && (
+                <>
                   <button
-                    key={i}
-                    onClick={() => setCurrentImg(i)}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      i === currentImg ? "bg-white" : "bg-white/40"
-                    }`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Thumbnail strip */}
-        {hasMultipleImages && (
-          <div className="flex gap-2 mb-10 overflow-x-auto pb-2">
-            {post.images.map((img, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentImg(i)}
-                className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${
-                  i === currentImg
-                    ? "border-primary opacity-100"
-                    : "border-transparent opacity-60 hover:opacity-90"
-                }`}
-              >
-                <img src={img} alt={`thumbnail ${i + 1}`} className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
+                    onClick={() => setCurrentImg((prev) => (prev === 0 ? post.images.length - 1 : prev - 1))}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentImg((prev) => (prev === post.images.length - 1 ? 0 : prev + 1))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {post.images.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentImg(i)}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          i === currentImg ? "bg-white" : "bg-white/40"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </>
         )}
 
         <div
