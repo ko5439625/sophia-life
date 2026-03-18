@@ -30,7 +30,7 @@ import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 
 const AssetOverview = () => {
-  const { state, totalCash, totalInvestment, totalPension, totalNetWorth } = useFinancial();
+  const { state, totalCash, totalInvestment, totalPension, totalNetWorth, totalAvailable } = useFinancial() as ReturnType<typeof useFinancial> & { totalAvailable: number };
   const { isGuest, maskAmount } = useGuestMode();
   const assetHistory = useMemo(() => deriveAssetHistory(state.monthlyBudgets), [state.monthlyBudgets]);
 
@@ -49,11 +49,13 @@ const AssetOverview = () => {
   const pieData = [
     { name: "저축", value: state.cashSavings, color: "#00704A" },
     { name: "비상금", value: state.emergencyFund, color: "#F7DC6F" },
+    { name: "현금보유", value: totalCash - state.cashSavings - state.emergencyFund, color: "#45B7D1" },
     { name: "투자", value: totalInvestment, color: "#2563EB" },
-    { name: "연금", value: totalPension, color: "#BB8FCE" },
-  ];
+    { name: "연금 (비가용)", value: totalPension, color: "#BB8FCE" },
+  ].filter((d) => d.value > 0);
 
-  const liveTotal = totalNetWorth || 1; // avoid division by 0
+  const liveTotal = totalNetWorth || 1;
+  const availablePct = totalNetWorth > 0 ? Math.round((totalAvailable / totalNetWorth) * 100) : 0;
   const cashPct = Math.round((totalCash / liveTotal) * 100);
   const investPct = Math.round((totalInvestment / liveTotal) * 100);
 
@@ -67,13 +69,18 @@ const AssetOverview = () => {
       >
         <p className="text-sm text-muted-foreground mb-1">총 자산</p>
         <div className="flex items-end gap-3">
-          <span className="text-2xl sm:text-3xl font-mono font-extrabold break-all">{isGuest ? maskAmount(latest.total) : `${formatKRW(latest.total)}원`}</span>
-          <span className={`flex items-center gap-1 text-sm font-mono font-medium ${isUp ? "text-primary" : "text-destructive"}`}>
-            {isUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-            {isUp ? "+" : ""}{changeRate}%
-          </span>
+          <span className="text-2xl sm:text-3xl font-mono font-extrabold break-all">{isGuest ? maskAmount(totalNetWorth) : `${formatKRW(totalNetWorth)}원`}</span>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">전월 대비</p>
+        <div className="flex gap-4 mt-3">
+          <div>
+            <p className="text-[10px] text-muted-foreground">가용자산</p>
+            <p className="text-sm font-mono font-bold text-primary">{isGuest ? "₩•••" : `${formatKRW(totalAvailable)}원`}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">연금 (비가용)</p>
+            <p className="text-sm font-mono font-bold text-purple-400">{isGuest ? "₩•••" : `${formatKRW(totalPension)}원`}</p>
+          </div>
+        </div>
       </motion.div>
 
       {/* 현금 vs 투자 카드 */}

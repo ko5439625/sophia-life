@@ -431,10 +431,12 @@ function computeDerived(state: FinancialState) {
     0
   );
 
-  const totalNetWorth =
-    totalCash + totalInvestment + totalPension + totalRealEstate;
+  // 가용자산 = 현금 + 투자 + 부동산 (연금 제외)
+  const totalAvailable = totalCash + totalInvestment + totalRealEstate;
+  // 총 자산 = 가용자산 + 연금
+  const totalNetWorth = totalAvailable + totalPension;
 
-  return { totalCash, totalInvestment, totalPension, totalRealEstate, totalNetWorth };
+  return { totalCash, totalInvestment, totalPension, totalRealEstate, totalNetWorth, totalAvailable };
 }
 
 function monthlyExpenseTotal(expenses: Expense[], month: string): number {
@@ -501,6 +503,7 @@ interface FinancialContextValue {
   totalPension: number;
   totalRealEstate: number;
   totalNetWorth: number;
+  totalAvailable: number;
   getMonthlyExpenseTotal: (month: string) => number;
   getBudgetRemainingByCategory: (month: string, categoryId: string) => number;
 }
