@@ -28,7 +28,8 @@ import { getPinnedMemos } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
-import { loadTodos, loadEvents } from "../../../services/supabaseSync";
+import { loadTodos, loadEvents, loadDdays } from "../../../services/supabaseSync";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface DashboardHomeProps {
   onNavigate?: (tabId: string) => void;
@@ -241,7 +242,12 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
   const { isGuest, maskAmount } = useGuestMode();
   const [checklist, setChecklist] = useState(mockChecklist);
   const [events, setEvents] = useState(initialEvents);
+  const [ddays, setDdays] = useState<{ id: string; title: string; emoji: string; date: string }[]>([]);
   const [pinnedMemos, setPinnedMemos] = useState<CoupleMemo[]>([]);
+  const [marketExpanded, setMarketExpanded] = useState(() => {
+    // Mobile: collapsed by default, Desktop: expanded
+    return window.innerWidth >= 768;
+  });
 
   // Load checklist, events, pinned memos from Supabase
   useEffect(() => {
@@ -295,6 +301,13 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
 
       result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       setEvents(result.slice(0, 5));
+    });
+
+    // Load D-days
+    loadDdays().then((rows) => {
+      if (rows.length > 0) {
+        setDdays(rows.map((r) => ({ id: r.id, title: r.title, emoji: r.emoji, date: r.date })));
+      }
     });
   }, []);
 
@@ -519,7 +532,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
       >
         <div className="flex items-start justify-between">
           <div className="space-y-1.5">
-            <h2 className="text-xl sm:text-2xl font-bold">{isGuest ? "안녕하세요, 게스트 님!" : "안녕하세요, 소피아 님!"}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold">{isGuest ? "안녕하세요, 게스트 님!" : "안녕하세요, 무요 & 데굴 님! ❣️"}</h2>
             {weather && weather.description ? (
               <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                 <Cloud className="h-3.5 w-3.5" />
@@ -617,6 +630,140 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
         )}
       </AnimatePresence>
 
+      {/* D-day section - always visible */}
+      {ddays.length > 0 && (
+        <motion.div
+          custom={1}
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
+          className="bg-card rounded-xl p-5"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Heart className="h-4 w-4 text-pink-400" />
+            <h3 className="text-sm font-mono text-muted-foreground">기념일</h3>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {ddays
+              .map((d) => {
+                const target = new Date(d.date);
+                const now = new Date();
+                now.setHours(0, 0, 0, 0);
+                target.setHours(0, 0, 0, 0);
+                const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                return { ...d, diff };
+              })
+              .sort((a, b) => {
+                // Show D-0 first, then nearest upcoming, then past (by recurrence)
+                const aAbs = a.diff >= 0 ? a.diff : 365 + a.diff;
+                const bAbs = b.diff >= 0 ? b.diff : 365 + b.diff;
+                return aAbs - bAbs;
+              })
+              .slice(0, 6)
+              .map((d) => (
+                <div
+                  key={d.id}
+                  className={`flex items-center gap-2 p-2.5 rounded-lg ${
+                    d.diff === 0 ? "bg-pink-500/10 ring-1 ring-pink-500/30" : "bg-muted/50"
+                  }`}
+                >
+                  <span className="text-lg">{d.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium truncate">{isGuest ? "기념일" : d.title}</p>
+                    <p className={`text-[10px] font-mono ${
+                      d.diff === 0 ? "text-pink-500 font-bold" : d.diff > 0 ? "text-primary" : "text-muted-foreground"
+                    }`}>
+                      {d.diff === 0 ? "오늘!" : d.diff > 0 ? `D-${d.diff}` : `D+${Math.abs(d.diff)}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* 2-column: checklist + events - BEFORE economy */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Today's checklist */}
+        <motion.div
+          custom={2}
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
+          className="bg-card rounded-xl p-5"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-mono text-muted-foreground">오늘 할 일</h3>
+            <span className="text-xs font-mono text-muted-foreground">{doneCount}/{checklist.length}</span>
+          </div>
+          <div className="space-y-1.5">
+            {checklist.length === 0 && (
+              <p className="text-xs text-muted-foreground/50">등록된 할 일이 없습니다</p>
+            )}
+            {checklist.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => toggleCheck(item.id)}
+                className="flex items-center gap-2 w-full text-left group py-0.5"
+              >
+                {item.isDone ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                ) : (
+                  <Circle className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary/60 flex-shrink-0 transition-colors" />
+                )}
+                <span className={`text-sm transition-all ${item.isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                  {item.title}
+                </span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Upcoming events */}
+        <motion.div
+          custom={3}
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
+          className="bg-card rounded-xl p-5"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-mono text-muted-foreground">다가오는 일정</h3>
+          </div>
+          <div className="space-y-2.5">
+            {events.length === 0 && (
+              <p className="text-xs text-muted-foreground/50">등록된 일정이 없습니다</p>
+            )}
+            {events.map((event) => (
+              <div key={event.id} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{event.emoji}</span>
+                  <span className="text-sm">{isGuest ? "일정이 있습니다" : event.title}</span>
+                  {event.dateLabel && (
+                    <span className="text-[10px] text-muted-foreground/60 font-mono">({event.dateLabel})</span>
+                  )}
+                </div>
+                <span className="text-xs font-mono text-primary font-medium">{getDday(event.date)}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Economy section - collapsible on mobile */}
+      <button
+        onClick={() => setMarketExpanded(!marketExpanded)}
+        className="w-full flex items-center justify-between bg-card rounded-xl px-5 py-3 md:hidden"
+      >
+        <span className="text-sm font-mono text-muted-foreground flex items-center gap-2">
+          <Gauge className="h-4 w-4" />
+          경제 & 시장
+        </span>
+        {marketExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+      </button>
+
+      <div className={`space-y-4 ${!marketExpanded ? "hidden md:block" : ""}`}>
       {/* Fear & Greed + USD/KRW - prominent */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <motion.div
@@ -847,85 +994,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
         </div>
       </motion.div>
 
-      {/* 2-column: checklist + events */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Today's checklist - compact */}
-        <motion.div
-          custom={4}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          className="bg-card rounded-xl p-5"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-mono text-muted-foreground">
-              오늘 할 일
-            </h3>
-            <span className="text-xs font-mono text-muted-foreground">
-              {doneCount}/{checklist.length}
-            </span>
-          </div>
-          <div className="space-y-1.5">
-            {checklist.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => toggleCheck(item.id)}
-                className="flex items-center gap-2 w-full text-left group py-0.5"
-              >
-                {item.isDone ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                ) : (
-                  <Circle className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary/60 flex-shrink-0 transition-colors" />
-                )}
-                <span
-                  className={`text-sm transition-all ${
-                    item.isDone
-                      ? "line-through text-muted-foreground"
-                      : "text-foreground"
-                  }`}
-                >
-                  {item.title}
-                </span>
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Upcoming events */}
-        <motion.div
-          custom={5}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          className="bg-card rounded-xl p-5"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-mono text-muted-foreground">
-              다가오는 일정
-            </h3>
-          </div>
-          <div className="space-y-2.5">
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className="flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-base">{event.emoji}</span>
-                  <span className="text-sm">{isGuest ? "일정이 있습니다" : event.title}</span>
-                  {event.dateLabel && (
-                    <span className="text-[10px] text-muted-foreground/60 font-mono">({event.dateLabel})</span>
-                  )}
-                </div>
-                <span className="text-xs font-mono text-primary font-medium">
-                  {getDday(event.date)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
+      </div>{/* end economy collapsible */}
 
       {/* Expense + couple note */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -992,7 +1061,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
                   >
                     <p className="text-sm mb-1">{memo.message}</p>
                     <p className="text-xs text-muted-foreground font-mono text-right">
-                      - {memo.author}, {memo.timestamp}
+                      - {memo.author === "sophia" ? "데굴" : "무요"}, {(() => { try { const d = new Date(memo.timestamp); return isNaN(d.getTime()) ? memo.timestamp : d.toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return memo.timestamp; } })()}
                     </p>
                   </div>
                 ))}

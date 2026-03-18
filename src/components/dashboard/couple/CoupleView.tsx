@@ -410,7 +410,7 @@ const CoupleView = () => {
                       }`}
                     >
                       <Smile className="h-3 w-3" />
-                      sophia
+                      데굴
                     </button>
                     <button
                       onClick={() => setNewMemoAuthor("partner")}
@@ -421,7 +421,7 @@ const CoupleView = () => {
                       }`}
                     >
                       <User className="h-3 w-3" />
-                      partner
+                      무요
                     </button>
                   </div>
                 </div>
@@ -482,7 +482,7 @@ const CoupleView = () => {
                               isSophia ? "text-pink-400" : "text-blue-400"
                             }`}
                           >
-                            {memo.author}
+                            {isSophia ? "데굴" : "무요"}
                           </span>
                         </div>
                         <p className="text-sm">{memo.message}</p>
@@ -509,7 +509,13 @@ const CoupleView = () => {
                             </button>
                           </div>
                           <p className="text-[10px] text-muted-foreground/60 font-mono">
-                            {memo.timestamp}
+                            {(() => {
+                              try {
+                                const d = new Date(memo.timestamp);
+                                if (isNaN(d.getTime())) return memo.timestamp;
+                                return d.toLocaleString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+                              } catch { return memo.timestamp; }
+                            })()}
                           </p>
                         </div>
                       </div>
