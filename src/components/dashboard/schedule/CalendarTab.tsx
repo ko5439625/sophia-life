@@ -50,6 +50,7 @@ const CalendarTab = () => {
   const [newTitle, setNewTitle] = useState("");
   const [newTime, setNewTime] = useState("");
   const [newEmoji, setNewEmoji] = useState("\u{1F4DD}");
+  const [newEndDate, setNewEndDate] = useState("");
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -99,19 +100,41 @@ const CalendarTab = () => {
   const handleAddEvent = (forDate: string) => {
     const title = newTitle.trim();
     if (!title) return;
-    const newEvent: CalendarEvent = {
-      id: crypto.randomUUID(),
-      title,
-      date: forDate,
-      time: newTime || undefined,
-      emoji: newEmoji,
-      isShared: false,
-    };
-    setEvents([...events, newEvent]);
-    saveEvent({ id: newEvent.id, title: newEvent.title, date: newEvent.date, time: newEvent.time || null, emoji: newEvent.emoji, is_shared: newEvent.isShared });
+
+    // Build list of dates (single or range)
+    const dates: string[] = [];
+    if (newEndDate && newEndDate > forDate) {
+      const start = new Date(forDate + "T00:00:00");
+      const end = new Date(newEndDate + "T00:00:00");
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        dates.push(`${y}-${m}-${day}`);
+      }
+    } else {
+      dates.push(forDate);
+    }
+
+    const newEvents: CalendarEvent[] = dates.map((date, i) => {
+      const suffix = dates.length > 1 ? ` (${i + 1}/${dates.length})` : "";
+      const ev: CalendarEvent = {
+        id: crypto.randomUUID(),
+        title: title + suffix,
+        date,
+        time: newTime || undefined,
+        emoji: newEmoji,
+        isShared: false,
+      };
+      saveEvent({ id: ev.id, title: ev.title, date: ev.date, time: ev.time || null, emoji: ev.emoji, is_shared: ev.isShared });
+      return ev;
+    });
+
+    setEvents([...events, ...newEvents]);
     setNewTitle("");
     setNewTime("");
     setNewEmoji("\u{1F4DD}");
+    setNewEndDate("");
     setAddingForDate(null);
   };
 
@@ -131,7 +154,7 @@ const CalendarTab = () => {
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
 
   // Inline add form component
   const renderAddForm = (forDate: string) => (
@@ -160,12 +183,26 @@ const CalendarTab = () => {
           className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40"
           autoFocus
         />
-        <input
-          type="time"
-          value={newTime}
-          onChange={(e) => setNewTime(e.target.value)}
-          className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-muted-foreground"
-        />
+        <div className="flex gap-2">
+          <input
+            type="time"
+            value={newTime}
+            onChange={(e) => setNewTime(e.target.value)}
+            className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-muted-foreground"
+          />
+          <div className="flex-1 relative">
+            <input
+              type="date"
+              value={newEndDate}
+              onChange={(e) => setNewEndDate(e.target.value)}
+              min={forDate}
+              className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 text-muted-foreground"
+            />
+            {!newEndDate && (
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground/40 pointer-events-none">종료일 (선택)</span>
+            )}
+          </div>
+        </div>
         {/* Emoji selector */}
         <div>
           <span className="text-[10px] text-muted-foreground mb-1 block">이모지</span>
