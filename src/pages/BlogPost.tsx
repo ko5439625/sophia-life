@@ -160,12 +160,10 @@ const BlogPost = () => {
           </div>
         )}
 
-        <div className="prose prose-lg dark:prose-invert max-w-none font-sans leading-relaxed text-foreground">
-          <p>{post.excerpt}</p>
-          <p className="mt-6 text-muted-foreground">
-            {post.content}
-          </p>
-        </div>
+        <div
+          className="prose prose-lg dark:prose-invert max-w-none font-sans leading-relaxed text-foreground [&_img]:rounded-lg [&_img]:my-4"
+          dangerouslySetInnerHTML={{ __html: post.content }}
+        />
       </article>
     </motion.div>
   );
