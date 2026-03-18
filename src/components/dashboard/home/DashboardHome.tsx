@@ -28,7 +28,7 @@ import { getPinnedMemos } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
-import { loadTodos, loadEvents, loadDdays } from "../../../services/supabaseSync";
+import { loadTodos, loadEvents, loadDdays, saveTodo } from "../../../services/supabaseSync";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface DashboardHomeProps {
@@ -395,11 +395,17 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
   const dayStr = dayNames[today.getDay()];
 
   const toggleCheck = (id: string) => {
-    setChecklist(
-      checklist.map((item) =>
-        item.id === id ? { ...item, isDone: !item.isDone } : item
-      )
+    const updated = checklist.map((item) =>
+      item.id === id ? { ...item, isDone: !item.isDone } : item
     );
+    setChecklist(updated);
+    // Sync to Supabase
+    const item = updated.find((i) => i.id === id);
+    if (item) {
+      const d = new Date();
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      saveTodo({ id: item.id, title: item.title, memo: "", is_done: item.isDone, date: dateKey });
+    }
   };
 
   const getDday = (dateStr: string) => {
