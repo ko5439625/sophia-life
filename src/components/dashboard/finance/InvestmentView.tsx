@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   PieChart,
@@ -92,14 +92,51 @@ const InvestmentView = () => {
 
   const [showForm, setShowForm] = useState(false);
   const [priceLoading, setPriceLoading] = useState(false);
+  const [symbolSearchResults, setSymbolSearchResults] = useState<{ symbol: string; name: string; type: string }[]>([]);
+  const [symbolSearching, setSymbolSearching] = useState(false);
+  const symbolSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [newHolding, setNewHolding] = useState({
     name: "",
-    symbol: "", // e.g. "005930.KS" for Samsung, "AAPL" for Apple
+    symbol: "",
     category: "stock" as Holding["category"],
     quantity: "",
     avgPrice: "",
     currentPrice: "",
   });
+
+  // Search stock symbols by name (debounced)
+  const searchSymbol = async (query: string) => {
+    if (!query || query.length < 2) { setSymbolSearchResults([]); return; }
+    setSymbolSearching(true);
+    try {
+      const { proxyFetch } = await import("../../../services/proxyFetch");
+      const result = await proxyFetch<{
+        quotes?: Array<{ symbol?: string; shortname?: string; longname?: string; quoteType?: string }>;
+      }>("yahoo-search", { query });
+      if (result?.quotes) {
+        setSymbolSearchResults(
+          result.quotes
+            .filter((q) => q.symbol && (q.quoteType === "EQUITY" || q.quoteType === "ETF"))
+            .slice(0, 6)
+            .map((q) => ({
+              symbol: q.symbol || "",
+              name: q.shortname || q.longname || "",
+              type: q.quoteType || "",
+            }))
+        );
+      }
+    } catch (e) {
+      console.warn("Symbol search failed:", e);
+    }
+    setSymbolSearching(false);
+  };
+
+  const handleNameChange = (value: string) => {
+    setNewHolding({ ...newHolding, name: value });
+    // Debounced search
+    if (symbolSearchTimer.current) clearTimeout(symbolSearchTimer.current);
+    symbolSearchTimer.current = setTimeout(() => searchSymbol(value), 500);
+  };
 
   // Auto-fetch current prices for all holdings
   const fetchCurrentPrices = async () => {
@@ -594,34 +631,39 @@ const InvestmentView = () => {
               className="mb-4 space-y-3 bg-muted/50 rounded-lg p-4 overflow-hidden"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+                <div className="relative sm:col-span-2">
                   <label className="text-xs text-muted-foreground mb-1 block">
-                    종목명
+                    종목 검색 {symbolSearching && <span className="text-primary">검색 중...</span>}
                   </label>
                   <input
                     type="text"
                     value={newHolding.name}
-                    onChange={(e) =>
-                      setNewHolding({ ...newHolding, name: e.target.value })
-                    }
-                    placeholder="삼성전자"
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    placeholder="종목명을 입력하면 자동 검색됩니다 (예: 삼성전자, AAPL)"
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">
-                    종목코드 (현재가 자동조회)
-                  </label>
-                  <input
-                    type="text"
-                    value={newHolding.symbol}
-                    onChange={(e) =>
-                      setNewHolding({ ...newHolding, symbol: e.target.value.toUpperCase() })
-                    }
-                    placeholder="005930.KS / AAPL"
-                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                  <p className="text-[9px] text-muted-foreground mt-0.5">한국: 005930.KS (코스피) / 035720.KQ (코스닥) · 미국: AAPL, TSLA</p>
+                  {newHolding.symbol && (
+                    <p className="text-[10px] text-primary font-mono mt-0.5">선택됨: {newHolding.symbol}</p>
+                  )}
+                  {/* Search results dropdown */}
+                  {symbolSearchResults.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                      {symbolSearchResults.map((r) => (
+                        <button
+                          key={r.symbol}
+                          type="button"
+                          onClick={() => {
+                            setNewHolding({ ...newHolding, name: r.name, symbol: r.symbol });
+                            setSymbolSearchResults([]);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between"
+                        >
+                          <span>{r.name}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">{r.symbol}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">

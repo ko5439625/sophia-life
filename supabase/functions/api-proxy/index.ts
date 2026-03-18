@@ -81,6 +81,22 @@ serve(async (req) => {
         break;
       }
 
+      // ====== Yahoo Finance Search (종목 검색) ======
+      case "yahoo-search": {
+        const { query } = params;
+        const result = await safeFetchJson(
+          `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query || "")}&quotesCount=8&newsCount=0`
+        );
+        if (!result.ok) {
+          return new Response(JSON.stringify(result.data), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        data = result.data;
+        break;
+      }
+
       // ====== NewsAPI ======
       case "news": {
         const { category, country, apiKey } = params;
