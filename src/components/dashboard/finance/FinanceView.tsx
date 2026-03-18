@@ -6,8 +6,8 @@ import ExpenseAnalysis from "./ExpenseAnalysis";
 
 const tabs = [
   { id: "budget", label: "예산 계획" },
+  { id: "analysis", label: "지출 관리" },
   { id: "asset", label: "자산 현황" },
-  { id: "analysis", label: "지출 분석" },
 ];
 
 const FinanceView = () => {
