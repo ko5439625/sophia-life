@@ -798,7 +798,7 @@ const BlogManagement = () => {
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Load posts from Supabase
+  // Load posts + blog settings from Supabase
   useEffect(() => {
     loadPostsFromDB().then((rows) => {
       if (rows.length > 0) {
@@ -814,11 +814,25 @@ const BlogManagement = () => {
         })));
       }
     });
+    // Load categories & subtitle from Supabase
+    import("@/lib/supabase").then(({ supabase }) => {
+      if (!supabase) return;
+      supabase.from("user_settings").select("blog_categories").limit(1).maybeSingle().then(({ data }) => {
+        if (data?.blog_categories && Array.isArray(data.blog_categories) && data.blog_categories.length > 0) {
+          setCategories(data.blog_categories);
+          localStorage.setItem(BLOG_CATEGORIES_KEY, JSON.stringify(data.blog_categories));
+        }
+      });
+    });
   }, []);
 
-  // Sync categories to localStorage
+  // Sync categories to localStorage + Supabase
   useEffect(() => {
     localStorage.setItem(BLOG_CATEGORIES_KEY, JSON.stringify(categories));
+    import("@/lib/supabase").then(({ supabase }) => {
+      if (!supabase) return;
+      supabase.from("user_settings").upsert({ id: "c7a9defe-0e45-57e0-9b26-4ef82dd867c1", blog_categories: categories });
+    });
   }, [categories]);
 
   // --- Category management ---
