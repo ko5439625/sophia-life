@@ -525,8 +525,14 @@ export interface MemoRow {
 export async function loadMemosFromDB(): Promise<MemoRow[]> {
   if (!isReady() || !supabase) return [];
   try {
-    const { data } = await supabase.from("memos").select("*").order("timestamp", { ascending: false });
-    return (data || []) as MemoRow[];
+    const { data } = await supabase.from("memos").select("*").order("created_at", { ascending: false });
+    return (data || []).map((r: Record<string, unknown>) => ({
+      id: r.id as string,
+      author: r.author as string,
+      message: r.message as string,
+      timestamp: (r.created_at as string) || "",
+      pinned: (r.pinned as boolean) || false,
+    }));
   } catch (e) {
     console.warn("[supabaseSync] loadMemos error:", e);
     return [];
@@ -536,7 +542,13 @@ export async function loadMemosFromDB(): Promise<MemoRow[]> {
 export async function saveMemoToDB(memo: MemoRow): Promise<void> {
   if (!isReady() || !supabase) return;
   try {
-    await supabase.from("memos").upsert(memo);
+    // Only send columns that exist in the DB (not timestamp)
+    await supabase.from("memos").upsert({
+      id: memo.id,
+      author: memo.author,
+      message: memo.message,
+      pinned: memo.pinned,
+    });
   } catch (e) {
     console.error("[supabaseSync] saveMemo error:", e);
   }
