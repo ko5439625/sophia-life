@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 import { proxyFetch } from "../../../services/proxyFetch";
 import { supabase } from "../../../lib/supabase";
+import { useFinancial } from "../../../store/financialStore";
 import {
   Lock,
   Tag,
@@ -339,6 +340,7 @@ const ApiConnectionStatus = () => {
 
 const SettingsView = () => {
   const { isGuest } = useGuestMode();
+  const { updateSettings } = useFinancial();
 
   // PIN
   const [currentPin, setCurrentPin] = useState("");
@@ -607,6 +609,14 @@ const SettingsView = () => {
           },
         });
       }
+      // Update financialStore immediately
+      updateSettings({
+        annualIncome1: parseInt(personalInfo.salaryOwn) || 0,
+        annualIncome2: parseInt(personalInfo.salarySpouse) || 0,
+        monthlyLoanPayment: parseInt(personalInfo.monthlyLoanPayment) || 0,
+        cashSavings: parseInt(personalInfo.cashSavings) || 0,
+        emergencyFund: parseInt(personalInfo.emergencyFund) || 0,
+      });
       setPersonalInfoMessage("저장 완료 (클라우드 동기화)");
     } catch (e) {
       console.warn("Failed to save personal info:", e);
