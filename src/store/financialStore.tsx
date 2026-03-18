@@ -391,18 +391,40 @@ function financialReducer(state: FinancialState, action: Action): FinancialState
 // Computed values helper
 // ---------------------------------------------------------------------------
 
+function getSettingsBase() {
+  try {
+    const stored = localStorage.getItem("sophia-personal-info");
+    if (stored) {
+      const p = JSON.parse(stored);
+      return {
+        cashHoldings: parseInt(p.cashHoldings) || 0,
+        pensionSavings: parseInt(p.pensionSavings) || 0,
+        irpBalance: parseInt(p.irpBalance) || 0,
+        dcBalance: parseInt(p.dcBalance) || 0,
+      };
+    }
+  } catch { /* ignore */ }
+  return { cashHoldings: 0, pensionSavings: 0, irpBalance: 0, dcBalance: 0 };
+}
+
 function computeDerived(state: FinancialState) {
-  const totalCash = state.cashSavings + state.emergencyFund;
+  const base = getSettingsBase();
+
+  const totalCash = state.cashSavings + state.emergencyFund + base.cashHoldings;
 
   const totalInvestment = state.holdings.reduce(
     (sum, h) => sum + h.currentPrice * h.quantity,
     0
   );
 
-  const totalPension = state.pensionFunds.reduce(
+  // If no pension funds tracked individually, use settings base
+  const pensionFromFunds = state.pensionFunds.reduce(
     (sum, f) => sum + f.currentPrice * f.quantity,
     0
   );
+  const totalPension = pensionFromFunds > 0
+    ? pensionFromFunds
+    : base.pensionSavings + base.irpBalance + base.dcBalance;
 
   const totalRealEstate = state.ownedProperties.reduce(
     (sum, p) => sum + p.currentValue,

@@ -251,7 +251,25 @@ function generateSimulationData(
 const PensionView = () => {
   const { isGuest, maskAmount } = useGuestMode();
   const [selectedAccount, setSelectedAccount] = useState<AccountType>("IRP");
-  const [funds, setFunds] = useState<PensionFund[]>(initialFunds);
+
+  // Load base values from settings (localStorage)
+  const settingsBase = (() => {
+    try {
+      const stored = localStorage.getItem("sophia-personal-info");
+      if (stored) {
+        const p = JSON.parse(stored);
+        return {
+          pensionSavings: parseInt(p.pensionSavings) || 0,
+          irpBalance: parseInt(p.irpBalance) || 0,
+          dcBalance: parseInt(p.dcBalance) || 0,
+        };
+      }
+    } catch { /* ignore */ }
+    return { pensionSavings: 0, irpBalance: 0, dcBalance: 0 };
+  })();
+
+  // Use settings base if no data entered yet, otherwise use user-entered funds
+  const [funds, setFunds] = useState<PensionFund[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newFund, setNewFund] = useState({
@@ -262,9 +280,14 @@ const PensionView = () => {
     weight: "",
   });
 
-  // DC Pension state
-  const [dcInfo, setDcInfo] = useState<DCPensionInfo>(initialDCInfo);
-  const [dcFunds, setDcFunds] = useState<DCFund[]>(initialDCFunds);
+  // DC Pension state - use settings base value if available
+  const [dcInfo, setDcInfo] = useState<DCPensionInfo>({
+    monthlyEmployerContribution: 0,
+    startDate: "",
+    cumulativeDeposited: settingsBase.dcBalance,
+    currentBalance: settingsBase.dcBalance,
+  });
+  const [dcFunds, setDcFunds] = useState<DCFund[]>([]);
   const [showDcForm, setShowDcForm] = useState(false);
   const [editingDcId, setEditingDcId] = useState<string | null>(null);
   const [newDcFund, setNewDcFund] = useState({
@@ -342,7 +365,35 @@ const PensionView = () => {
   const [pensionHedgingLoading, setPensionHedgingLoading] = useState(false);
   const [pensionHedgingResult, setPensionHedgingResult] = useState<string | null>(null);
 
-  const account = initialAccounts.find((a) => a.type === selectedAccount)!;
+  // Dynamic accounts based on settings base values
+  const dynamicAccounts: PensionAccount[] = useMemo(() => [
+    {
+      type: "IRP" as AccountType,
+      totalDeposited: settingsBase.irpBalance,
+      currentValue: settingsBase.irpBalance,
+      annualLimit: 18000000,
+      annualDeposited: 0,
+      taxDeduction: 0,
+    },
+    {
+      type: "연금저축" as AccountType,
+      totalDeposited: settingsBase.pensionSavings,
+      currentValue: settingsBase.pensionSavings,
+      annualLimit: 6000000,
+      annualDeposited: 0,
+      taxDeduction: 0,
+    },
+    {
+      type: "퇴직연금(DC)" as AccountType,
+      totalDeposited: settingsBase.dcBalance,
+      currentValue: settingsBase.dcBalance,
+      annualLimit: 18000000,
+      annualDeposited: 0,
+      taxDeduction: 0,
+    },
+  ], [settingsBase]);
+
+  const account = dynamicAccounts.find((a) => a.type === selectedAccount)!;
   const accountFunds = funds.filter((f) => f.accountType === selectedAccount);
 
   const totalReturnPct =
