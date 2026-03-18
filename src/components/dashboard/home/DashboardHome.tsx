@@ -639,10 +639,16 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
           animate="visible"
           className="bg-card rounded-xl p-5"
         >
-          <div className="flex items-center gap-2 mb-3">
-            <Heart className="h-4 w-4 text-pink-400" />
-            <h3 className="text-sm font-mono text-muted-foreground">기념일</h3>
-          </div>
+          <button
+            onClick={() => onNavigate?.("couple")}
+            className="flex items-center justify-between mb-3 w-full group"
+          >
+            <div className="flex items-center gap-2">
+              <Heart className="h-4 w-4 text-pink-400" />
+              <h3 className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">기념일</h3>
+            </div>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+          </button>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {ddays
               .map((d) => {
@@ -692,10 +698,16 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
           animate="visible"
           className="bg-card rounded-xl p-5"
         >
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-mono text-muted-foreground">오늘 할 일</h3>
-            <span className="text-xs font-mono text-muted-foreground">{doneCount}/{checklist.length}</span>
-          </div>
+          <button
+            onClick={() => onNavigate?.("schedule")}
+            className="flex items-center justify-between mb-3 w-full group"
+          >
+            <h3 className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">오늘 할 일</h3>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-mono text-muted-foreground">{doneCount}/{checklist.length}</span>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+            </div>
+          </button>
           <div className="space-y-1.5">
             {checklist.length === 0 && (
               <p className="text-xs text-muted-foreground/50">등록된 할 일이 없습니다</p>
@@ -727,10 +739,16 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
           animate="visible"
           className="bg-card rounded-xl p-5"
         >
-          <div className="flex items-center gap-2 mb-3">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-mono text-muted-foreground">다가오는 일정</h3>
-          </div>
+          <button
+            onClick={() => onNavigate?.("schedule")}
+            className="flex items-center justify-between mb-3 w-full group"
+          >
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">다가오는 일정</h3>
+            </div>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+          </button>
           <div className="space-y-2.5">
             {events.length === 0 && (
               <p className="text-xs text-muted-foreground/50">등록된 일정이 없습니다</p>
