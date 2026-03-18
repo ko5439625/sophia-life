@@ -49,7 +49,7 @@ interface BlogPost {
 // Mock data
 // ---------------------------------------------------------------------------
 
-const defaultCategories = ["일상", "개발", "여행", "요리", "음악", "영화"];
+const defaultCategories = ["일상", "개발", "여행", "웨딩"];
 
 const mockPosts: BlogPost[] = [];
 

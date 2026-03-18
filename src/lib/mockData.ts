@@ -16,7 +16,7 @@ export interface BlogPost {
   isPublic: boolean;
 }
 
-export const categories = ["전체", "일상", "여행", "맛집", "감성"];
+export const categories = ["전체", "일상", "개발", "여행", "웨딩"];
 
 export const mockPosts: BlogPost[] = [
   {

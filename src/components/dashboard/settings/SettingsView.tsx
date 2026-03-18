@@ -478,7 +478,7 @@ const SettingsView = () => {
       const stored = localStorage.getItem("sophia-locked-categories");
       if (stored) return JSON.parse(stored);
     } catch { /* ignore */ }
-    return ["감성"];
+    return ["웨딩"];
   });
 
   // Use blogCategories as the source for locked category selection
