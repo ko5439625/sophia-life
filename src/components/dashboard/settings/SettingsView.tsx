@@ -371,10 +371,11 @@ const SettingsView = () => {
       monthlyLoanPayment: "",
       cashSavings: "",
       emergencyFund: "",
-      isRegulated: false,
+      cashHoldings: "",
+      pensionSavings: "",
+      irpBalance: "",
+      dcBalance: "",
       baseRate: "3.5",
-      ltvLimit: "70",
-      dsrLimit: "40",
     };
   });
   const [personalInfoMessage, setPersonalInfoMessage] = useState<string | null>(
@@ -458,6 +459,21 @@ const SettingsView = () => {
           Object.entries(mergedAi).forEach(([k, v]) => {
             if (v) localStorage.setItem(`sophia-api-${k}`, v);
           });
+          // Restore asset base info from api_keys jsonb
+          if (remote.cashHoldings || remote.pensionSavings || remote.irpBalance || remote.dcBalance) {
+            setPersonalInfo((prev: Record<string, string>) => {
+              const updated = {
+                ...prev,
+                cashHoldings: remote.cashHoldings || prev.cashHoldings || "",
+                pensionSavings: remote.pensionSavings || prev.pensionSavings || "",
+                irpBalance: remote.irpBalance || prev.irpBalance || "",
+                dcBalance: remote.dcBalance || prev.dcBalance || "",
+                baseRate: remote.baseRate || prev.baseRate || "3.5",
+              };
+              localStorage.setItem("sophia-personal-info", JSON.stringify(updated));
+              return updated;
+            });
+          }
         }
       } catch (e) {
         console.warn("[Settings] Supabase API key sync failed:", e);
@@ -562,7 +578,7 @@ const SettingsView = () => {
   const handleSavePersonalInfo = async () => {
     try {
       localStorage.setItem("sophia-personal-info", JSON.stringify(personalInfo));
-      // Sync to Supabase user_settings (annualIncome, cashSavings, emergencyFund)
+      // Sync to Supabase user_settings
       if (supabase) {
         await supabase.from("user_settings").upsert({
           id: "c7a9defe-0e45-57e0-9b26-4ef82dd867c1",
@@ -571,6 +587,24 @@ const SettingsView = () => {
           monthly_loan_payment: parseInt(personalInfo.monthlyLoanPayment) || 0,
           cash_savings: parseInt(personalInfo.cashSavings) || 0,
           emergency_fund: parseInt(personalInfo.emergencyFund) || 0,
+          // Store additional asset info in api_keys jsonb (alongside existing keys)
+          api_keys: {
+            ...(() => { try { return JSON.parse(localStorage.getItem("sophia-api-keys-cache") || "{}"); } catch { return {}; } })(),
+            // Preserve existing API keys
+            kakao: localStorage.getItem("sophia-api-kakao") || "",
+            news: localStorage.getItem("sophia-api-news") || "",
+            stock: localStorage.getItem("sophia-api-stock") || "",
+            data: localStorage.getItem("sophia-api-data") || "",
+            weather: localStorage.getItem("sophia-api-weather") || "",
+            openai: localStorage.getItem("sophia-api-openai") || "",
+            gemini: localStorage.getItem("sophia-api-gemini") || "",
+            // Asset base info
+            cashHoldings: personalInfo.cashHoldings || "0",
+            pensionSavings: personalInfo.pensionSavings || "0",
+            irpBalance: personalInfo.irpBalance || "0",
+            dcBalance: personalInfo.dcBalance || "0",
+            baseRate: personalInfo.baseRate || "3.5",
+          },
         });
       }
       setPersonalInfoMessage("저장 완료 (클라우드 동기화)");
@@ -937,6 +971,98 @@ const SettingsView = () => {
                   setPersonalInfo({
                     ...personalInfo,
                     emergencyFund: parseWon(e.target.value),
+                  })
+                }
+                placeholder="0"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                원
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground font-mono mb-1 block">
+              현금 보유 (보증금 포함)
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={formatWon(personalInfo.cashHoldings || "")}
+                onChange={(e) =>
+                  setPersonalInfo({
+                    ...personalInfo,
+                    cashHoldings: parseWon(e.target.value),
+                  })
+                }
+                placeholder="0"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                원
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground font-mono mb-1 block">
+              연금저축
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={formatWon(personalInfo.pensionSavings || "")}
+                onChange={(e) =>
+                  setPersonalInfo({
+                    ...personalInfo,
+                    pensionSavings: parseWon(e.target.value),
+                  })
+                }
+                placeholder="0"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                원
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground font-mono mb-1 block">
+              IRP
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={formatWon(personalInfo.irpBalance || "")}
+                onChange={(e) =>
+                  setPersonalInfo({
+                    ...personalInfo,
+                    irpBalance: parseWon(e.target.value),
+                  })
+                }
+                placeholder="0"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                원
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground font-mono mb-1 block">
+              DC (확정기여형)
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={formatWon(personalInfo.dcBalance || "")}
+                onChange={(e) =>
+                  setPersonalInfo({
+                    ...personalInfo,
+                    dcBalance: parseWon(e.target.value),
                   })
                 }
                 placeholder="0"
