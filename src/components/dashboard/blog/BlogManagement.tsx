@@ -829,7 +829,7 @@ const BlogManagement = () => {
       savePostToDB({ id: updated.id, title: updated.title, content: updated.content, category: updated.category, tags: updated.tags, is_public: updated.isPublic, created_at: updated.createdAt, images: updated.images });
     } else {
       const newPost: BlogPost = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         ...data,
         createdAt: new Date().toISOString().slice(0, 10),
         images: [],

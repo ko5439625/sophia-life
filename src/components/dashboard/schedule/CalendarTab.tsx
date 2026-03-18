@@ -100,7 +100,7 @@ const CalendarTab = () => {
     const title = newTitle.trim();
     if (!title) return;
     const newEvent: CalendarEvent = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title,
       date: forDate,
       time: newTime || undefined,

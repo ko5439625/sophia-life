@@ -137,7 +137,7 @@ const PlannerTab = () => {
   const handleAddTrip = () => {
     if (!newTrip.title.trim() || !newTrip.startDate || !newTrip.endDate) return;
     const plan: Plan = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: newTrip.title,
       startDate: newTrip.startDate,
       endDate: newTrip.endDate,
@@ -190,7 +190,7 @@ const PlannerTab = () => {
   const handleAddScheduleItem = (planId: string, dayNumber: number) => {
     if (!newScheduleItem.title.trim()) return;
     const item: PlanItem = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       dayNumber,
       time: newScheduleItem.time,
       title: newScheduleItem.title,

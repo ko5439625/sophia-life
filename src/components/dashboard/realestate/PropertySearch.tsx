@@ -492,7 +492,7 @@ const PropertySearch = () => {
     if (!manualForm.name.trim() || !manualForm.address.trim()) return;
     const newProp: ManualProperty = {
       ...manualForm,
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
     };
     setManualProperties((prev) => [newProp, ...prev]);

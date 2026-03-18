@@ -37,7 +37,7 @@ const GalleryView = () => {
   const createAlbum = () => {
     if (!newTitle.trim()) return;
     const newAlbum: Album = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: newTitle.trim(),
       description: newDescription.trim(),
       isPublic: true,

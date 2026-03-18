@@ -163,7 +163,7 @@ const RealEstateHub = () => {
       );
     } else {
       const newInspection: Inspection = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         apartmentName: form.apartmentName,
         visitDate: form.visitDate,
         scores: form.scores,

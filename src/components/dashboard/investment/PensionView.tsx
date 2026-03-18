@@ -284,7 +284,7 @@ const PensionView = () => {
   const handleAddDcFund = () => {
     if (!newDcFund.name.trim()) return;
     const fund: DCFund = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: newDcFund.name,
       buyPrice: parseInt(newDcFund.buyPrice.replace(/,/g, "")) || 0,
       currentPrice: parseInt(newDcFund.currentPrice.replace(/,/g, "")) || 0,
@@ -433,7 +433,7 @@ const PensionView = () => {
   const handleAddFund = () => {
     if (!newFund.name.trim()) return;
     const fund: PensionFund = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       accountType: selectedAccount,
       name: newFund.name,
       buyPrice: parseInt(newFund.buyPrice.replace(/,/g, "")) || 0,

@@ -88,7 +88,7 @@ const CoupleView = () => {
 
   const handleAddMemo = (author: "sophia" | "partner", message: string) => {
     const newMemo: CoupleMemo = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       author,
       message,
       timestamp: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
@@ -170,7 +170,7 @@ const CoupleView = () => {
   const addDday = () => {
     if (!newDdayTitle.trim() || !newDdayDate) return;
     const newItem: Dday = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: newDdayTitle.trim(),
       emoji: newDdayEmoji,
       date: newDdayDate,
@@ -193,7 +193,7 @@ const CoupleView = () => {
   const addWish = () => {
     if (!newWishTitle.trim()) return;
     const newItem: WishItem = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: newWishTitle.trim(),
       category: newWishCategory,
       isDone: false,

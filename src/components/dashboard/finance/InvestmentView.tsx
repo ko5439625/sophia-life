@@ -185,7 +185,7 @@ const InvestmentView = () => {
   const handleAddHolding = () => {
     if (!newHolding.name.trim()) return;
     const h: Holding = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: newHolding.name,
       category: newHolding.category,
       quantity: parseFloat(newHolding.quantity) || 0,

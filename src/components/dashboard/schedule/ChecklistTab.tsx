@@ -118,7 +118,7 @@ const ChecklistTab = () => {
     const title = (newTitles[dateKey] || "").trim();
     if (!title) return;
     const newTodo: Todo = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title,
       memo: "",
       isDone: false,

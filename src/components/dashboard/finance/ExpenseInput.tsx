@@ -34,7 +34,7 @@ const ExpenseInput = () => {
   const handleAdd = () => {
     if (!amount || !category) return;
     const expense: Expense = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       type,
       amount: parseInt(amount),
       category,
