@@ -6,7 +6,7 @@ import BlogHeader from "@/components/blog/BlogHeader";
 import CategoryTabs from "@/components/blog/CategoryTabs";
 import ArticleCard from "@/components/blog/ArticleCard";
 import BlogFooter from "@/components/blog/BlogFooter";
-import { mockPosts, BlogPost } from "@/lib/mockData";
+import { BlogPost } from "@/lib/mockData";
 import { loadPosts } from "@/services/supabaseSync";
 
 function stripHtml(html: string): string {
@@ -32,7 +32,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [unlockedCategories, setUnlockedCategories] = useState<Set<string>>(new Set());
-  const [allPosts, setAllPosts] = useState<BlogPost[]>(mockPosts);
+  const [allPosts, setAllPosts] = useState<BlogPost[]>([]);
 
   // Load posts from Supabase, merge with mock
   useEffect(() => {

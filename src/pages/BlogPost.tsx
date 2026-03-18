@@ -3,15 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
-import { mockPosts, BlogPost as BlogPostType } from "@/lib/mockData";
+import { BlogPost as BlogPostType } from "@/lib/mockData";
 import { loadPosts } from "@/services/supabaseSync";
 
 const BlogPost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [post, setPost] = useState<BlogPostType | undefined>(
-    mockPosts.find((p) => p.id === id)
-  );
+  const [post, setPost] = useState<BlogPostType | undefined>(undefined);
   const [currentImg, setCurrentImg] = useState(0);
 
   useEffect(() => {
