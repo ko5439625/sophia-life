@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { BlogPost } from "@/lib/mockData";
 import { useNavigate } from "react-router-dom";
+import defaultBlogImg from "@/assets/default-blog.png";
 
 interface ArticleCardProps {
   post: BlogPost;
@@ -49,8 +50,9 @@ const ArticleCard = ({ post, index, onTagClick, activeTag }: ArticleCardProps) =
             )}
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
-            <span className="text-4xl">📝</span>
+          <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 gap-2 p-4">
+            <img src={defaultBlogImg} alt="no image" className="w-24 h-24 object-contain opacity-60" />
+            <span className="text-[10px] text-muted-foreground/50 font-mono">첨부 이미지가 없습니다</span>
           </div>
         )}
       </div>
