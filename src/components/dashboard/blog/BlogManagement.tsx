@@ -795,6 +795,7 @@ const BlogManagement = () => {
   const [subtitle, setSubtitle] = useState(() => {
     return localStorage.getItem("sophia-blog-subtitle") || "일상의 작은 순간들을 기록합니다";
   });
+  const categoriesLoaded = useRef(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -822,13 +823,15 @@ const BlogManagement = () => {
           setCategories(data.blog_categories);
           localStorage.setItem(BLOG_CATEGORIES_KEY, JSON.stringify(data.blog_categories));
         }
+        categoriesLoaded.current = true;
       });
     });
   }, []);
 
-  // Sync categories to localStorage + Supabase
+  // Sync categories to localStorage + Supabase (only after initial load)
   useEffect(() => {
     localStorage.setItem(BLOG_CATEGORIES_KEY, JSON.stringify(categories));
+    if (!categoriesLoaded.current) return; // Don't save to DB until loaded
     import("@/lib/supabase").then(({ supabase }) => {
       if (!supabase) return;
       supabase.from("user_settings").upsert({ id: "c7a9defe-0e45-57e0-9b26-4ef82dd867c1", blog_categories: categories });
