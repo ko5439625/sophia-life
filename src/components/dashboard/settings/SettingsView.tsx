@@ -366,12 +366,14 @@ const SettingsView = () => {
       if (stored) return JSON.parse(stored);
     } catch { /* ignore */ }
     return {
-      salaryOwn: "50000000",
-      salarySpouse: "40000000",
-      monthlyLoanPayment: "500000",
-      isRegulated: true,
+      salaryOwn: "",
+      salarySpouse: "",
+      monthlyLoanPayment: "",
+      cashSavings: "",
+      emergencyFund: "",
+      isRegulated: false,
       baseRate: "3.5",
-      ltvLimit: "50",
+      ltvLimit: "70",
       dsrLimit: "40",
     };
   });
@@ -557,10 +559,21 @@ const SettingsView = () => {
     });
   };
 
-  const handleSavePersonalInfo = () => {
+  const handleSavePersonalInfo = async () => {
     try {
       localStorage.setItem("sophia-personal-info", JSON.stringify(personalInfo));
-      setPersonalInfoMessage("개인 정보가 저장되었습니다.");
+      // Sync to Supabase user_settings (annualIncome, cashSavings, emergencyFund)
+      if (supabase) {
+        await supabase.from("user_settings").upsert({
+          id: "c7a9defe-0e45-57e0-9b26-4ef82dd867c1",
+          annual_income1: parseInt(personalInfo.salaryOwn) || 0,
+          annual_income2: parseInt(personalInfo.salarySpouse) || 0,
+          monthly_loan_payment: parseInt(personalInfo.monthlyLoanPayment) || 0,
+          cash_savings: parseInt(personalInfo.cashSavings) || 0,
+          emergency_fund: parseInt(personalInfo.emergencyFund) || 0,
+        });
+      }
+      setPersonalInfoMessage("저장 완료 (클라우드 동기화)");
     } catch (e) {
       console.warn("Failed to save personal info:", e);
       setPersonalInfoMessage("저장 실패");
@@ -816,11 +829,11 @@ const SettingsView = () => {
         </div>
       </CollapsibleSection>
 
-      {/* 2. Personal Info for Real Estate */}
+      {/* 2. Personal / Financial Info */}
       <CollapsibleSection
         icon={<User className="h-4 w-4 text-muted-foreground" />}
-        title="개인 정보"
-        badge="부동산 계산용"
+        title="자산 기초 정보"
+        badge="자산·투자 기초 데이터"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -891,30 +904,46 @@ const SettingsView = () => {
 
           <div>
             <label className="text-xs text-muted-foreground font-mono mb-1 block">
-              규제지역 여부
+              현금 저축
             </label>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleRegulatedToggle}
-                className={`relative w-11 h-6 rounded-full transition-colors ${
-                  personalInfo.isRegulated ? "bg-primary" : "bg-muted"
-                }`}
-              >
-                <motion.div
-                  className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow"
-                  animate={{
-                    left: personalInfo.isRegulated
-                      ? "calc(100% - 22px)"
-                      : "2px",
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                />
-                {personalInfo.isRegulated && (
-                  <Check className="absolute right-1.5 top-1 h-4 w-4 text-primary-foreground" />
-                )}
-              </button>
-              <span className="text-xs font-mono text-muted-foreground">
-                {personalInfo.isRegulated ? "규제지역" : "비규제지역"}
+            <div className="relative">
+              <input
+                type="text"
+                value={formatWon(personalInfo.cashSavings || "")}
+                onChange={(e) =>
+                  setPersonalInfo({
+                    ...personalInfo,
+                    cashSavings: parseWon(e.target.value),
+                  })
+                }
+                placeholder="0"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                원
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground font-mono mb-1 block">
+              비상금
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={formatWon(personalInfo.emergencyFund || "")}
+                onChange={(e) =>
+                  setPersonalInfo({
+                    ...personalInfo,
+                    emergencyFund: parseWon(e.target.value),
+                  })
+                }
+                placeholder="0"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                원
               </span>
             </div>
           </div>
@@ -940,58 +969,6 @@ const SettingsView = () => {
                 %
               </span>
             </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-muted-foreground font-mono mb-1 block">
-              LTV 한도 (%)
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                step="1"
-                value={personalInfo.ltvLimit}
-                onChange={(e) =>
-                  setPersonalInfo({
-                    ...personalInfo,
-                    ltvLimit: e.target.value,
-                  })
-                }
-                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                %
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              기본: 규제지역 50%, 비규제 70%
-            </p>
-          </div>
-
-          <div>
-            <label className="text-xs text-muted-foreground font-mono mb-1 block">
-              DSR 한도 (%)
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                step="1"
-                value={personalInfo.dsrLimit}
-                onChange={(e) =>
-                  setPersonalInfo({
-                    ...personalInfo,
-                    dsrLimit: e.target.value,
-                  })
-                }
-                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                %
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              기본: 40%
-            </p>
           </div>
         </div>
 
