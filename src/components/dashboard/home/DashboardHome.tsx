@@ -36,7 +36,7 @@ interface DashboardHomeProps {
 
 const mockChecklist: { id: string; title: string; isDone: boolean }[] = [];
 
-const initialEvents: { id: string; title: string; emoji: string; date: string }[] = [];
+const initialEvents: { id: string; title: string; emoji: string; date: string; dateLabel?: string }[] = [];
 
 // Pinned memos are loaded from shared memo store
 
@@ -256,16 +256,45 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
       if (todayTodos.length > 0) setChecklist(todayTodos);
     });
 
-    // Load upcoming events
+    // Load upcoming events (group multi-day events)
     loadEvents().then((rows) => {
-      if (rows.length > 0) {
-        setEvents(rows.map((r) => ({
-          id: r.id,
-          title: r.title,
-          emoji: r.emoji,
-          date: r.date,
-        })));
+      if (rows.length === 0) return;
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      // Group consecutive events by base title (remove " (1/4)" suffix)
+      const grouped = new Map<string, { emoji: string; dates: string[] }>();
+      for (const r of rows) {
+        const baseTitle = r.title.replace(/\s*\(\d+\/\d+\)$/, "");
+        const key = `${baseTitle}__${r.emoji}`;
+        if (!grouped.has(key)) {
+          grouped.set(key, { emoji: r.emoji, dates: [] });
+        }
+        grouped.get(key)!.dates.push(r.date);
       }
+
+      const result: { id: string; title: string; emoji: string; date: string; dateLabel?: string }[] = [];
+      for (const [key, val] of grouped) {
+        const baseTitle = key.split("__")[0];
+        const sortedDates = val.dates.sort();
+        const startDate = sortedDates[0];
+        const endDate = sortedDates[sortedDates.length - 1];
+
+        // Skip past events
+        if (new Date(endDate) < now) continue;
+
+        if (sortedDates.length > 1 && startDate !== endDate) {
+          const s = new Date(startDate);
+          const e = new Date(endDate);
+          const dateLabel = `${s.getMonth()+1}/${s.getDate()}~${e.getMonth()+1}/${e.getDate()}`;
+          result.push({ id: key, title: baseTitle, emoji: val.emoji, date: startDate, dateLabel });
+        } else {
+          result.push({ id: key, title: baseTitle, emoji: val.emoji, date: startDate });
+        }
+      }
+
+      result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      setEvents(result.slice(0, 5));
     });
   }, []);
 
@@ -885,6 +914,9 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
                 <div className="flex items-center gap-2">
                   <span className="text-base">{event.emoji}</span>
                   <span className="text-sm">{isGuest ? "일정이 있습니다" : event.title}</span>
+                  {event.dateLabel && (
+                    <span className="text-[10px] text-muted-foreground/60 font-mono">({event.dateLabel})</span>
+                  )}
                 </div>
                 <span className="text-xs font-mono text-primary font-medium">
                   {getDday(event.date)}
