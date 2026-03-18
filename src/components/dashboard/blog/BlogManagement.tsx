@@ -300,8 +300,26 @@ const PostEditor = ({
   const [pasteToast, setPasteToast] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiToast, setAiToast] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload image to Supabase Storage → return public URL
+  const uploadImageToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      if (!supabase) return null;
+      const ext = file.name.split(".").pop() || "png";
+      const fileName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("blog-images").upload(fileName, file, { contentType: file.type });
+      if (error) { console.error("Upload error:", error); return null; }
+      const { data: urlData } = supabase.storage.from("blog-images").getPublicUrl(fileName);
+      return urlData.publicUrl;
+    } catch (e) {
+      console.error("Image upload failed:", e);
+      return null;
+    }
+  };
 
   // Set initial content into contentEditable div
   useEffect(() => {
@@ -351,17 +369,27 @@ const PostEditor = ({
     }
   }, []);
 
-  // Handle paste -- detect images
+  // Handle paste -- detect images → upload to Supabase Storage
   const handlePaste = useCallback(
-    (e: React.ClipboardEvent<HTMLDivElement>) => {
+    async (e: React.ClipboardEvent<HTMLDivElement>) => {
       const items = e.clipboardData?.files;
       if (items && items.length > 0) {
         const file = items[0];
         if (file.type.startsWith("image/")) {
           e.preventDefault();
-          const objectUrl = URL.createObjectURL(file);
-          const imgHtml = `<br><img src="${objectUrl}" alt="pasted image" style="max-width:100%;border-radius:8px;margin:8px 0;" /><br>`;
-          insertAtCursor(imgHtml);
+          setUploadingImage(true);
+          // Show placeholder
+          const placeholderId = `img-loading-${Date.now()}`;
+          insertAtCursor(`<br><span id="${placeholderId}" style="color:#888;font-size:12px;">📷 이미지 업로드 중...</span><br>`);
+          const url = await uploadImageToStorage(file);
+          // Replace placeholder with actual image
+          const placeholder = contentRef.current?.querySelector(`#${placeholderId}`);
+          if (url && placeholder) {
+            placeholder.outerHTML = `<img src="${url}" alt="pasted image" style="max-width:100%;border-radius:8px;margin:8px 0;" />`;
+          } else if (placeholder) {
+            placeholder.outerHTML = `<span style="color:#ef4444;font-size:12px;">이미지 업로드 실패</span>`;
+          }
+          setUploadingImage(false);
           setPasteToast(true);
           setTimeout(() => setPasteToast(false), 2000);
           return;
@@ -416,15 +444,22 @@ const PostEditor = ({
     setTimeout(() => setAiToast(false), 2500);
   }, []);
 
-  // Handle file input for inline image insertion
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file input for inline image insertion → upload to Supabase Storage
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    // Focus the content area and insert at end if no selection
+    setUploadingImage(true);
     contentRef.current?.focus();
-    const imgHtml = `<br><img src="${objectUrl}" alt="${file.name}" style="max-width:100%;border-radius:8px;margin:8px 0;" /><br>`;
-    insertAtCursor(imgHtml);
+    const placeholderId = `img-loading-${Date.now()}`;
+    insertAtCursor(`<br><span id="${placeholderId}" style="color:#888;font-size:12px;">📷 이미지 업로드 중...</span><br>`);
+    const url = await uploadImageToStorage(file);
+    const placeholder = contentRef.current?.querySelector(`#${placeholderId}`);
+    if (url && placeholder) {
+      placeholder.outerHTML = `<img src="${url}" alt="${file.name}" style="max-width:100%;border-radius:8px;margin:8px 0;" />`;
+    } else if (placeholder) {
+      placeholder.outerHTML = `<span style="color:#ef4444;font-size:12px;">이미지 업로드 실패</span>`;
+    }
+    setUploadingImage(false);
     e.target.value = "";
   };
 
