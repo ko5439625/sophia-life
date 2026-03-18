@@ -6,7 +6,8 @@ import BlogHeader from "@/components/blog/BlogHeader";
 import CategoryTabs from "@/components/blog/CategoryTabs";
 import ArticleCard from "@/components/blog/ArticleCard";
 import BlogFooter from "@/components/blog/BlogFooter";
-import { mockPosts } from "@/lib/mockData";
+import { mockPosts, BlogPost } from "@/lib/mockData";
+import { loadPosts } from "@/services/supabaseSync";
 
 // Default locked categories - can be managed from settings
 const DEFAULT_LOCKED_CATEGORIES = ["감성"];
@@ -25,6 +26,27 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [unlockedCategories, setUnlockedCategories] = useState<Set<string>>(new Set());
+  const [allPosts, setAllPosts] = useState<BlogPost[]>(mockPosts);
+
+  // Load posts from Supabase, merge with mock
+  useEffect(() => {
+    loadPosts().then((rows) => {
+      if (rows.length > 0) {
+        const dbPosts: BlogPost[] = rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          excerpt: r.content.slice(0, 100),
+          content: r.content,
+          category: r.category,
+          images: r.images || [],
+          tags: r.tags || [],
+          date: r.created_at?.slice(0, 10) || "",
+          isPublic: r.is_public,
+        }));
+        setAllPosts(dbPosts);
+      }
+    });
+  }, []);
 
   // Load locked categories from localStorage
   const lockedCategories = useMemo(() => {
@@ -49,7 +71,7 @@ const Index = () => {
   }, []);
 
   const filteredPosts = useMemo(() => {
-    let posts = mockPosts;
+    let posts = allPosts;
 
     // Hide posts from locked categories that haven't been unlocked
     posts = posts.filter((p) => {
@@ -78,7 +100,7 @@ const Index = () => {
     }
 
     return posts;
-  }, [activeCategory, searchQuery, activeTag, lockedCategories, unlockedCategories]);
+  }, [activeCategory, searchQuery, activeTag, lockedCategories, unlockedCategories, allPosts]);
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">

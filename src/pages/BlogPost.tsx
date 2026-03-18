@@ -1,15 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
-import { mockPosts } from "@/lib/mockData";
+import { mockPosts, BlogPost as BlogPostType } from "@/lib/mockData";
+import { loadPosts } from "@/services/supabaseSync";
 
 const BlogPost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const post = mockPosts.find((p) => p.id === id);
+  const [post, setPost] = useState<BlogPostType | undefined>(
+    mockPosts.find((p) => p.id === id)
+  );
   const [currentImg, setCurrentImg] = useState(0);
+
+  useEffect(() => {
+    loadPosts().then((rows) => {
+      const found = rows.find((r) => r.id === id);
+      if (found) {
+        setPost({
+          id: found.id,
+          title: found.title,
+          excerpt: found.content.slice(0, 100),
+          content: found.content,
+          category: found.category,
+          images: found.images || [],
+          tags: found.tags || [],
+          date: found.created_at?.slice(0, 10) || "",
+          isPublic: found.is_public,
+        });
+      }
+    });
+  }, [id]);
 
   if (!post) {
     return (
