@@ -389,6 +389,50 @@ export async function deleteTodo(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Plans (플래너/여행 계획)
+// ---------------------------------------------------------------------------
+
+export interface PlanRow {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string;
+  estimated_cost: number;
+  status: string;
+  memo: string;
+  items: unknown; // jsonb
+}
+
+export async function loadPlans(): Promise<PlanRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("plans").select("*").order("start_date");
+    return (data || []) as PlanRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadPlans error:", e);
+    return [];
+  }
+}
+
+export async function savePlan(plan: PlanRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("plans").upsert(plan);
+  } catch (e) {
+    console.error("[supabaseSync] savePlan error:", e);
+  }
+}
+
+export async function deletePlan(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("plans").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deletePlan error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Events (캘린더 일정)
 // ---------------------------------------------------------------------------
 

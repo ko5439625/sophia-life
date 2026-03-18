@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -16,6 +16,8 @@ import {
   Lock,
 } from "lucide-react";
 import { useGuestMode } from "@/hooks/useGuestMode";
+import { loadPlans, savePlan, deletePlan as deletePlanDB } from "@/services/supabaseSync";
+import type { PlanRow } from "@/services/supabaseSync";
 
 interface PlanItem {
   id: string;
@@ -47,24 +49,31 @@ const categoryEmojis: Record<string, string> = {
   transport: "\u{1F697}",
 };
 
-const mockPlans: Plan[] = [
-  {
-    id: "1",
-    title: "제주도 3박 4일",
-    startDate: "2026-03-28",
-    endDate: "2026-03-31",
-    estimatedCost: 800000,
-    status: "planned",
-    memo: "봄 제주 여행! 벚꽃 시즌",
-    items: [
-      { id: "a", dayNumber: 1, time: "10:00", title: "공항 도착", place: "제주공항", category: "transport", memo: "" },
-      { id: "b", dayNumber: 1, time: "12:00", title: "흑돼지 점심", place: "돈사돈", category: "food", memo: "예약 완료" },
-      { id: "c", dayNumber: 1, time: "14:00", title: "성산일출봉", place: "성산읍", category: "tour", memo: "" },
-      { id: "d", dayNumber: 2, time: "09:00", title: "카페 투어", place: "한림읍", category: "cafe", memo: "" },
-      { id: "e", dayNumber: 2, time: "18:00", title: "해산물 저녁", place: "협재 해변", category: "food", memo: "" },
-    ],
-  },
-];
+function planToRow(p: Plan): PlanRow {
+  return {
+    id: p.id,
+    title: p.title,
+    start_date: p.startDate,
+    end_date: p.endDate,
+    estimated_cost: p.estimatedCost,
+    status: p.status,
+    memo: p.memo,
+    items: p.items,
+  };
+}
+
+function rowToPlan(r: PlanRow): Plan {
+  return {
+    id: r.id,
+    title: r.title,
+    startDate: r.start_date,
+    endDate: r.end_date,
+    estimatedCost: r.estimated_cost,
+    status: r.status as Plan["status"],
+    memo: r.memo,
+    items: (r.items as PlanItem[]) || [],
+  };
+}
 
 const YEARS = [2025, 2026, 2027];
 
@@ -77,8 +86,18 @@ const getDayCount = (start: string, end: string): number => {
 
 const PlannerTab = () => {
   const { isGuest } = useGuestMode();
-  const [plans, setPlans] = useState<Plan[]>(mockPlans);
-  const [expandedPlan, setExpandedPlan] = useState<string | null>("1");
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    loadPlans().then((rows) => {
+      if (rows.length > 0) {
+        setPlans(rows.map(rowToPlan));
+        setExpandedPlan(rows[0].id);
+      }
+    });
+  }, []);
   const [selectedYear, setSelectedYear] = useState(2026);
   const [selectedMonth, setSelectedMonth] = useState(3);
   const [showForm, setShowForm] = useState(false);
@@ -147,6 +166,7 @@ const PlannerTab = () => {
       items: [],
     };
     setPlans((prev) => [...prev, plan]);
+    savePlan(planToRow(plan));
     setNewTrip({ title: "", startDate: "", endDate: "", memo: "", estimatedCost: "" });
     setShowForm(false);
     setExpandedPlan(plan.id);
@@ -154,6 +174,7 @@ const PlannerTab = () => {
 
   const handleDeleteTrip = (planId: string) => {
     setPlans((prev) => prev.filter((p) => p.id !== planId));
+    deletePlanDB(planId);
     if (expandedPlan === planId) setExpandedPlan(null);
   };
 
@@ -170,8 +191,8 @@ const PlannerTab = () => {
 
   const handleSaveEditTrip = () => {
     if (!editingTripId) return;
-    setPlans((prev) =>
-      prev.map((p) =>
+    setPlans((prev) => {
+      const updated = prev.map((p) =>
         p.id === editingTripId
           ? {
               ...p,
@@ -182,8 +203,11 @@ const PlannerTab = () => {
               estimatedCost: parseInt(editTrip.estimatedCost.replace(/,/g, "")) || 0,
             }
           : p
-      )
-    );
+      );
+      const target = updated.find((p) => p.id === editingTripId);
+      if (target) savePlan(planToRow(target));
+      return updated;
+    });
     setEditingTripId(null);
   };
 
@@ -198,23 +222,29 @@ const PlannerTab = () => {
       category: newScheduleItem.category,
       memo: newScheduleItem.memo,
     };
-    setPlans((prev) =>
-      prev.map((p) =>
+    setPlans((prev) => {
+      const updated = prev.map((p) =>
         p.id === planId ? { ...p, items: [...p.items, item] } : p
-      )
-    );
+      );
+      const target = updated.find((p) => p.id === planId);
+      if (target) savePlan(planToRow(target));
+      return updated;
+    });
     setNewScheduleItem({ time: "", title: "", place: "", memo: "", category: "activity" });
     setAddingScheduleDay(null);
   };
 
   const handleDeleteScheduleItem = (planId: string, itemId: string) => {
-    setPlans((prev) =>
-      prev.map((p) =>
+    setPlans((prev) => {
+      const updated = prev.map((p) =>
         p.id === planId
           ? { ...p, items: p.items.filter((i) => i.id !== itemId) }
           : p
-      )
-    );
+      );
+      const target = updated.find((p) => p.id === planId);
+      if (target) savePlan(planToRow(target));
+      return updated;
+    });
   };
 
   // Filter plans for selected year/month
