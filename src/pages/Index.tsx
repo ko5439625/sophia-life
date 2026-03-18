@@ -9,6 +9,12 @@ import BlogFooter from "@/components/blog/BlogFooter";
 import { mockPosts, BlogPost } from "@/lib/mockData";
 import { loadPosts } from "@/services/supabaseSync";
 
+function stripHtml(html: string): string {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+}
+
 // Default locked categories - can be managed from settings
 const DEFAULT_LOCKED_CATEGORIES = ["감성"];
 
@@ -35,7 +41,7 @@ const Index = () => {
         const dbPosts: BlogPost[] = rows.map((r) => ({
           id: r.id,
           title: r.title,
-          excerpt: r.content.slice(0, 100),
+          excerpt: stripHtml(r.content).slice(0, 100),
           content: r.content,
           category: r.category,
           images: r.images || [],
@@ -114,7 +120,7 @@ const Index = () => {
         transition={{ duration: 0.8, delay: 1.5 }}
       >
         <p className="text-center text-xs md:text-sm text-muted-foreground/70 font-light tracking-[0.2em] uppercase">
-          일상의 작은 순간들을 기록합니다
+          {localStorage.getItem("sophia-blog-subtitle") || "일상의 작은 순간들을 기록합니다"}
         </p>
       </motion.section>
 

@@ -1,6 +1,6 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { categories } from "@/lib/mockData";
+import { categories as defaultCategories } from "@/lib/mockData";
 import { Lock, X } from "lucide-react";
 
 interface CategoryTabsProps {
@@ -18,6 +18,14 @@ const CategoryTabs = ({
   unlockedCategories = new Set(),
   onUnlock,
 }: CategoryTabsProps) => {
+  const categories = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("sophia-blog-categories");
+      if (stored) return ["전체", ...JSON.parse(stored)];
+    } catch { /* ignore */ }
+    return defaultCategories;
+  }, []);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const [pinModal, setPinModal] = useState<string | null>(null);

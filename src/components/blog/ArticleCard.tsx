@@ -30,20 +30,27 @@ const ArticleCard = ({ post, index, onTagClick, activeTag }: ArticleCardProps) =
     >
       {/* Image area */}
       <div
-        className="aspect-square overflow-hidden relative"
+        className="aspect-square overflow-hidden relative bg-muted"
         onMouseEnter={() => { if (hasMultiple) setImgIndex(1); }}
         onMouseLeave={() => setImgIndex(0)}
       >
-        <img
-          src={post.images[imgIndex] || post.images[0]}
-          alt={post.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
-        {/* Image count badge */}
-        {hasMultiple && (
-          <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
-            +{post.images.length}
+        {post.images.length > 0 && post.images[0] ? (
+          <>
+            <img
+              src={post.images[imgIndex] || post.images[0]}
+              alt={post.title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+            />
+            {hasMultiple && (
+              <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
+                +{post.images.length}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
+            <span className="text-4xl">📝</span>
           </div>
         )}
       </div>
@@ -62,7 +69,7 @@ const ArticleCard = ({ post, index, onTagClick, activeTag }: ArticleCardProps) =
           {post.title}
         </h3>
         <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2">
-          {post.excerpt}
+          {(() => { try { const tmp = document.createElement("div"); tmp.innerHTML = post.excerpt; return tmp.textContent || post.excerpt; } catch { return post.excerpt; } })()}
         </p>
 
         {/* Tags */}

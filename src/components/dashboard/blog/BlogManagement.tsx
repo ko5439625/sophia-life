@@ -757,9 +757,9 @@ const BlogManagement = () => {
     } catch { /* ignore */ }
     return defaultCategories;
   });
-  const [subtitle, setSubtitle] = useState(
-    "일상의 작은 순간들을 기록합니다"
-  );
+  const [subtitle, setSubtitle] = useState(() => {
+    return localStorage.getItem("sophia-blog-subtitle") || "일상의 작은 순간들을 기록합니다";
+  });
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -911,7 +911,7 @@ const BlogManagement = () => {
               onAddCategory={addCategory}
               onRemoveCategory={removeCategory}
               subtitle={subtitle}
-              onSubtitleChange={setSubtitle}
+              onSubtitleChange={(v: string) => { setSubtitle(v); localStorage.setItem("sophia-blog-subtitle", v); }}
             />
 
             {/* Post list */}
