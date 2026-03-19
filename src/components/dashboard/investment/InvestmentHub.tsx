@@ -3,12 +3,14 @@ import { motion } from "framer-motion";
 import InvestmentView from "../finance/InvestmentView";
 import HedgingView from "../finance/HedgingView";
 import QuantRecommendView from "../finance/QuantRecommendView";
+import TradingView from "../finance/TradingView";
 import PensionView from "./PensionView";
 
 const tabs = [
   { id: "portfolio", label: "투자 현황" },
   { id: "pension", label: "연금 투자" },
   { id: "quant", label: "퀀트 추천" },
+  { id: "trading", label: "매매" },
   { id: "hedging", label: "헷징 분석" },
 ];
 
@@ -65,6 +67,7 @@ const InvestmentHub = () => {
         {activeTab === "portfolio" && <InvestmentView />}
         {activeTab === "pension" && <PensionView />}
         {activeTab === "quant" && <QuantRecommendView />}
+        {activeTab === "trading" && <TradingView />}
         {activeTab === "hedging" && <HedgingView />}
       </motion.div>
     </div>

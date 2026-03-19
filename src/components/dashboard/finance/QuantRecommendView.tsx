@@ -851,17 +851,17 @@ const QuantRecommendView = () => {
   const { isGuest } = useGuestMode();
   const [market, setMarket] = useState<"us" | "kr">("us");
   const [activePerspective, setActivePerspective] = useState<"aggressive" | "neutral" | "conservative">("aggressive");
-  const [stocks, setStocks] = useState<StockData[]>(() => {
-    try {
-      const cached = localStorage.getItem("sophia-quant-cache");
-      if (cached) {
-        const { data, market: m, timestamp } = JSON.parse(cached);
-        // 6시간 이내면 캐시 사용
-        if (Date.now() - timestamp < 6 * 60 * 60 * 1000 && data?.length > 0) return data;
-      }
-    } catch { /* ignore */ }
-    return [];
+  // 미장/국장 각각 캐시
+  const [stocksUs, setStocksUs] = useState<StockData[]>(() => {
+    try { const c = localStorage.getItem("sophia-quant-us"); if (c) { const d = JSON.parse(c); if (Date.now() - d.t < 6*3600000 && d.d?.length) return d.d; } } catch {} return [];
   });
+  const [stocksKr, setStocksKr] = useState<StockData[]>(() => {
+    try { const c = localStorage.getItem("sophia-quant-kr"); if (c) { const d = JSON.parse(c); if (Date.now() - d.t < 6*3600000 && d.d?.length) return d.d; } } catch {} return [];
+  });
+  const stocks = market === "us" ? stocksUs : stocksKr;
+  const setStocks = (data: StockData[]) => {
+    if (market === "us") setStocksUs(data); else setStocksKr(data);
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
@@ -930,8 +930,7 @@ const QuantRecommendView = () => {
       // 필터 후 재분류
       data = applyRelativeClassification(data);
       setStocks(data);
-      // 캐시 저장
-      try { localStorage.setItem("sophia-quant-cache", JSON.stringify({ data, market, timestamp: Date.now() })); } catch { /* */ }
+      try { localStorage.setItem(market === "us" ? "sophia-quant-us" : "sophia-quant-kr", JSON.stringify({ d: data, t: Date.now() })); } catch { /* */ }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "로드 실패");
     } finally {
@@ -1029,6 +1028,9 @@ const QuantRecommendView = () => {
     );
   }
 
+  // 전체 순위 (recScore 기준)
+  const allRanked = [...stocks].sort((a, b) => b.recScore - a.recScore);
+  const rankMap = new Map(allRanked.map((s, i) => [s.symbol, i + 1]));
   const filteredStocks = stocks.filter((s) => s.category === activePerspective).sort((a, b) => b.recScore - a.recScore);
   const perspective = perspectives.find((p) => p.id === activePerspective)!;
 
@@ -1212,17 +1214,21 @@ const QuantRecommendView = () => {
           <div className="space-y-1.5">
             {filteredStocks.map((stock) => {
               const isSelected = selectedStock?.symbol === stock.symbol;
+              const rank = rankMap.get(stock.symbol) || 999;
               return (
                 <div key={stock.symbol}>
                   <motion.button onClick={() => handleAIAnalyze(stock)}
-                    className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                    className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${rank <= 3 ? "border-l-2 border-yellow-500/50" : ""} ${
                       isSelected ? "bg-card border border-primary/30" : "bg-card/50 hover:bg-card"
                     }`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: perspective.color }} />
+                        {rank <= 10 && (
+                          <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${rank <= 3 ? "bg-yellow-500/20 text-yellow-500" : "bg-primary/10 text-primary"}`}>
+                            {rank <= 3 ? ["🥇","🥈","🥉"][rank-1] : `${rank}위`}
+                          </span>
+                        )}
                         <span className="text-sm font-medium truncate">{stock.name}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground">{stock.symbol}</span>
                         <span className={`text-[9px] font-bold ${valColor(stock.valuation)}`}>{stock.valuation}</span>
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${recBadge(stock.recommendation).bg}`}>
                           {recBadge(stock.recommendation).icon} {recBadge(stock.recommendation).text}
