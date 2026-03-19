@@ -42,6 +42,8 @@ export interface Trade {
   destination?: "cash" | "reinvest" | "savings";
 }
 
+export type DeductFrom = "cashSavings" | "emergencyFund" | "none";
+
 export interface Expense {
   id: string;
   type: "income" | "expense";
@@ -49,6 +51,7 @@ export interface Expense {
   category: string;
   date: string;
   memo: string;
+  deductFrom?: DeductFrom;
 }
 
 export interface OwnedProperty {
@@ -215,6 +218,7 @@ type Action =
 function financialReducer(state: FinancialState, action: Action): FinancialState {
   switch (action.type) {
     // --- Expenses ---
+    // Note: asset deductions are computed dynamically in computeDerived()
     case "ADD_EXPENSE":
       return { ...state, expenses: [action.payload, ...state.expenses] };
 
@@ -410,7 +414,33 @@ function getSettingsBase() {
 function computeDerived(state: FinancialState) {
   const base = getSettingsBase();
 
-  const totalCash = state.cashSavings + state.emergencyFund + base.cashHoldings;
+  // Effective cash/emergency = base setting value
+  //   + budget allocations UP TO current month (not future)
+  //   - expense deductions UP TO current month
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const budgetSavingsTotal = state.monthlyBudgets
+    .filter((b) => b.month <= currentMonth)
+    .reduce((sum, b) => sum + (b.categories.find((c) => c.id === "savings")?.amount ?? 0), 0);
+  const budgetEmergencyTotal = state.monthlyBudgets
+    .filter((b) => b.month <= currentMonth)
+    .reduce((sum, b) => sum + (b.categories.find((c) => c.id === "emergency")?.amount ?? 0), 0);
+  const expenseCashDeductions = state.expenses
+    .filter((e) => e.type === "expense" && e.deductFrom === "cashSavings" && e.date.slice(0, 7) <= currentMonth)
+    .reduce((sum, e) => sum + e.amount, 0);
+  const expenseEmergencyDeductions = state.expenses
+    .filter((e) => e.type === "expense" && e.deductFrom === "emergencyFund" && e.date.slice(0, 7) <= currentMonth)
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const effectiveCashSavings = Math.max(0,
+    state.cashSavings + budgetSavingsTotal - expenseCashDeductions
+  );
+  const effectiveEmergencyFund = Math.max(0,
+    state.emergencyFund + budgetEmergencyTotal - expenseEmergencyDeductions
+  );
+
+  const totalCash = effectiveCashSavings + effectiveEmergencyFund + base.cashHoldings;
 
   const totalInvestment = state.holdings.reduce(
     (sum, h) => sum + h.currentPrice * h.quantity,
@@ -436,7 +466,10 @@ function computeDerived(state: FinancialState) {
   // 총 자산 = 가용자산 + 연금
   const totalNetWorth = totalAvailable + totalPension;
 
-  return { totalCash, totalInvestment, totalPension, totalRealEstate, totalNetWorth, totalAvailable };
+  return {
+    totalCash, totalInvestment, totalPension, totalRealEstate, totalNetWorth, totalAvailable,
+    effectiveCashSavings, effectiveEmergencyFund,
+  };
 }
 
 function monthlyExpenseTotal(expenses: Expense[], month: string): number {
@@ -504,6 +537,8 @@ interface FinancialContextValue {
   totalRealEstate: number;
   totalNetWorth: number;
   totalAvailable: number;
+  effectiveCashSavings: number;
+  effectiveEmergencyFund: number;
   getMonthlyExpenseTotal: (month: string) => number;
   getBudgetRemainingByCategory: (month: string, categoryId: string) => number;
 }

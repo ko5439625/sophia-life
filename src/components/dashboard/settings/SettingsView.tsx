@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 import { proxyFetch } from "../../../services/proxyFetch";
 import { supabase } from "../../../lib/supabase";
+import { saveBlogSettings } from "../../../services/supabaseSync";
 import { useFinancial } from "../../../store/financialStore";
 import {
   Lock,
@@ -391,6 +392,9 @@ const SettingsView = () => {
     stock: "",
     data: "",
     weather: "",
+    ecos: "",
+    kisAppkey: "",
+    kisSecret: "",
   });
   const [apiKeyVisibility, setApiKeyVisibility] = useState({
     kakao: false,
@@ -398,6 +402,9 @@ const SettingsView = () => {
     stock: false,
     data: false,
     weather: false,
+    ecos: false,
+    kisAppkey: false,
+    kisSecret: false,
   });
   const [apiMessage, setApiMessage] = useState<string | null>(null);
 
@@ -422,6 +429,9 @@ const SettingsView = () => {
         stock: localStorage.getItem("sophia-api-stock") || "",
         data: localStorage.getItem("sophia-api-data") || "",
         weather: localStorage.getItem("sophia-api-weather") || "",
+        ecos: localStorage.getItem("sophia-api-ecos") || "",
+        kisAppkey: localStorage.getItem("sophia-api-kis-appkey") || "",
+        kisSecret: localStorage.getItem("sophia-api-kis-secret") || "",
       };
       const localAiKeys = {
         openai: localStorage.getItem("sophia-api-openai") || "",
@@ -447,6 +457,9 @@ const SettingsView = () => {
             stock: remote.stock || localApiKeys.stock,
             data: remote.data || localApiKeys.data,
             weather: remote.weather || localApiKeys.weather,
+            ecos: remote.ecos || localApiKeys.ecos,
+            kisAppkey: remote.kisAppkey || localApiKeys.kisAppkey,
+            kisSecret: remote.kisSecret || localApiKeys.kisSecret,
           };
           const mergedAi = {
             openai: remote.openai || localAiKeys.openai,
@@ -534,6 +547,7 @@ const SettingsView = () => {
     } catch (e) {
       console.warn("Failed to save locked categories:", e);
     }
+    saveBlogSettings({ locked_categories: updated });
   };
 
   // Expense categories
@@ -598,6 +612,7 @@ const SettingsView = () => {
             stock: localStorage.getItem("sophia-api-stock") || "",
             data: localStorage.getItem("sophia-api-data") || "",
             weather: localStorage.getItem("sophia-api-weather") || "",
+            ecos: localStorage.getItem("sophia-api-ecos") || "",
             openai: localStorage.getItem("sophia-api-openai") || "",
             gemini: localStorage.getItem("sophia-api-gemini") || "",
             // Asset base info
@@ -631,7 +646,8 @@ const SettingsView = () => {
     try {
       await supabase
         .from("user_settings")
-        .upsert({ id: "default", api_keys: allKeys });
+        .update({ api_keys: allKeys })
+        .eq("id", "c7a9defe-0e45-57e0-9b26-4ef82dd867c1");
     } catch (e) {
       console.warn("[Settings] Supabase API key save failed:", e);
     }
@@ -644,6 +660,9 @@ const SettingsView = () => {
       localStorage.setItem("sophia-api-stock", apiKeys.stock);
       localStorage.setItem("sophia-api-data", apiKeys.data);
       localStorage.setItem("sophia-api-weather", apiKeys.weather);
+      localStorage.setItem("sophia-api-ecos", apiKeys.ecos);
+      localStorage.setItem("sophia-api-kis-appkey", apiKeys.kisAppkey);
+      localStorage.setItem("sophia-api-kis-secret", apiKeys.kisSecret);
       // Sync to Supabase (merge with AI keys)
       syncApiKeysToSupabase({ ...apiKeys, ...aiApiKeys });
       setApiMessage("API 키가 저장되었습니다. (클라우드 동기화 완료)");
@@ -703,6 +722,7 @@ const SettingsView = () => {
       } catch (e) {
         console.warn("Failed to save locked categories:", e);
       }
+      saveBlogSettings({ locked_categories: updated });
     }
   };
 
@@ -1130,7 +1150,7 @@ const SettingsView = () => {
       <CollapsibleSection
         icon={<Key className="h-4 w-4 text-muted-foreground" />}
         title="서비스 API 설정"
-        badge="카카오/뉴스/주식/공공데이터/날씨"
+        badge="카카오/뉴스/주식/공공데이터/날씨/ECOS/한투"
       >
         <div className="space-y-4">
           {/* Kakao API */}
@@ -1296,6 +1316,77 @@ const SettingsView = () => {
             <p className="text-[10px] text-muted-foreground mt-1">
               홈 대시보드 날씨 표시용
             </p>
+          </div>
+
+          {/* ECOS (한국은행 경제통계) API */}
+          <div>
+            <label className="text-xs text-muted-foreground font-mono mb-1 block">
+              한국은행 ECOS API 키
+            </label>
+            <div className="relative">
+              <input
+                type={apiKeyVisibility.ecos ? "text" : "password"}
+                value={apiKeys.ecos}
+                onChange={(e) =>
+                  setApiKeys({ ...apiKeys, ecos: e.target.value })
+                }
+                placeholder="ECOS 인증키"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-10"
+              />
+              <button
+                onClick={() => toggleApiKeyVisibility("ecos")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {apiKeyVisibility.ecos ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {"소비자물가지수(CPI) 조회용 · 미입력 시 연 3% 고정 · ecos.bok.or.kr에서 발급"}
+            </p>
+          </div>
+
+          {/* 한국투자증권 Open API */}
+          <div className="bg-amber-500/5 border border-amber-500/15 rounded-lg p-3 space-y-3">
+            <p className="text-xs font-mono text-amber-500 font-medium">
+              {"한국투자증권 Open API (퀀트 스크리닝)"}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {"퀀트 종목 조건검색에 필요 · apiportal.koreainvestment.com에서 발급 · 한투 계좌 필요"}
+            </p>
+            <div>
+              <label className="text-xs text-muted-foreground font-mono mb-1 block">앱 키 (App Key)</label>
+              <div className="relative">
+                <input
+                  type={apiKeyVisibility.kisAppkey ? "text" : "password"}
+                  value={apiKeys.kisAppkey}
+                  onChange={(e) => setApiKeys({ ...apiKeys, kisAppkey: e.target.value })}
+                  placeholder="한투 앱 키"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-10"
+                />
+                <button onClick={() => toggleApiKeyVisibility("kisAppkey")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {apiKeyVisibility.kisAppkey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground font-mono mb-1 block">앱 시크릿 (App Secret)</label>
+              <div className="relative">
+                <input
+                  type={apiKeyVisibility.kisSecret ? "text" : "password"}
+                  value={apiKeys.kisSecret}
+                  onChange={(e) => setApiKeys({ ...apiKeys, kisSecret: e.target.value })}
+                  placeholder="한투 앱 시크릿"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-10"
+                />
+                <button onClick={() => toggleApiKeyVisibility("kisSecret")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {apiKeyVisibility.kisSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

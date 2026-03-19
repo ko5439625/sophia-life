@@ -7,7 +7,7 @@ import CategoryTabs from "@/components/blog/CategoryTabs";
 import ArticleCard from "@/components/blog/ArticleCard";
 import BlogFooter from "@/components/blog/BlogFooter";
 import { BlogPost } from "@/lib/mockData";
-import { loadPosts } from "@/services/supabaseSync";
+import { loadPosts, loadBlogSettings, saveBlogSettings } from "@/services/supabaseSync";
 
 function stripHtml(html: string): string {
   const tmp = document.createElement("div");
@@ -40,6 +40,16 @@ const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [unlockedCategories, setUnlockedCategories] = useState<Set<string>>(new Set());
   const [allPosts, setAllPosts] = useState<BlogPost[]>([]);
+  const [lockedCategories, setLockedCategories] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("sophia-locked-categories");
+      if (stored) return JSON.parse(stored);
+    } catch { /* ignore */ }
+    return DEFAULT_LOCKED_CATEGORIES;
+  });
+  const [subtitle, setSubtitle] = useState(
+    () => localStorage.getItem("sophia-blog-subtitle") || "일상의 작은 순간들을 기록합니다"
+  );
 
   // Load posts from Supabase, merge with mock
   useEffect(() => {
@@ -59,19 +69,23 @@ const Index = () => {
         setAllPosts(dbPosts);
       }
     });
-  }, []);
-
-  // Load locked categories from localStorage
-  const lockedCategories = useMemo(() => {
-    const stored = localStorage.getItem("sophia-locked-categories");
-    if (stored) {
-      try {
-        return JSON.parse(stored) as string[];
-      } catch {
-        return DEFAULT_LOCKED_CATEGORIES;
+    // Sync blog settings: DB → local (pull), or local → DB (push if DB empty)
+    loadBlogSettings().then((settings) => {
+      if (settings.lockedCategories) {
+        setLockedCategories(settings.lockedCategories);
+        localStorage.setItem("sophia-locked-categories", JSON.stringify(settings.lockedCategories));
       }
-    }
-    return DEFAULT_LOCKED_CATEGORIES;
+      if (settings.blogSubtitle) {
+        setSubtitle(settings.blogSubtitle);
+        localStorage.setItem("sophia-blog-subtitle", settings.blogSubtitle);
+      } else {
+        // DB empty but local has value → push to DB
+        const localSubtitle = localStorage.getItem("sophia-blog-subtitle");
+        if (localSubtitle) {
+          saveBlogSettings({ blog_subtitle: localSubtitle });
+        }
+      }
+    });
   }, []);
 
   const handleTagClick = useCallback((tag: string) => {
@@ -127,7 +141,7 @@ const Index = () => {
         transition={{ duration: 0.8, delay: 1.5 }}
       >
         <p className="text-center text-xs md:text-sm text-muted-foreground/70 font-light tracking-[0.2em] uppercase">
-          {localStorage.getItem("sophia-blog-subtitle") || "일상의 작은 순간들을 기록합니다"}
+          {subtitle}
         </p>
       </motion.section>
 

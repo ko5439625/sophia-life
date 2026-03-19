@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { enhanceBlogContent } from "../../../services/openaiApi";
 import { useGuestMode } from "../../../hooks/useGuestMode";
-import { loadPosts as loadPostsFromDB, savePost as savePostToDB, deletePost as deletePostFromDB } from "../../../services/supabaseSync";
+import { loadPosts as loadPostsFromDB, savePost as savePostToDB, deletePost as deletePostFromDB, saveBlogSettings } from "../../../services/supabaseSync";
 import {
   Plus,
   Edit3,
@@ -849,6 +849,7 @@ const BlogManagement = () => {
       const locked = JSON.parse(localStorage.getItem("sophia-locked-categories") || "[]");
       const updated = locked.filter((c: string) => c !== cat);
       localStorage.setItem("sophia-locked-categories", JSON.stringify(updated));
+      saveBlogSettings({ locked_categories: updated });
     } catch { /* ignore */ }
   };
 
@@ -963,7 +964,7 @@ const BlogManagement = () => {
               onAddCategory={addCategory}
               onRemoveCategory={removeCategory}
               subtitle={subtitle}
-              onSubtitleChange={(v: string) => { setSubtitle(v); localStorage.setItem("sophia-blog-subtitle", v); }}
+              onSubtitleChange={(v: string) => { setSubtitle(v); localStorage.setItem("sophia-blog-subtitle", v); saveBlogSettings({ blog_subtitle: v }); }}
             />
 
             {/* Post list */}

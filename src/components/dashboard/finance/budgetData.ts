@@ -166,28 +166,55 @@ export const mockInvestmentSnapshots: InvestmentSnapshot[] = [
   { month: "2026-03", value: 6500000 },
 ];
 
+export interface ExpenseForHistory {
+  type: "income" | "expense";
+  amount: number;
+  date: string;
+  deductFrom?: "cashSavings" | "emergencyFund" | "none";
+}
+
 export const deriveAssetHistory = (
   budgets: MonthlyBudget[],
-  investmentSnapshots: InvestmentSnapshot[] = mockInvestmentSnapshots,
+  investmentSnapshots: InvestmentSnapshot[] = [],
+  expenses: ExpenseForHistory[] = [],
+  baseValues?: { cashSavings: number; emergencyFund: number; investmentTotal: number },
 ): AssetDataPoint[] => {
-  const baseSavings = 11100000;
-  const baseEmergency = 2300000;
+  // Sort budgets chronologically (critical for cumulative calculation)
+  const sortedBudgets = [...budgets].sort((a, b) => a.month.localeCompare(b.month));
+
+  // Use store base values if provided, otherwise fallback
+  const baseSavings = baseValues?.cashSavings ?? 11100000;
+  const baseEmergency = baseValues?.emergencyFund ?? 2300000;
+  const baseInvestment = baseValues?.investmentTotal ?? 0;
 
   let cumulativeSavings = baseSavings;
   let cumulativeEmergency = baseEmergency;
 
-  return budgets.map((b) => {
+  return sortedBudgets.map((b) => {
     const savingsAmount = b.categories.find((c) => c.id === "savings")?.amount ?? 0;
     const emergencyAmount = b.categories.find((c) => c.id === "emergency")?.amount ?? 0;
     cumulativeSavings += savingsAmount;
     cumulativeEmergency += emergencyAmount;
 
-    const investmentValue = investmentSnapshots.find((s) => s.month === b.month)?.value ?? 0;
+    // Deduct expenses that target cashSavings/emergencyFund for this month
+    const monthExpenses = expenses.filter(
+      (e) => e.type === "expense" && e.date.startsWith(b.month)
+    );
+    for (const exp of monthExpenses) {
+      if (exp.deductFrom === "cashSavings") {
+        cumulativeSavings = Math.max(0, cumulativeSavings - exp.amount);
+      } else if (exp.deductFrom === "emergencyFund") {
+        cumulativeEmergency = Math.max(0, cumulativeEmergency - exp.amount);
+      }
+    }
+
+    // Investment: use snapshot if available, otherwise carry base
+    const investmentValue = investmentSnapshots.find((s) => s.month === b.month)?.value ?? baseInvestment;
     const cashTotal = cumulativeSavings + cumulativeEmergency;
 
     return {
       month: b.month.replace("-", "."),
-      total: cashTotal + investmentValue,
+      total: cashTotal + investmentValue, // 가용자산 = 현금 + 투자 (연금 제외)
       cash: cashTotal,
       investment: investmentValue,
       savings: cumulativeSavings,

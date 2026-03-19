@@ -18,7 +18,8 @@ import {
   Bell,
   Cloud,
 } from "lucide-react";
-import { getFearGreedIndex, getStockQuote, getExchangeRate } from "../../../services/marketApi";
+import { getFearGreedIndex, getStockQuote, getExchangeRate, getSectorFearGreed } from "../../../services/marketApi";
+import type { SectorFearGreed } from "../../../services/marketApi";
 import { getNews } from "../../../services/newsApi";
 import { getWeather } from "../../../services/weatherApi";
 import type { WeatherResult } from "../../../services/weatherApi";
@@ -28,7 +29,7 @@ import { getPinnedMemos } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
-import { loadTodos, loadEvents, loadDdays, saveTodo } from "../../../services/supabaseSync";
+import { loadTodos, loadEvents, loadDdays, saveTodo, loadBlogSettings, saveBlogSettings } from "../../../services/supabaseSync";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface DashboardHomeProps {
@@ -69,6 +70,7 @@ function generateAlerts(
   events: { id: string; title: string; emoji: string; date: string }[],
   budgetUsed: number,
   budgetTotal: number,
+  nextMonthBudgetExists?: boolean,
 ): Alert[] {
   const alerts: Alert[] = [];
   const now = new Date();
@@ -221,6 +223,26 @@ function generateAlerts(
     });
   }
 
+  // Next month budget reminder (25th~31st)
+  const dayOfMonth = now.getDate();
+  if (dayOfMonth >= 25 && nextMonthBudgetExists === false) {
+    // Check if dismissed today
+    const dismissKey = "sophia-budget-noti-dismissed";
+    const dismissedDate = localStorage.getItem(dismissKey);
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(dayOfMonth).padStart(2, "0")}`;
+    if (dismissedDate !== todayStr) {
+      alerts.push({
+        id: "budget-next-month",
+        level: "warning",
+        title: "다음 달 예산 미작성",
+        message: "다음 달 예산 계획을 아직 세우지 않았습니다. 예산 탭에서 작성해주세요.",
+        timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
+        actionLabel: "예산 작성하기",
+        actionTab: "finance",
+      });
+    }
+  }
+
   // If everything is normal
   if (alerts.length === 0) {
     alerts.push({
@@ -309,6 +331,17 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
         setDdays(rows.map((r) => ({ id: r.id, title: r.title, emoji: r.emoji, date: r.date })));
       }
     });
+
+    // Sync dismissed alerts from Supabase
+    loadBlogSettings().then((settings) => {
+      if (settings.dismissedAlerts && settings.dismissedAlerts.length > 0) {
+        setDismissedAlerts((prev) => {
+          const merged = new Set([...prev, ...settings.dismissedAlerts!]);
+          localStorage.setItem("sophia-dismissed-alerts", JSON.stringify([...merged]));
+          return merged;
+        });
+      }
+    });
   }, []);
 
   // Market data state
@@ -325,6 +358,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
     } catch { /* ignore */ }
     return new Set();
   });
+  const [sectorFG, setSectorFG] = useState<SectorFearGreed>({ nasdaq: null, kosdaq: null, crypto: null });
   const [marketTimestamp, setMarketTimestamp] = useState<string>("");
   const [newsTimestamp, setNewsTimestamp] = useState<string>("");
   const [weather, setWeather] = useState<WeatherResult | null>(null);
@@ -345,6 +379,8 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
         setStockQuotes({ "^GSPC": sp500, "^IXIC": nasdaq, "^KS11": kospi });
         setExchangeRate(rate);
         setMarketTimestamp(new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }));
+        // Sector Fear & Greed (parallel, non-blocking)
+        getSectorFearGreed().then(setSectorFG).catch(() => {});
       } catch (e) {
         console.warn("Market data fetch error:", e);
       }
@@ -436,6 +472,14 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
         .reduce((sum, c) => sum + c.amount, 0)
     : 0;
 
+  // Check if next month budget exists
+  const nextMonthStr = (() => {
+    const [y, m] = currentMonthStr.split("-").map(Number);
+    const nm = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 };
+    return `${nm.y}-${String(nm.m).padStart(2, "0")}`;
+  })();
+  const nextMonthBudgetExists = state.monthlyBudgets.some((b) => b.month === nextMonthStr);
+
   // Alert system
   const alerts = useMemo(() => {
     if (marketLoading) return [];
@@ -446,20 +490,29 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
       events,
       monthlyExpenseUsed,
       monthlyBudgetTotal,
+      nextMonthBudgetExists,
     );
-  }, [fearGreed, stockQuotes, exchangeRate, marketLoading, monthlyExpenseUsed, monthlyBudgetTotal]);
+  }, [fearGreed, stockQuotes, exchangeRate, marketLoading, monthlyExpenseUsed, monthlyBudgetTotal, nextMonthBudgetExists]);
 
   const visibleAlerts = alerts.filter((a) => !dismissedAlerts.has(a.id));
 
   const dismissAlert = (id: string) => {
+    // Budget noti: save today's date so it re-appears tomorrow
+    if (id === "budget-next-month") {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      localStorage.setItem("sophia-budget-noti-dismissed", todayStr);
+    }
     setDismissedAlerts((prev) => {
       const next = new Set(prev);
       next.add(id);
+      const arr = [...next];
       try {
-        localStorage.setItem("sophia-dismissed-alerts", JSON.stringify([...next]));
+        localStorage.setItem("sophia-dismissed-alerts", JSON.stringify(arr));
       } catch (e) {
         console.warn("Failed to save dismissed alerts:", e);
       }
+      saveBlogSettings({ dismissed_alerts: arr });
       return next;
     });
   };
@@ -808,8 +861,8 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
               </span>
             )}
           </div>
-          {/* Clean gauge display */}
-          <div className="flex flex-col items-center space-y-3">
+          {/* Sector Fear & Greed */}
+          <div className="space-y-3">
             {marketLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -817,64 +870,77 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
               </div>
             ) : (
             <>
-            {/* Large number */}
-            <div className="text-center">
-              <p
-                className="text-4xl sm:text-5xl font-mono font-extrabold tabular-nums"
-                style={{ color: fearGreedColor }}
-              >
-                {fearGreedValue ?? "--"}
-              </p>
-              <p
-                className="text-sm font-medium mt-1"
-                style={{ color: fearGreedColor }}
-              >
-                {fearGreedKoLabel}
-              </p>
-            </div>
-            {/* Simple colored bar */}
-            <div className="w-full space-y-1.5">
-              <div className="flex h-2 rounded-full overflow-hidden gap-px">
-                <div className="flex-1 bg-[#ef4444] rounded-l-full" />
-                <div className="flex-1 bg-[#f97316]" />
-                <div className="flex-1 bg-[#eab308]" />
-                <div className="flex-1 bg-[#84cc16]" />
-                <div className="flex-1 bg-[#22c55e] rounded-r-full" />
-              </div>
-              {/* Indicator position */}
-              {fearGreedValue !== null && (
-              <div className="relative h-2">
-                <motion.div
-                  className="absolute -top-0.5 w-2 h-2 rounded-full bg-foreground border border-background shadow"
-                  initial={{ left: "0%" }}
-                  animate={{ left: `${Math.min(Math.max(fearGreedDisplay, 2), 98)}%` }}
-                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                  style={{ transform: "translateX(-50%)" }}
-                />
-              </div>
-              )}
-            </div>
-            {/* Explanation */}
-            <div className="w-full space-y-1 mt-2">
-              {fearGreedExplanations.map((item) => {
-                const isActive = fearGreedValue >= item.min && fearGreedValue < (item.max === 100 ? 101 : item.max);
+            {/* 3-sector gauges */}
+            <div className="grid grid-cols-3 gap-3">
+              {([
+                { label: "나스닥", data: sectorFG.nasdaq, fallback: null },
+                { label: "코스피", data: sectorFG.kosdaq, fallback: null },
+                { label: "코인", data: sectorFG.crypto, fallback: null },
+              ] as const).map((sector) => {
+                const fg = sector.data ?? sector.fallback;
+                const val = fg?.value ?? null;
+                const color = val === null ? "#6b7280" : val <= 25 ? "#ef4444" : val <= 45 ? "#f97316" : val <= 55 ? "#eab308" : val <= 75 ? "#84cc16" : "#22c55e";
+                const koLabel = val === null ? "--" : val <= 25 ? "극단공포" : val <= 45 ? "공포" : val <= 55 ? "중립" : val <= 75 ? "탐욕" : "극단탐욕";
                 return (
-                  <div
-                    key={item.range}
-                    className={`flex items-start gap-2 text-[10px] font-mono px-2 py-1 rounded transition-all ${
-                      isActive ? "bg-muted/80" : "opacity-50"
-                    }`}
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span style={{ color: isActive ? item.color : undefined }}>
-                      {item.range}: {item.label} — {item.desc}
-                    </span>
+                  <div key={sector.label} className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1.5 font-medium">{sector.label}</p>
+                    <p className="text-3xl sm:text-4xl font-mono font-extrabold tabular-nums" style={{ color }}>
+                      {val ?? "--"}
+                    </p>
+                    <p className="text-xs font-medium mt-1" style={{ color }}>{koLabel}</p>
+                    {/* Mini bar */}
+                    <div className="mt-1.5 mx-auto max-w-[80px]">
+                      <div className="flex h-1.5 rounded-full overflow-hidden gap-px">
+                        <div className="flex-1 bg-[#ef4444] rounded-l-full" />
+                        <div className="flex-1 bg-[#f97316]" />
+                        <div className="flex-1 bg-[#eab308]" />
+                        <div className="flex-1 bg-[#84cc16]" />
+                        <div className="flex-1 bg-[#22c55e] rounded-r-full" />
+                      </div>
+                      {val !== null && (
+                        <div className="relative h-1.5">
+                          <motion.div
+                            className="absolute -top-0.5 w-1.5 h-1.5 rounded-full bg-foreground border border-background shadow"
+                            initial={{ left: "0%" }}
+                            animate={{ left: `${Math.min(Math.max(val, 2), 98)}%` }}
+                            transition={{ duration: 0.6 }}
+                            style={{ transform: "translateX(-50%)" }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
+            </div>
+            {/* Legend + 설명 */}
+            <div className="flex justify-center gap-3 text-[9px] text-muted-foreground">
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />공포</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#eab308]" />중립</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />탐욕</span>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-3 space-y-1.5 mt-1">
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                <strong className="text-foreground/70">0~25 극단공포</strong> — 시장 패닉, 역발상 매수 기회 가능성
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                <strong className="text-foreground/70">25~45 공포</strong> — 투자자 불안, 방어적 전략 권장
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                <strong className="text-foreground/70">45~55 중립</strong> — 균형 상태, 현 포지션 유지
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                <strong className="text-foreground/70">55~75 탐욕</strong> — 과열 주의, 리스크 관리 필요
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                <strong className="text-foreground/70">75~100 극단탐욕</strong> — 버블 경계, 차익 실현 고려
+              </p>
+              <hr className="border-border/50" />
+              <div className="text-[9px] text-muted-foreground/60 space-y-0.5">
+                <p>나스닥: CNN Fear & Greed Index (미국 주식 심리)</p>
+                <p>코스피: KOSPI Fear & Greed Index (kospi-fear-greed-index.co.kr)</p>
+                <p>코인: Crypto Fear & Greed Index (alternative.me)</p>
+              </div>
             </div>
             </>
             )}

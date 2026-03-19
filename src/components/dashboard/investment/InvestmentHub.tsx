@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import InvestmentView from "../finance/InvestmentView";
-import NewsView from "../finance/NewsView";
 import HedgingView from "../finance/HedgingView";
+import QuantRecommendView from "../finance/QuantRecommendView";
 import PensionView from "./PensionView";
 
 const tabs = [
   { id: "portfolio", label: "투자 현황" },
   { id: "pension", label: "연금 투자" },
-  { id: "news", label: "뉴스" },
+  { id: "quant", label: "퀀트 추천" },
   { id: "hedging", label: "헷징 분석" },
 ];
 
@@ -48,6 +48,9 @@ const InvestmentHub = () => {
               {tab.id === "hedging" && (
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/50 flex-shrink-0" />
               )}
+              {tab.id === "quant" && (
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500/50 flex-shrink-0" />
+              )}
             </span>
           </button>
         ))}
@@ -61,7 +64,7 @@ const InvestmentHub = () => {
       >
         {activeTab === "portfolio" && <InvestmentView />}
         {activeTab === "pension" && <PensionView />}
-        {activeTab === "news" && <NewsView />}
+        {activeTab === "quant" && <QuantRecommendView />}
         {activeTab === "hedging" && <HedgingView />}
       </motion.div>
     </div>

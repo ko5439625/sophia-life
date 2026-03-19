@@ -78,6 +78,7 @@ function expenseToRow(e: Expense) {
     category: e.category,
     date: e.date,
     memo: e.memo,
+    deduct_from: e.deductFrom ?? null,
   };
 }
 
@@ -89,6 +90,7 @@ function rowToExpense(r: Record<string, unknown>): Expense {
     category: r.category as string,
     date: r.date as string,
     memo: r.memo as string,
+    deductFrom: (r.deduct_from as Expense["deductFrom"]) ?? undefined,
   };
 }
 
@@ -327,6 +329,50 @@ export async function deleteOwnedProperty(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Blog settings sync (locked_categories, subtitle, dismissed_alerts)
+// ---------------------------------------------------------------------------
+
+export interface BlogSettings {
+  lockedCategories?: string[];
+  blogSubtitle?: string;
+  dismissedAlerts?: string[];
+}
+
+export async function loadBlogSettings(): Promise<BlogSettings> {
+  if (!isReady() || !supabase) return {};
+  try {
+    const { data } = await supabase
+      .from("user_settings")
+      .select("locked_categories, blog_subtitle, dismissed_alerts")
+      .limit(1)
+      .maybeSingle();
+
+    if (!data) return {};
+    return {
+      lockedCategories: (data.locked_categories as string[]) ?? undefined,
+      blogSubtitle: (data.blog_subtitle as string) ?? undefined,
+      dismissedAlerts: (data.dismissed_alerts as string[]) ?? undefined,
+    };
+  } catch (e) {
+    console.warn("[supabaseSync] loadBlogSettings error:", e);
+    return {};
+  }
+}
+
+export async function saveBlogSettings(settings: Partial<{
+  locked_categories: string[];
+  blog_subtitle: string;
+  dismissed_alerts: string[];
+}>): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("user_settings").upsert({ id: "default", ...settings });
+  } catch (e) {
+    console.error("[supabaseSync] saveBlogSettings error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // API Keys sync (cross-device)
 // ---------------------------------------------------------------------------
 
@@ -347,6 +393,9 @@ export async function loadApiKeysFromSupabase(): Promise<void> {
         stock: "sophia-api-stock",
         data: "sophia-api-data",
         weather: "sophia-api-weather",
+        ecos: "sophia-api-ecos",
+        kisAppkey: "sophia-api-kis-appkey",
+        kisSecret: "sophia-api-kis-secret",
         openai: "sophia-api-openai",
         gemini: "sophia-api-gemini",
       };
@@ -684,5 +733,158 @@ export async function syncHoldingsAndTrades(
     ]);
   } catch (err) {
     console.error("[supabaseSync] syncHoldingsAndTrades error:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Inspections (임장 기록)
+// ---------------------------------------------------------------------------
+
+export interface InspectionRow {
+  id: string;
+  apartment_name: string;
+  location: string;
+  visit_date: string;
+  score_transport: number;
+  score_school: number;
+  score_environment: number;
+  score_commercial: number;
+  score_complex: number;
+  total_score: number;
+  photos: string[];
+  review: string;
+}
+
+export async function loadInspections(): Promise<InspectionRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("inspections").select("*").order("visit_date", { ascending: false });
+    return (data || []) as InspectionRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadInspections error:", e);
+    return [];
+  }
+}
+
+export async function saveInspection(ins: InspectionRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("inspections").upsert(ins);
+  } catch (e) {
+    console.error("[supabaseSync] saveInspection error:", e);
+  }
+}
+
+export async function deleteInspection(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("inspections").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteInspection error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RE Filters (매물 모니터 필터)
+// ---------------------------------------------------------------------------
+
+export interface ReFilterRow {
+  id: string;
+  name: string;
+  region_code: string;
+  region_name: string;
+  trade_type: string;
+  price_min: number | null;
+  price_max: number | null;
+  area_min: number | null;
+  area_max: number | null;
+  is_active: boolean;
+}
+
+export async function loadReFilters(): Promise<ReFilterRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("re_filters").select("*").order("created_at");
+    return (data || []) as ReFilterRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadReFilters error:", e);
+    return [];
+  }
+}
+
+export async function saveReFilter(filter: Omit<ReFilterRow, "id"> & { id?: string }): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("re_filters").upsert({ id: filter.id || crypto.randomUUID(), ...filter });
+  } catch (e) {
+    console.error("[supabaseSync] saveReFilter error:", e);
+  }
+}
+
+export async function deleteReFilter(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("re_filters").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteReFilter error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RE Listings (매물)
+// ---------------------------------------------------------------------------
+
+export interface ReListingRow {
+  id: string;
+  filter_id: string;
+  naver_article_id: string;
+  complex_name: string;
+  price_text: string;
+  price_man: number;
+  area_m2: number | null;
+  area_pyeong: number | null;
+  floor_info: string | null;
+  direction: string | null;
+  description: string | null;
+  detail_url: string | null;
+  status: string;
+  is_new: boolean;
+  is_favorited: boolean;
+  first_seen_at: string;
+}
+
+export async function loadReListings(filterId?: string): Promise<ReListingRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    let q = supabase.from("re_listings").select("*").order("first_seen_at", { ascending: false });
+    if (filterId) q = q.eq("filter_id", filterId);
+    const { data } = await q;
+    return (data || []) as ReListingRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadReListings error:", e);
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RE Regions (지역)
+// ---------------------------------------------------------------------------
+
+export interface ReRegionRow {
+  id: string;
+  city_name: string;
+  district_name: string | null;
+  display_name: string;
+  cortar_no: string;
+}
+
+export async function loadReRegions(): Promise<ReRegionRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("re_regions").select("*").order("sort_order");
+    return (data || []) as ReRegionRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadReRegions error:", e);
+    return [];
   }
 }

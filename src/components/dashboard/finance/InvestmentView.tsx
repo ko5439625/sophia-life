@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   PieChart,
@@ -80,6 +80,7 @@ const InvestmentView = () => {
     sellHolding: storeSellHolding,
     buyHolding: storeBuyHolding,
     removeHolding: storeRemoveHolding,
+    updateHolding,
     totalInvestment,
     totalPension,
     totalNetWorth,
@@ -138,30 +139,92 @@ const InvestmentView = () => {
     symbolSearchTimer.current = setTimeout(() => searchSymbol(value), 500);
   };
 
+  // 한국 주요 종목 이름→심볼 매핑 (Yahoo Search 429 대비)
+  const KR_SYMBOL_MAP: Record<string, string> = {
+    "삼성전자": "005930.KS", "SK하이닉스": "000660.KS", "LG에너지솔루션": "373220.KS",
+    "삼성바이오로직스": "207940.KS", "현대차": "005380.KS", "기아": "000270.KS",
+    "셀트리온": "068270.KS", "KB금융": "105560.KS", "신한지주": "055550.KS",
+    "NAVER": "035420.KS", "네이버": "035420.KS", "카카오": "035720.KS",
+    "POSCO홀딩스": "005490.KS", "삼성SDI": "006400.KS", "LG화학": "051910.KS",
+    "현대모비스": "012330.KS", "삼성물산": "028260.KS", "SK이노베이션": "096770.KS",
+    "한화에어로스페이스": "012450.KS", "한화오션": "042660.KS", "LG전자": "066570.KS",
+    "두산에너빌리티": "034020.KS", "HD현대중공업": "329180.KS", "크래프톤": "259960.KS",
+    "엔씨소프트": "036570.KS", "펄어비스": "263750.KS", "넷마블": "251270.KS",
+  };
+
   // Auto-fetch current prices for all holdings
   const fetchCurrentPrices = async () => {
     setPriceLoading(true);
     const { getQuote } = await import("../../../services/yahooFinanceApi");
     for (const h of holdings) {
-      // Extract symbol from name if format "이름 (SYMBOL)"
-      const symbolMatch = h.name.match(/\(([^)]+)\)$/);
-      const symbol = symbolMatch?.[1];
+      let symbol = h.name.match(/\(([^)]+)\)$/)?.[1];
+
+      // 심볼 없으면 로컬 매핑에서 찾기
+      if (!symbol) {
+        const cleanName = h.name.replace(/\s*\([^)]*\)$/, "").trim();
+        symbol = KR_SYMBOL_MAP[cleanName];
+        // 찾으면 Vercel 프록시로 Yahoo Search 시도
+        if (!symbol) {
+          try {
+            const res = await fetch(`/api/market?service=quote&symbol=${encodeURIComponent(cleanName)}`);
+            if (!res.ok) {
+              // 직접 이름으로 못 찾으면 .KS 붙여서 시도
+              // Skip - will be handled by search below
+            }
+          } catch { /* ignore */ }
+        }
+        if (symbol) {
+          updateHolding(h.id, { name: `${cleanName} (${symbol})` });
+        }
+      }
+
       if (!symbol) continue;
       try {
         const quote = await getQuote(symbol);
-        if (quote.price > 0 && quote.price !== h.currentPrice) {
-          state.holdings.forEach((sh) => {
-            if (sh.id === h.id) sh.currentPrice = quote.price;
-          });
+        if (quote.price > 0) {
+          updateHolding(h.id, { currentPrice: Math.round(quote.price) });
         }
       } catch (e) {
         console.warn(`Price fetch failed for ${symbol}:`, e);
       }
     }
-    // Force re-render by dispatching settings update
     setPriceLoading(false);
-    window.location.reload(); // Simple reload to reflect updated prices
   };
+
+  // 환율 (USD→KRW)
+  const [usdKrw, setUsdKrw] = useState(1450); // 기본값
+  useEffect(() => {
+    import("../../../services/marketApi").then(({ getExchangeRate }) =>
+      getExchangeRate("USD", "KRW").then((r) => { if (r.rate > 0) setUsdKrw(r.rate); }).catch(() => {})
+    );
+  }, []);
+
+  // 종목이 미장인지 판별
+  const isKrStock = (name: string) => {
+    const sym = name.match(/\(([^)]+)\)$/)?.[1] || "";
+    return sym.endsWith(".KS") || sym.endsWith(".KQ") || !sym; // 심볼 없으면 한국으로 간주
+  };
+
+  // 국장/미장 분리
+  const krHoldings = holdings.filter((h) => isKrStock(h.name));
+  const usHoldings = holdings.filter((h) => !isKrStock(h.name));
+
+  // 미장 원화 환산 평가액
+  const getKrwValue = (h: typeof holdings[0]) => {
+    if (isKrStock(h.name)) return h.currentPrice * h.quantity;
+    return Math.round(h.currentPrice * h.quantity * usdKrw);
+  };
+
+  // 마운트 시 currentPrice=0인 종목 자동 현재가 fetch
+  const autoFetchDone = useRef(false);
+  useEffect(() => {
+    if (autoFetchDone.current || holdings.length === 0 || isGuest) return;
+    const needsFetch = holdings.some((h) => h.currentPrice === 0);
+    if (needsFetch) {
+      autoFetchDone.current = true;
+      fetchCurrentPrices();
+    }
+  }, [holdings.length]);
 
   // Sell state
   const [sellingId, setSellingId] = useState<string | null>(null);
@@ -429,31 +492,54 @@ const InvestmentView = () => {
                 </button>
               )}
             </div>
-            {holdings.map((h) => {
+            {/* 국장 */}
+            {krHoldings.length > 0 && (
+              <p className="text-[9px] text-muted-foreground/60 font-mono mt-1">국장 (KRW)</p>
+            )}
+            {krHoldings.map((h) => {
               const totalValue = h.currentPrice * h.quantity;
               const invested = h.avgPrice * h.quantity;
-              const returnAmt = totalValue - invested;
-              const returnPct =
-                invested > 0 ? ((returnAmt / invested) * 100).toFixed(1) : "0";
-              const isUp = returnAmt >= 0;
+              const returnPct = invested > 0 ? (((totalValue - invested) / invested) * 100).toFixed(1) : "0";
+              const isUp = totalValue >= invested;
               return (
                 <div key={h.id} className="flex items-center justify-between py-1 group">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <div
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: CATEGORY_COLORS[h.category] || "#999" }}
-                    />
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[h.category] || "#999" }} />
                     <span className="text-[10px] truncate">{h.name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] font-mono">{isGuest ? "₩•••" : formatKRW(totalValue)}</span>
-                    <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>
-                      {isUp ? "+" : ""}{returnPct}%
-                    </span>
-                    <button
-                      onClick={() => removeHolding(h.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
+                    <span className="text-[10px] font-mono">{isGuest ? "₩•••" : `${formatKRW(totalValue)}원`}</span>
+                    <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>{isUp ? "+" : ""}{returnPct}%</span>
+                    <button onClick={() => removeHolding(h.id)} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X className="h-2.5 w-2.5 text-muted-foreground hover:text-destructive" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {/* 미장 */}
+            {usHoldings.length > 0 && (
+              <p className="text-[9px] text-muted-foreground/60 font-mono mt-2">미장 (USD · {formatKRW(Math.round(usdKrw))}원/달러)</p>
+            )}
+            {usHoldings.map((h) => {
+              const usdValue = h.currentPrice * h.quantity;
+              const krwValue = getKrwValue(h);
+              const invested = h.avgPrice * h.quantity;
+              const returnPct = invested > 0 ? (((usdValue - invested) / invested) * 100).toFixed(1) : "0";
+              const isUp = usdValue >= invested;
+              return (
+                <div key={h.id} className="flex items-center justify-between py-1 group">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[h.category] || "#999" }} />
+                    <span className="text-[10px] truncate">{h.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="text-right">
+                      <span className="text-[10px] font-mono">{isGuest ? "$•••" : `$${h.currentPrice.toLocaleString()}`}</span>
+                      <span className="text-[8px] text-muted-foreground ml-1">({isGuest ? "₩•••" : `₩${formatKRW(krwValue)}`})</span>
+                    </div>
+                    <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>{isUp ? "+" : ""}{returnPct}%</span>
+                    <button onClick={() => removeHolding(h.id)} className="opacity-0 group-hover:opacity-100 transition-opacity">
                       <X className="h-2.5 w-2.5 text-muted-foreground hover:text-destructive" />
                     </button>
                   </div>
@@ -652,9 +738,24 @@ const InvestmentView = () => {
                         <button
                           key={r.symbol}
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             setNewHolding({ ...newHolding, name: r.name, symbol: r.symbol });
                             setSymbolSearchResults([]);
+                            // Auto-fetch current price
+                            try {
+                              const { getQuote } = await import("../../../services/yahooFinanceApi");
+                              const quote = await getQuote(r.symbol);
+                              if (quote.price > 0) {
+                                setNewHolding((prev) => ({
+                                  ...prev,
+                                  name: r.name,
+                                  symbol: r.symbol,
+                                  currentPrice: String(Math.round(quote.price)),
+                                }));
+                              }
+                            } catch (e) {
+                              console.warn("Auto price fetch failed:", e);
+                            }
                           }}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between"
                         >
@@ -792,14 +893,18 @@ const InvestmentView = () => {
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 mt-0.5 text-[10px] sm:text-xs text-muted-foreground font-mono flex-wrap">
                       <span>{h.quantity}주</span>
-                      <span>평균 {formatKRW(h.avgPrice)}</span>
-                      <span>현재 {formatKRW(h.currentPrice)}</span>
+                      <span>평균 {isKrStock(h.name) ? formatKRW(h.avgPrice) : `$${h.avgPrice.toLocaleString()}`}</span>
+                      <span>현재 {isKrStock(h.name) ? formatKRW(h.currentPrice) : `$${h.currentPrice.toLocaleString()}`}</span>
+                      {!isKrStock(h.name) && <span className="text-primary/60">({formatKRW(Math.round(usdKrw))}원/$)</span>}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-sm font-mono font-bold tabular-nums">
-                      {isGuest ? maskAmount(totalValue) : `${formatKRW(totalValue)}원`}
+                      {isGuest ? maskAmount(getKrwValue(h)) : `${formatKRW(getKrwValue(h))}원`}
                     </p>
+                    {!isKrStock(h.name) && (
+                      <p className="text-[9px] text-muted-foreground font-mono">${(h.currentPrice * h.quantity).toLocaleString()}</p>
+                    )}
                     <p
                       className={`text-xs font-mono tabular-nums ${
                         isUp ? "text-primary" : "text-destructive"

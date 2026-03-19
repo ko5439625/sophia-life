@@ -34,7 +34,8 @@ import {
   MessageSquare,
   Lock,
 } from "lucide-react";
-import { getFearGreedIndex, getStockQuote, getHistoricalData } from "../../../services/marketApi";
+import { getFearGreedIndex, getStockQuote, getHistoricalData, getSectorFearGreed } from "../../../services/marketApi";
+import type { SectorFearGreed } from "../../../services/marketApi";
 import { analyzeHedging } from "../../../services/geminiApi";
 import type { HedgingAnalysis } from "../../../services/geminiApi";
 import { useFinancial } from "../../../store/financialStore";
@@ -611,6 +612,7 @@ const HedgingView = () => {
   })();
 
   const [fearGreedValue, setFearGreedValue] = useState(42);
+  const [sectorFG, setSectorFG] = useState<SectorFearGreed>({ nasdaq: null, kosdaq: null, crypto: null });
   const [loading, setLoading] = useState(true);
   const [nasdaqData, setNasdaqData] = useState(defaultNasdaqData);
   const [kospiData, setKospiData] = useState(defaultKospiData);
@@ -649,6 +651,7 @@ const HedgingView = () => {
         ]);
 
         setFearGreedValue(fg.value);
+        getSectorFearGreed().then(setSectorFG).catch(() => {});
 
         // NASDAQ
         setNasdaqQuote({
@@ -1048,7 +1051,7 @@ ${personalSituation}
       {/* Section 2: 시장 지표 & 차트 */}
       {/* ================================================================== */}
 
-      {/* Fear & Greed Index */}
+      {/* Fear & Greed Index - 3 Sectors */}
       <motion.div
         className="bg-card rounded-xl p-5"
         initial={{ opacity: 0, y: 10 }}
@@ -1056,91 +1059,58 @@ ${personalSituation}
         transition={{ delay: 0.1 }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <Target className="h-4 w-4" style={{ color: getFearGreedColor(fearGreedValue) }} />
+          <Target className="h-4 w-4 text-amber-500" />
           <h3 className="text-sm font-medium">Fear & Greed Index</h3>
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-[#FFB347]/30 to-transparent ml-1" />
+          <span className="text-[10px] text-muted-foreground ml-auto font-mono">{dataTimestamp}</span>
         </div>
 
-        <div className="flex flex-col items-center">
-          <div className="relative w-48 h-24 mb-2">
-            <svg viewBox="0 0 200 100" className="w-full h-full">
-              <path
-                d="M 20 90 A 80 80 0 0 1 180 90"
-                fill="none"
-                stroke="hsl(var(--muted))"
-                strokeWidth="12"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 20 90 A 80 80 0 0 1 52 30"
-                fill="none"
-                stroke="#FF6B6B"
-                strokeWidth="12"
-                strokeLinecap="round"
-                opacity={0.3}
-              />
-              <path
-                d="M 52 30 A 80 80 0 0 1 100 10"
-                fill="none"
-                stroke="#FF9F43"
-                strokeWidth="12"
-                opacity={0.3}
-              />
-              <path
-                d="M 100 10 A 80 80 0 0 1 148 30"
-                fill="none"
-                stroke="#F7DC6F"
-                strokeWidth="12"
-                opacity={0.3}
-              />
-              <path
-                d="M 148 30 A 80 80 0 0 1 180 90"
-                fill="none"
-                stroke="#4ECDC4"
-                strokeWidth="12"
-                strokeLinecap="round"
-                opacity={0.3}
-              />
-              <line
-                x1="100"
-                y1="90"
-                x2={100 + 70 * Math.cos(Math.PI - (fearGreedValue / 100) * Math.PI)}
-                y2={90 - 70 * Math.sin(Math.PI - (fearGreedValue / 100) * Math.PI)}
-                stroke={getFearGreedColor(fearGreedValue)}
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-              <circle
-                cx="100"
-                cy="90"
-                r="4"
-                fill={getFearGreedColor(fearGreedValue)}
-              />
-            </svg>
-          </div>
-          <p
-            className="text-5xl font-mono font-extrabold drop-shadow-lg"
-            style={{
-              color: getFearGreedColor(fearGreedValue),
-              textShadow: `0 0 20px ${getFearGreedColor(fearGreedValue)}40`,
-            }}
-          >
-            {fearGreedValue}
-          </p>
-          <p
-            className="text-sm font-bold mt-1 px-3 py-0.5 rounded-full"
-            style={{
-              color: getFearGreedColor(fearGreedValue),
-              backgroundColor: `${getFearGreedColor(fearGreedValue)}15`,
-            }}
-          >
-            {getFearGreedLabel(fearGreedValue)}
-          </p>
-          <div className="flex justify-between w-full max-w-xs mt-2 text-[10px] text-muted-foreground font-mono">
-            <span>극도의 공포</span>
-            <span>중립</span>
-            <span>극도의 탐욕</span>
-          </div>
+        <div className="grid grid-cols-3 gap-4">
+          {([
+            { label: "나스닥", data: sectorFG.nasdaq, src: "CNN" },
+            { label: "코스피", data: sectorFG.kosdaq, src: "KOSPI F&G" },
+            { label: "코인", data: sectorFG.crypto, src: "alternative.me" },
+          ] as const).map((sector) => {
+            const val = sector.data?.value ?? null;
+            const color = val === null ? "#6b7280" : getFearGreedColor(val);
+            const koLabel = val === null ? "--" : getFearGreedLabel(val);
+            return (
+              <div key={sector.label} className="text-center">
+                <p className="text-xs text-muted-foreground mb-2 font-medium">{sector.label}</p>
+                {/* Mini gauge */}
+                <div className="relative w-24 h-12 mx-auto mb-1">
+                  <svg viewBox="0 0 200 100" className="w-full h-full">
+                    <path d="M 20 90 A 80 80 0 0 1 52 30" fill="none" stroke="#FF6B6B" strokeWidth="10" strokeLinecap="round" opacity={0.3} />
+                    <path d="M 52 30 A 80 80 0 0 1 100 10" fill="none" stroke="#FF9F43" strokeWidth="10" opacity={0.3} />
+                    <path d="M 100 10 A 80 80 0 0 1 148 30" fill="none" stroke="#F7DC6F" strokeWidth="10" opacity={0.3} />
+                    <path d="M 148 30 A 80 80 0 0 1 180 90" fill="none" stroke="#4ECDC4" strokeWidth="10" strokeLinecap="round" opacity={0.3} />
+                    {val !== null && (
+                      <>
+                        <line
+                          x1="100" y1="90"
+                          x2={100 + 65 * Math.cos(Math.PI - (val / 100) * Math.PI)}
+                          y2={90 - 65 * Math.sin(Math.PI - (val / 100) * Math.PI)}
+                          stroke={color} strokeWidth="3" strokeLinecap="round"
+                        />
+                        <circle cx="100" cy="90" r="4" fill={color} />
+                      </>
+                    )}
+                  </svg>
+                </div>
+                <p className="text-3xl font-mono font-extrabold" style={{ color }}>{val ?? "--"}</p>
+                <p className="text-[10px] font-bold mt-0.5 px-2 py-0.5 rounded-full inline-block"
+                  style={{ color, backgroundColor: `${color}15` }}>
+                  {koLabel}
+                </p>
+                <p className="text-[8px] text-muted-foreground/50 mt-1">{sector.src}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex justify-between w-full mt-3 text-[9px] text-muted-foreground font-mono border-t border-border pt-2">
+          <span className="text-red-400">0 극단공포</span>
+          <span className="text-yellow-500">50 중립</span>
+          <span className="text-green-400">100 극단탐욕</span>
         </div>
       </motion.div>
 

@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   Menu,
+  Newspaper,
 } from "lucide-react";
 import ThemeToggle from "../ThemeToggle";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +24,7 @@ import SettingsView from "./settings/SettingsView";
 import BlogManagement from "./blog/BlogManagement";
 import InvestmentHub from "./investment/InvestmentHub";
 import RealEstateHub from "./realestate/RealEstateHub";
+import NewsView from "./finance/NewsView";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -40,6 +42,7 @@ const topNav: NavItem[] = [
 const bottomNav: NavItem[] = [
   { icon: PenSquare, label: "블로그", id: "blog" },
   { icon: TrendingUp, label: "투자", id: "investment" },
+  { icon: Newspaper, label: "뉴스", id: "news" },
   { icon: Building2, label: "부동산", id: "realestate" },
   { icon: Settings, label: "설정", id: "settings" },
 ];
@@ -77,6 +80,8 @@ const DashboardLayout = () => {
         return <CoupleView />;
       case "investment":
         return <InvestmentHub />;
+      case "news":
+        return <div className="space-y-6"><h2 className="text-xl sm:text-2xl font-bold">뉴스</h2><NewsView /></div>;
       case "realestate":
         return <RealEstateHub />;
       case "settings":

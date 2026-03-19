@@ -1,13 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Wallet, PiggyBank, TrendingUp, ChevronLeft, ChevronRight, Calendar, History, ShieldCheck } from "lucide-react";
+import { Users, Wallet, PiggyBank, TrendingUp, ChevronLeft, ChevronRight, Calendar, History, ShieldCheck, Copy, Check } from "lucide-react";
 import {
   type BudgetCategory,
   type MonthlyBudget,
   defaultCategories,
   formatMonthLabel,
   getNextMonth,
-  getPrevMonth,
   formatKRW,
 } from "./budgetData";
 import { useFinancial } from "../../../store/financialStore";
@@ -18,27 +17,47 @@ const BudgetPlan = () => {
   const { isGuest, maskAmount } = useGuestMode();
   const budgets = state.monthlyBudgets;
 
-  // Current month as "YYYY-MM"
-  const currentMonth = "2026-03";
+  // Dynamic current month
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const nextMonth = getNextMonth(currentMonth);
 
-  // Selected month for editing – default to next month for planning
   const [selectedMonth, setSelectedMonth] = useState(nextMonth);
   const [editMode, setEditMode] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showBulkApply, setShowBulkApply] = useState(false);
+  const [bulkEndMonth, setBulkEndMonth] = useState("");
+  const [bulkApplied, setBulkApplied] = useState(false);
 
-  // All available months (past + current + next for planning)
+  // All available months: past budgets + current + up to 12 months ahead
   const allMonths = useMemo(() => {
     const months = new Set(budgets.map((b) => b.month));
-    months.add(nextMonth); // always show next month as plannable
+    // Add current + next 12 months as plannable
+    let m = currentMonth;
+    for (let i = 0; i < 13; i++) {
+      months.add(m);
+      m = getNextMonth(m);
+    }
     return Array.from(months).sort();
-  }, [budgets, nextMonth]);
+  }, [budgets, currentMonth]);
+
+  // Generate end-month options for bulk apply (from next month to 12 months ahead)
+  const bulkEndOptions = useMemo(() => {
+    const opts: string[] = [];
+    let m = getNextMonth(selectedMonth);
+    const maxYear = now.getFullYear() + 2;
+    while (m <= `${maxYear}-12`) {
+      opts.push(m);
+      m = getNextMonth(m);
+      if (opts.length >= 24) break;
+    }
+    return opts;
+  }, [selectedMonth]);
 
   // Get or create budget for selected month
   const selectedBudget = useMemo(() => {
     const existing = budgets.find((b) => b.month === selectedMonth);
     if (existing) return existing;
-    // New month: copy from latest existing or use defaults
     const latest = budgets[budgets.length - 1];
     return {
       month: selectedMonth,
@@ -54,9 +73,7 @@ const BudgetPlan = () => {
   const [salary2, setSalary2] = useState(selectedBudget.salary2);
   const [budget, setBudget] = useState<BudgetCategory[]>(selectedBudget.categories);
 
-  // Sync state when selectedMonth changes
   const handleMonthChange = (month: string) => {
-    // Save current edits first
     saveCurrent();
     setSelectedMonth(month);
     const b = budgets.find((b) => b.month === month);
@@ -75,6 +92,7 @@ const BudgetPlan = () => {
       );
     }
     setEditMode(false);
+    setBulkApplied(false);
   };
 
   const saveCurrent = () => {
@@ -85,6 +103,36 @@ const BudgetPlan = () => {
       categories: budget.map((c) => ({ ...c })),
     };
     updateBudget(selectedMonth, updated);
+  };
+
+  // 자동 저장: salary/budget 변경 시 1초 후 자동 반영
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      saveCurrent();
+    }, 1000);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [salary1, salary2, budget, selectedMonth]);
+
+  // Bulk apply: copy current budget to all months from selectedMonth+1 to endMonth
+  const handleBulkApply = () => {
+    if (!bulkEndMonth) return;
+    saveCurrent(); // Save current first
+
+    let m = getNextMonth(selectedMonth);
+    while (m <= bulkEndMonth) {
+      const copied: MonthlyBudget = {
+        month: m,
+        salary1,
+        salary2,
+        categories: budget.map((c) => ({ ...c })),
+      };
+      updateBudget(m, copied);
+      m = getNextMonth(m);
+    }
+    setBulkApplied(true);
+    setTimeout(() => setBulkApplied(false), 3000);
   };
 
   const totalIncome = salary1 + salary2;
@@ -111,7 +159,6 @@ const BudgetPlan = () => {
     if (idx < allMonths.length - 1) handleMonthChange(allMonths[idx + 1]);
   };
 
-  // Past budget history (excluding selected month)
   const pastBudgets = budgets
     .filter((b) => b.month !== selectedMonth)
     .sort((a, b) => b.month.localeCompare(a.month));
@@ -139,7 +186,7 @@ const BudgetPlan = () => {
             </div>
             {isNextMonth && (
               <span className="text-xs text-primary font-medium mt-1 inline-block bg-primary/10 px-2 py-0.5 rounded-full">
-                다음 달 계획
+                {selectedMonth > nextMonth ? "미래 계획" : "다음 달 계획"}
               </span>
             )}
             {isPastMonth && (
@@ -211,6 +258,15 @@ const BudgetPlan = () => {
             <h3 className="text-lg font-bold">월 예산 계획</h3>
           </div>
           <div className="flex gap-2">
+            {!isGuest && (
+              <button
+                onClick={() => setShowBulkApply(!showBulkApply)}
+                className="text-xs px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors flex items-center gap-1"
+              >
+                <Copy className="h-3 w-3" />
+                연간 적용
+              </button>
+            )}
             <button
               onClick={() => {
                 if (editMode) saveCurrent();
@@ -222,6 +278,59 @@ const BudgetPlan = () => {
             </button>
           </div>
         </div>
+
+        {/* 연간 적용 패널 */}
+        <AnimatePresence>
+          {showBulkApply && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  현재 예산을 <strong>{formatMonthLabel(selectedMonth)}</strong>부터 선택한 월까지 동일하게 적용합니다.
+                </p>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={bulkEndMonth}
+                    onChange={(e) => setBulkEndMonth(e.target.value)}
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="">적용 종료 월 선택</option>
+                    {bulkEndOptions.map((m) => (
+                      <option key={m} value={m}>{formatMonthLabel(m)}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleBulkApply}
+                    disabled={!bulkEndMonth || bulkApplied}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {bulkApplied ? (
+                      <><Check className="h-3.5 w-3.5" /> 적용 완료</>
+                    ) : (
+                      "적용"
+                    )}
+                  </button>
+                </div>
+                {bulkEndMonth && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {formatMonthLabel(getNextMonth(selectedMonth))} ~ {formatMonthLabel(bulkEndMonth)} ({
+                      (() => {
+                        let count = 0;
+                        let m = getNextMonth(selectedMonth);
+                        while (m <= bulkEndMonth) { count++; m = getNextMonth(m); }
+                        return count;
+                      })()
+                    }개월)에 동일 예산이 적용됩니다.
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* 예산 비율 바 */}
         <div className="w-full h-4 rounded-full overflow-hidden flex bg-muted">
@@ -301,16 +410,14 @@ const BudgetPlan = () => {
               <span className="text-lg leading-none mt-0.5">⚠️</span>
               <div className="flex-1">
                 <p className="text-sm font-medium text-yellow-500">
-                  {isGuest ? maskAmount(remaining) : `${formatKRW(remaining)}원`}이 미배분 상태입니다. 비상금 또는 기타에 배분하세요.
+                  {isGuest ? maskAmount(remaining) : `${formatKRW(remaining)}원`}이 미배분 상태입니다.
                 </p>
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => {
                       setBudget((prev) =>
                         prev.map((b) =>
-                          b.id === "emergency"
-                            ? { ...b, amount: b.amount + remaining }
-                            : b
+                          b.id === "emergency" ? { ...b, amount: b.amount + remaining } : b
                         )
                       );
                     }}
@@ -322,9 +429,7 @@ const BudgetPlan = () => {
                     onClick={() => {
                       setBudget((prev) =>
                         prev.map((b) =>
-                          b.id === "etc"
-                            ? { ...b, amount: b.amount + remaining }
-                            : b
+                          b.id === "etc" ? { ...b, amount: b.amount + remaining } : b
                         )
                       );
                     }}
@@ -343,9 +448,7 @@ const BudgetPlan = () => {
               animate={{ opacity: 1, y: 0 }}
             >
               <span className="text-lg leading-none">✅</span>
-              <p className="text-sm font-medium text-green-500">
-                완벽하게 배분되었습니다!
-              </p>
+              <p className="text-sm font-medium text-green-500">완벽하게 배분되었습니다!</p>
             </motion.div>
           )}
           {remaining < 0 && (

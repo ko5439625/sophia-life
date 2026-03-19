@@ -207,19 +207,25 @@ async function realSummarizeNews(
 
 ${sections}
 
-다음 JSON 형식으로만 응답하세요 (설명 없이, 모든 텍스트는 한국어로):
-{
-  "headline": "오늘의 핵심 이슈 한 줄 요약",
-  "sections": [
-    { "category": "카테고리명", "summary": "해당 카테고리 주요 이슈 2-3줄 요약" }
-  ],
-  "keyTakeaway": "전체적으로 주목할 포인트 1-2문장"
-}`;
+반드시 유효한 JSON만 응답하세요. 설명 없이 JSON만. summary 안에 큰따옴표를 쓰지 마세요.
+{"headline":"핵심 한줄","sections":[{"category":"카테고리","summary":"요약"}],"keyTakeaway":"포인트"}`;
 
   const text = await callGemini(prompt);
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to parse Gemini news summary");
-  return JSON.parse(jsonMatch[0]) as NewsSummary;
+  const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+
+  try {
+    return JSON.parse(cleaned) as NewsSummary;
+  } catch {
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("뉴스 요약 파싱 실패");
+    try {
+      return JSON.parse(jsonMatch[0]) as NewsSummary;
+    } catch {
+      // Fix trailing commas and retry
+      const fixed = jsonMatch[0].replace(/,\s*([}\]])/g, "$1");
+      return JSON.parse(fixed) as NewsSummary;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
