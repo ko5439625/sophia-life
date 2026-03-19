@@ -14,6 +14,16 @@ const US_STOCKS = [
   "V", "UNH", "MA", "COST", "HD", "NFLX", "CRM", "AMD", "ORCL", "ADBE",
   "PEP", "KO", "MRK", "ABBV", "TMO", "ACN", "MCD", "CSCO", "LIN", "DHR",
 ];
+const US_NAMES: Record<string, string> = {
+  "AAPL": "애플", "NVDA": "엔비디아", "MSFT": "마이크로소프트", "GOOGL": "구글",
+  "AMZN": "아마존", "META": "메타", "TSLA": "테슬라", "AVGO": "브로드컴",
+  "LLY": "일라이릴리", "JPM": "JP모건", "V": "비자", "UNH": "유나이티드헬스",
+  "MA": "마스터카드", "COST": "코스트코", "HD": "홈디포", "NFLX": "넷플릭스",
+  "CRM": "세일즈포스", "AMD": "AMD", "ORCL": "오라클", "ADBE": "어도비",
+  "PEP": "펩시코", "KO": "코카콜라", "MRK": "머크", "ABBV": "애브비",
+  "TMO": "써모피셔", "ACN": "액센추어", "MCD": "맥도날드", "CSCO": "시스코",
+  "LIN": "린데", "DHR": "다나허",
+};
 const KR_STOCKS = [
   "005930.KS", "000660.KS", "373220.KS", "207940.KS", "005380.KS",
   "000270.KS", "068270.KS", "035420.KS", "035720.KS", "005490.KS",
@@ -177,18 +187,26 @@ function makeStockData(sym: string, name: string, q: Record<string, unknown>, cu
   };
 }
 
-// KOSPI200 + KOSDAQ 대형주 (시가총액 상위, 동전주 제외)
+// KOSPI + KOSDAQ 시총 상위 100개 (3년 전에도 대형주였을 가능성 높은 종목 포함)
 const KR_UNIVERSE = [
-  // KOSPI 시총 상위 30
+  // KOSPI 시총 상위 50
   "005930.KS", "000660.KS", "373220.KS", "207940.KS", "005380.KS",
   "000270.KS", "068270.KS", "005490.KS", "006400.KS", "051910.KS",
   "012450.KS", "042660.KS", "066570.KS", "055550.KS", "105560.KS",
   "034020.KS", "329180.KS", "028260.KS", "012330.KS", "096770.KS",
   "017670.KS", "030200.KS", "032830.KS", "009150.KS", "086280.KS",
   "003670.KS", "010130.KS", "009830.KS", "267260.KS", "267250.KS",
-  // KOSDAQ 시총 상위 10
+  "003550.KS", "009540.KS", "034730.KS", "011170.KS", "000810.KS",
+  "036570.KS", "018260.KS", "033780.KS", "011200.KS", "097950.KS",
+  "010950.KS", "326030.KS", "316140.KS", "003490.KS", "402340.KS",
+  "138040.KS", "004020.KS", "021240.KS", "051900.KS", "161390.KS",
+  // KOSDAQ 시총 상위 20
   "247540.KQ", "086520.KQ", "263750.KQ", "293490.KQ", "035760.KQ",
   "022100.KQ", "042700.KQ", "036570.KQ", "251270.KQ", "259960.KQ",
+  "328130.KQ", "241560.KQ", "145020.KQ", "196170.KQ", "091990.KQ",
+  "112040.KQ", "357780.KQ", "068760.KQ", "041510.KQ", "035420.KQ",
+  // 과거 대형주 (3년전 상위였으나 현재 하락한 종목 포함)
+  "035720.KS", "352820.KS", "323410.KS", "377300.KS",
 ];
 
 const KR_UNIVERSE_NAMES: Record<string, string> = {
@@ -215,7 +233,7 @@ async function fetchYahooStocks(market: "us" | "kr"): Promise<StockData[]> {
       for (const sym of batch) {
         const q = data[sym];
         if (!q || !q.price) continue;
-        const name = market === "kr" ? (KR_UNIVERSE_NAMES[sym] || KR_NAMES[sym] || sym) : sym;
+        const name = market === "kr" ? (KR_UNIVERSE_NAMES[sym] || KR_NAMES[sym] || sym) : `${US_NAMES[sym] || sym} (${sym})`;
         results.push(makeStockData(sym, name, q, q.currency || (market === "us" ? "USD" : "KRW")));
       }
     } catch { /* skip */ }
@@ -674,9 +692,8 @@ async function runSimulation(allStocks: StockData[], period: string): Promise<Si
   const isKr = allStocks.length > 0 && allStocks[0].currency === "KRW";
   const benchmarkSymbol = isKr ? "069500.KS" : "SPY";
 
-  // Yahoo range 매핑 (시뮬 기간보다 넉넉하게)
   const rangeMap: Record<string, string> = {
-    "1mo": "3mo", "3mo": "6mo", "6mo": "1y", "1y": "2y", "3y": "5y", "5y": "5y",
+    "1mo": "3mo", "3mo": "6mo", "6mo": "1y", "1y": "2y", "3y": "5y", "5y": "max",
   };
   const range = rangeMap[period] || "1y";
   const targetDays: Record<string, number> = {
@@ -871,11 +888,13 @@ const QuantRecommendView = () => {
     setSimPeriod(period);
     setSimLoading(true);
     try {
-      const result = await runSimulation(stocks, period);
+      // 시뮬레이션은 필터 무관하게 전체 유니버스에서
+      const fullUniverse = await fetchStocks(market);
+      const result = await runSimulation(fullUniverse, period);
       setSimResult(result);
     } catch { setSimResult(null); }
     setSimLoading(false);
-  }, [stocks]);
+  }, [market]);
 
   // 종목 검색
   const [searchQuery, setSearchQuery] = useState("");
@@ -1253,18 +1272,18 @@ const QuantRecommendView = () => {
                 포트폴리오 시뮬레이션
               </h4>
               <div className="flex gap-1">
-                {(["1mo" as const, "3mo" as const, "6mo" as const, "1y" as const, "3y" as const, "5y" as const]).map((p) => (
+                {(["1mo" as const, "3mo" as const, "6mo" as const, "1y" as const, "3y" as const]).map((p) => (
                   <button key={p} onClick={() => handleSimulation(p as "1y" | "3y" | "5y")} disabled={simLoading}
                     className={`px-2 py-1 text-[10px] rounded-lg font-medium transition-colors ${
                       simPeriod === p && simResult ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
                     }`}>
-                    {p === "1mo" ? "1개월" : p === "3mo" ? "3개월" : p === "6mo" ? "6개월" : p === "1y" ? "1년" : p === "3y" ? "3년" : "5년"}
+                    {p === "1mo" ? "1개월" : p === "3mo" ? "3개월" : p === "6mo" ? "6개월" : p === "1y" ? "1년" : "3년"}
                   </button>
                 ))}
               </div>
             </div>
 
-            <p className="text-[9px] text-muted-foreground mb-3">{"과거 시점에도 퀀트 추천이었을 종목을 그때 매수 → 현재가 비교. 과거 PER = 그때 주가/현재 EPS로 추정"}</p>
+            <p className="text-[9px] text-muted-foreground mb-3">{"전략 검증: 과거 시점 기술적 지표(모멘텀/RSI/MA/변동성)로 추천했을 종목을 그때 매수 → 현재가 비교"}</p>
 
             {simLoading && (
               <div className="flex items-center justify-center py-6">
@@ -1311,12 +1330,19 @@ const QuantRecommendView = () => {
                   <div className="space-y-1.5">
                     {simResult.stocks.map((s, i) => {
                       const profit = Math.round(perStock * (s.returnPct / 100));
+                      const rankColors = ["text-yellow-500", "text-gray-400", "text-amber-600"];
+                      const rankBg = i < 3 ? "border-l-2 border-yellow-500/50" : "";
                       return (
-                        <div key={s.symbol} className={`rounded-lg px-3 py-2 ${s.returnPct >= 0 ? "bg-card" : "bg-destructive/5"}`}>
+                        <div key={s.symbol} className={`rounded-lg px-3 py-2 ${s.returnPct >= 0 ? "bg-card" : "bg-destructive/5"} ${rankBg}`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[10px] text-muted-foreground w-4">{i + 1}</span>
+                              <span className={`text-xs font-bold w-6 text-center ${i < 3 ? rankColors[i] : "text-muted-foreground"}`}>
+                                {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
+                              </span>
                               <span className="text-xs font-medium truncate">{s.name}</span>
+                              <span className="text-[8px] font-mono text-muted-foreground">{s.symbol}</span>
+                              {i < 3 && <span className="text-[8px] px-1 py-0.5 rounded bg-primary/10 text-primary font-bold">강력추천</span>}
+                              {i >= 3 && i < 7 && <span className="text-[8px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-500 font-bold">추천</span>}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <span className={`text-xs font-mono font-bold ${s.returnPct >= 0 ? "text-primary" : "text-destructive"}`}>
@@ -1331,7 +1357,10 @@ const QuantRecommendView = () => {
                             {s.startPrice.toLocaleString()} → {s.endPrice.toLocaleString()}
                           </div>
                           {s.returnPct <= -10 && (
-                            <p className="text-[9px] text-destructive mt-1">{"대폭 하락 - 실적 악화/섹터 약세/밸류에이션 조정 가능성"}</p>
+                            <p className="text-[9px] text-destructive mt-1">{"⚠ 대폭 하락 - 과거 추천이었으나 실적 악화/섹터 약세로 손실"}</p>
+                          )}
+                          {s.returnPct >= 50 && (
+                            <p className="text-[9px] text-primary mt-1">{"✓ 전략 적중 - 기술적 시그널이 유효했음"}</p>
                           )}
                         </div>
                       );
