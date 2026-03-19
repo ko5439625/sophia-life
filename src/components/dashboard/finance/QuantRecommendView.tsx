@@ -107,11 +107,9 @@ function classifyStock(s: { pe: number | null; pb: number | null; roe: number | 
     else if (s.pb > 5.0) valuation = "고평가";
   }
 
+  // 절대 점수 계산 (상대 분류는 fetchStocks에서)
   const diff = aggScore - conScore;
-  let category: "aggressive" | "neutral" | "conservative";
-  if (diff >= 3) category = "aggressive";
-  else if (diff <= -3) category = "conservative";
-  else category = "neutral";
+  let category: "aggressive" | "neutral" | "conservative" = "neutral"; // 임시, 나중에 상대 분류
   const score = Math.max(0, Math.min(100, 50 + diff * 10));
 
   // 종합 추천도 (0~100)
@@ -153,69 +151,154 @@ function classifyStock(s: { pe: number | null; pb: number | null; roe: number | 
 }
 
 // ---------------------------------------------------------------------------
-// Fetch
+// Fetch - 한투 API 우선, fallback Yahoo
 // ---------------------------------------------------------------------------
 
-async function fetchStocks(market: "us" | "kr"): Promise<StockData[]> {
-  const symbols = market === "us" ? US_STOCKS : KR_STOCKS;
+function makeStockData(sym: string, name: string, q: Record<string, unknown>, currency: string): StockData {
+  const change = q.changePercent != null
+    ? Math.round((q.changePercent as number) * 100) / 100
+    : (() => { const prev = (q.previousClose as number) || (q.price as number) || 1; return Math.round((((q.price as number) - prev) / prev) * 1000) / 10; })();
+  const classified = classifyStock({
+    pe: q.pe as number | null, pb: q.pb as number | null, roe: q.roe as number | null,
+    beta: q.beta as number | null, change,
+    revenueGrowth: q.revenueGrowth as number | null, dividendYield: q.dividendYield as number | null,
+    debtToEquity: q.debtToEquity as number | null,
+  });
+  return {
+    symbol: sym, name, price: (q.price as number) || 0, change, currency,
+    pe: q.pe ? Math.round((q.pe as number) * 10) / 10 : null,
+    pb: q.pb ? Math.round((q.pb as number) * 100) / 100 : null,
+    roe: q.roe ? Math.round((q.roe as number) * 1000) / 10 : null,
+    beta: q.beta ? Math.round((q.beta as number) * 100) / 100 : null,
+    dividendYield: q.dividendYield ? Math.round((q.dividendYield as number) * 1000) / 10 : null,
+    revenueGrowth: q.revenueGrowth ? Math.round((q.revenueGrowth as number) * 1000) / 10 : null,
+    debtToEquity: q.debtToEquity ? Math.round((q.debtToEquity as number) * 10) / 10 : null,
+    ...classified,
+  };
+}
+
+// KOSPI200 + KOSDAQ 대형주 (시가총액 상위, 동전주 제외)
+const KR_UNIVERSE = [
+  // KOSPI 시총 상위 30
+  "005930.KS", "000660.KS", "373220.KS", "207940.KS", "005380.KS",
+  "000270.KS", "068270.KS", "005490.KS", "006400.KS", "051910.KS",
+  "012450.KS", "042660.KS", "066570.KS", "055550.KS", "105560.KS",
+  "034020.KS", "329180.KS", "028260.KS", "012330.KS", "096770.KS",
+  "017670.KS", "030200.KS", "032830.KS", "009150.KS", "086280.KS",
+  "003670.KS", "010130.KS", "009830.KS", "267260.KS", "267250.KS",
+  // KOSDAQ 시총 상위 10
+  "247540.KQ", "086520.KQ", "263750.KQ", "293490.KQ", "035760.KQ",
+  "022100.KQ", "042700.KQ", "036570.KQ", "251270.KQ", "259960.KQ",
+];
+
+const KR_UNIVERSE_NAMES: Record<string, string> = {
+  ...KR_NAMES,
+  "017670.KS": "SK텔레콤", "030200.KS": "KT", "032830.KS": "삼성생명",
+  "009150.KS": "삼성전기", "086280.KS": "현대글로비스", "003670.KS": "포스코퓨처엠",
+  "010130.KS": "고려아연", "009830.KS": "한화솔루션", "267260.KS": "HD현대일렉트릭",
+  "267250.KS": "HD현대", "247540.KQ": "에코프로비엠", "086520.KQ": "에코프로",
+  "293490.KQ": "카카오게임즈", "035760.KQ": "CJ ENM", "022100.KQ": "포스코DX",
+  "042700.KQ": "한미반도체", "036570.KQ": "엔씨소프트", "251270.KQ": "넷마블",
+  "259960.KQ": "크래프톤", "263750.KQ": "펄어비스",
+};
+
+async function fetchYahooStocks(market: "us" | "kr"): Promise<StockData[]> {
+  const symbols = market === "us" ? US_STOCKS : KR_UNIVERSE;
   const results: StockData[] = [];
 
-  // Batch fetch fundamentals (5 at a time to avoid rate limit)
   for (let i = 0; i < symbols.length; i += 5) {
     const batch = symbols.slice(i, i + 5);
     try {
       const res = await fetch(`/api/market?service=batch-fundamentals&symbols=${batch.join(",")}`);
-      if (!res.ok) {
-        // Fallback to basic quote
-        const res2 = await fetch(`/api/market?service=batch-quote&symbols=${batch.join(",")}`);
-        if (res2.ok) {
-          const data2 = await res2.json();
-          for (const sym of batch) {
-            const q = data2[sym];
-            if (!q) continue;
-            const prev = q.previousClose || q.price;
-            const change = prev > 0 ? ((q.price - prev) / prev) * 100 : 0;
-            const classified = classifyStock({ pe: null, pb: null, roe: null, beta: null, change, revenueGrowth: null, dividendYield: null });
-            results.push({
-              symbol: sym, name: market === "kr" ? (KR_NAMES[sym] || sym) : sym,
-              price: q.price, change: Math.round(change * 100) / 100,
-              currency: q.currency || (market === "us" ? "USD" : "KRW"),
-              pe: null, pb: null, roe: null, beta: null, dividendYield: null, revenueGrowth: null, debtToEquity: null,
-              ...classified,
-            });
-          }
-        }
-        continue;
-      }
+      if (!res.ok) continue;
       const data = await res.json();
       for (const sym of batch) {
         const q = data[sym];
-        if (!q) continue;
-        const prev = q.previousClose || q.price;
-        const change = prev > 0 ? ((q.price - prev) / prev) * 100 : 0;
-        const classified = classifyStock({
-          pe: q.pe, pb: q.pb, roe: q.roe, beta: q.beta,
-          change, revenueGrowth: q.revenueGrowth, dividendYield: q.dividendYield,
-          debtToEquity: q.debtToEquity,
-        });
-        results.push({
-          symbol: sym, name: market === "kr" ? (KR_NAMES[sym] || sym) : sym,
-          price: q.price || 0, change: Math.round(change * 100) / 100,
-          currency: q.currency || (market === "us" ? "USD" : "KRW"),
-          pe: q.pe ? Math.round(q.pe * 10) / 10 : null,
-          pb: q.pb ? Math.round(q.pb * 100) / 100 : null,
-          roe: q.roe ? Math.round(q.roe * 1000) / 10 : null,
-          beta: q.beta ? Math.round(q.beta * 100) / 100 : null,
-          dividendYield: q.dividendYield ? Math.round(q.dividendYield * 1000) / 10 : null,
-          revenueGrowth: q.revenueGrowth ? Math.round(q.revenueGrowth * 1000) / 10 : null,
-          debtToEquity: q.debtToEquity ? Math.round(q.debtToEquity * 10) / 10 : null,
-          ...classified,
-        });
+        if (!q || !q.price) continue;
+        const name = market === "kr" ? (KR_UNIVERSE_NAMES[sym] || KR_NAMES[sym] || sym) : sym;
+        results.push(makeStockData(sym, name, q, q.currency || (market === "us" ? "USD" : "KRW")));
       }
     } catch { /* skip */ }
   }
 
-  return results.sort((a, b) => b.score - a.score);
+  return results.sort((a, b) => b.recScore - a.recScore);
+}
+
+function applyRelativeClassification(stocks: StockData[]): StockData[] {
+  if (stocks.length === 0) return stocks;
+
+  // score 기준 정렬 → 상위 30% 공격, 중간 40% 중립, 하위 30% 보수
+  const sorted = [...stocks].sort((a, b) => b.score - a.score);
+  const total = sorted.length;
+  const aggressiveCut = Math.ceil(total * 0.3);
+  const conservativeCut = Math.ceil(total * 0.7);
+
+  sorted.forEach((stock, idx) => {
+    if (idx < aggressiveCut) stock.category = "aggressive";
+    else if (idx >= conservativeCut) stock.category = "conservative";
+    else stock.category = "neutral";
+  });
+
+  return sorted;
+}
+
+async function fetchKisMarketCapStocks(): Promise<StockData[]> {
+  const appkey = localStorage.getItem("sophia-api-kis-appkey");
+  const appsecret = localStorage.getItem("sophia-api-kis-secret");
+  if (!appkey || !appsecret) return [];
+
+  try {
+    const res = await fetch(`/api/market?service=kis-market-cap&appkey=${encodeURIComponent(appkey)}&appsecret=${encodeURIComponent(appsecret)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const output = (data.output || []) as Array<Record<string, string>>;
+    if (output.length === 0) return [];
+
+    const results: StockData[] = [];
+    // 시총 상위 전체 → 병렬 처리 (10개씩)
+    const items = output as Array<Record<string, string>>;
+
+    for (let i = 0; i < items.length; i += 10) {
+      const batch = items.slice(i, i + 10);
+      const promises = batch.map(async (item) => {
+        const code = item.mksc_shrn_iscd || item.stck_shrn_iscd;
+        if (!code) return null;
+        const name = item.hts_kor_isnm || code;
+
+        for (const suffix of [".KS", ".KQ"]) {
+          try {
+            const fRes = await fetch(`/api/market?service=fundamentals&symbol=${code}${suffix}`);
+            if (fRes.ok) {
+              const q = await fRes.json();
+              if (q.price) return makeStockData(`${code}${suffix}`, name, q, "KRW");
+            }
+          } catch { /* next */ }
+        }
+
+        const price = parseInt(item.stck_prpr) || 0;
+        const change = parseFloat(item.prdy_ctrt) || 0;
+        if (price <= 0) return null;
+        const classified = classifyStock({ pe: null, pb: null, roe: null, beta: null, change, revenueGrowth: null, dividendYield: null });
+        return { symbol: `${code}.KS`, name, price, change: Math.round(change * 100) / 100, currency: "KRW", pe: null, pb: null, roe: null, beta: null, dividendYield: null, revenueGrowth: null, debtToEquity: null, ...classified } as StockData;
+      });
+
+      const settled = await Promise.allSettled(promises);
+      settled.forEach((r) => { if (r.status === "fulfilled" && r.value) results.push(r.value); });
+    }
+    return results;
+  } catch { return []; }
+}
+
+async function fetchStocks(market: "us" | "kr"): Promise<StockData[]> {
+  let results: StockData[];
+  if (market === "kr") {
+    // 한투 시총 상위 우선
+    results = await fetchKisMarketCapStocks();
+    if (results.length === 0) results = await fetchYahooStocks(market);
+  } else {
+    results = await fetchYahooStocks(market);
+  }
+  return applyRelativeClassification(results);
 }
 
 async function analyzeStock(stock: StockData, market: string): Promise<AIAnalysis> {
@@ -315,7 +398,7 @@ Respond ONLY with valid JSON. ABSOLUTELY NO HTML tags (no br, b, p tags). No mar
   "confidence": "높음/중간/낮음. 확률 차이가 10%p 이내면 낮음, 20%p 이상이면 높음",
   "summary": "[숫자 근거] PER/PBR/ROE 동종업계 비교, 밸류에이션 판단. [뉴스 여론] 최신 뉴스 기반 시장 센티먼트. [종합] 숫자와 여론을 종합한 최종 평가",
   "prediction": "목표가(상승률%). Bull Case(확률%, 근거). Bear Case(확률%, 근거). 차트 이동평균/지지선 기반 기술적 판단",
-  "strategy": "진입가(지지선/MA 근거). 목표가. 손절가(이 가격 아래로 떨어지면 왜 위험한지 구체적 이유). 포지션 비중과 기간",
+  "strategy": "투자기간 명시(단기1-3개월/중기3-12개월/장기1년+, 왜 이 기간인지). 진입가(지지선/MA 근거). 목표가. 손절가(이 가격 아래면 왜 위험한지). 포지션 비중(전체 포트의 몇%)",
   "risk": "리스크 1(확률/영향도). 리스크 2. 리스크 3. 이 종목을 사면 안 되는 최악의 시나리오"
 }`;
 
@@ -575,17 +658,224 @@ function MetricBadge({ label, value, unit }: { label: string; value: number | nu
 // Component
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Backtest Simulation
+// ---------------------------------------------------------------------------
+
+interface SimResult {
+  period: string;
+  stocks: { symbol: string; name: string; startPrice: number; endPrice: number; returnPct: number }[];
+  portfolioReturn: number;
+  benchmark: number;
+  benchmarkName: string;
+}
+
+async function runSimulation(allStocks: StockData[], period: string): Promise<SimResult> {
+  const isKr = allStocks.length > 0 && allStocks[0].currency === "KRW";
+  const benchmarkSymbol = isKr ? "069500.KS" : "SPY";
+
+  // Yahoo range 매핑 (시뮬 기간보다 넉넉하게)
+  const rangeMap: Record<string, string> = {
+    "1mo": "3mo", "3mo": "6mo", "6mo": "1y", "1y": "2y", "3y": "5y", "5y": "5y",
+  };
+  const range = rangeMap[period] || "1y";
+  const targetDays: Record<string, number> = {
+    "1mo": 22, "3mo": 66, "6mo": 132, "1y": 252, "3y": 756, "5y": 1260,
+  };
+  const simDays = targetDays[period] || 252;
+
+  // 한투 API 또는 Yahoo로 히스토리 가져오기
+  type HistData = { closes: number[]; volumes: number[] };
+  const histCache: Record<string, HistData | null> = {};
+  const kisAppkey = localStorage.getItem("sophia-api-kis-appkey") || "";
+  const kisSecret = localStorage.getItem("sophia-api-kis-secret") || "";
+
+  const fetchHist = async (symbol: string): Promise<HistData | null> => {
+    if (histCache[symbol] !== undefined) return histCache[symbol];
+
+    // 한투 API (국장)
+    if (kisAppkey && kisSecret && (symbol.endsWith(".KS") || symbol.endsWith(".KQ"))) {
+      try {
+        const code = symbol.replace(".KS", "").replace(".KQ", "");
+        const now = new Date();
+        const end = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+        const pastDate = new Date(now);
+        pastDate.setDate(pastDate.getDate() - (simDays * 2)); // 넉넉하게
+        const start = `${pastDate.getFullYear()}${String(pastDate.getMonth() + 1).padStart(2, "0")}${String(pastDate.getDate()).padStart(2, "0")}`;
+
+        const res = await fetch(`/api/market?service=kis-daily-price&appkey=${encodeURIComponent(kisAppkey)}&appsecret=${encodeURIComponent(kisSecret)}&code=${code}&start=${start}&end=${end}`);
+        if (res.ok) {
+          const data = await res.json();
+          const output = (data.output2 || []) as Array<Record<string, string>>;
+          if (output.length > 10) {
+            // KIS는 최신→과거 순이라 reverse
+            const reversed = [...output].reverse();
+            const closes = reversed.map((r) => parseInt(r.stck_clpr) || 0).filter((v) => v > 0);
+            const volumes = reversed.map((r) => parseInt(r.acml_vol) || 0);
+            const h = { closes, volumes };
+            histCache[symbol] = h;
+            return h;
+          }
+        }
+      } catch { /* fallback to Yahoo */ }
+    }
+
+    // Yahoo fallback
+    try {
+      const res = await fetch(`/api/market?service=historical&symbol=${encodeURIComponent(symbol)}&range=${range}`);
+      if (!res.ok) { histCache[symbol] = null; return null; }
+      const data = await res.json();
+      const result = data?.chart?.result?.[0];
+      if (!result) { histCache[symbol] = null; return null; }
+      const closes = (result.indicators?.quote?.[0]?.close || []).filter((v: number | null) => v != null) as number[];
+      const volumes = (result.indicators?.quote?.[0]?.volume || []).filter((v: number | null) => v != null) as number[];
+      const h = { closes, volumes };
+      histCache[symbol] = h;
+      return h;
+    } catch { histCache[symbol] = null; return null; }
+  };
+
+  // 각 종목의 과거 시점 기술적 지표 계산
+  interface PastScore {
+    symbol: string; name: string; score: number;
+    pastPrice: number; nowPrice: number; currency: string;
+    momentum3m: number; volatility: number; rsi: number; maSignal: string;
+  }
+  const pastScores: PastScore[] = [];
+
+  for (const stock of allStocks) {
+    const hist = await fetchHist(stock.symbol);
+    if (!hist || hist.closes.length < simDays + 20) continue;
+
+    const total = hist.closes.length;
+    const entryIdx = total - simDays; // 과거 진입 시점
+    const pastPrice = hist.closes[entryIdx];
+    const nowPrice = hist.closes[total - 1];
+    if (!pastPrice || pastPrice <= 0) continue;
+
+    // 과거 시점 기준 지표 계산 (entryIdx 시점)
+    const pastSlice = hist.closes.slice(0, entryIdx + 1);
+
+    // 1. 모멘텀: 진입 시점 기준 3개월 수익률
+    const mom3mIdx = Math.max(0, entryIdx - 66);
+    const momentum3m = pastSlice[mom3mIdx] > 0 ? ((pastPrice - pastSlice[mom3mIdx]) / pastSlice[mom3mIdx]) * 100 : 0;
+
+    // 2. 변동성: 20일 일간 수익률 표준편차
+    const returns20 = pastSlice.slice(-21).map((c, i, a) => i > 0 ? (c - a[i - 1]) / a[i - 1] : 0).slice(1);
+    const mean20 = returns20.reduce((s, r) => s + r, 0) / (returns20.length || 1);
+    const volatility = Math.sqrt(returns20.reduce((s, r) => s + (r - mean20) ** 2, 0) / (returns20.length || 1)) * 100;
+
+    // 3. RSI (14일)
+    const rsiSlice = pastSlice.slice(-15);
+    let gains = 0, losses = 0;
+    for (let i = 1; i < rsiSlice.length; i++) {
+      const diff = rsiSlice[i] - rsiSlice[i - 1];
+      if (diff > 0) gains += diff; else losses -= diff;
+    }
+    const avgGain = gains / 14, avgLoss = losses / 14;
+    const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss));
+
+    // 4. 이동평균 시그널
+    const ma20 = pastSlice.slice(-20).reduce((s, c) => s + c, 0) / 20;
+    const ma60 = pastSlice.length >= 60 ? pastSlice.slice(-60).reduce((s, c) => s + c, 0) / 60 : ma20;
+    const maSignal = pastPrice > ma20 && ma20 > ma60 ? "정배열" : pastPrice < ma20 && ma20 < ma60 ? "역배열" : "혼조";
+
+    // 종합 점수: 모멘텀 + 저변동성 + RSI 적정 + 정배열
+    let score = 0;
+    if (momentum3m > 10) score += 3; else if (momentum3m > 0) score += 1; else score -= 1;
+    if (volatility < 2) score += 2; else if (volatility < 3) score += 1; else score -= 1;
+    if (rsi >= 30 && rsi <= 70) score += 1; // 과매수/과매도 아닌 구간
+    if (rsi < 30) score += 2; // 과매도 = 매수 기회
+    if (maSignal === "정배열") score += 2; else if (maSignal === "역배열") score -= 2;
+
+    pastScores.push({
+      symbol: stock.symbol, name: stock.name, score,
+      pastPrice: Math.round(pastPrice), nowPrice: Math.round(nowPrice),
+      currency: stock.currency,
+      momentum3m: Math.round(momentum3m * 10) / 10,
+      volatility: Math.round(volatility * 100) / 100,
+      rsi: Math.round(rsi), maSignal,
+    });
+  }
+
+  // 점수 상위 10개 = 그 시점에 추천했을 종목
+  const top10 = pastScores.sort((a, b) => b.score - a.score).slice(0, 10);
+
+  const results: SimResult["stocks"] = top10.map((s) => ({
+    symbol: s.symbol, name: s.name,
+    startPrice: s.pastPrice, endPrice: s.nowPrice,
+    returnPct: Math.round(((s.nowPrice - s.pastPrice) / s.pastPrice) * 1000) / 10,
+  }));
+
+  const avgReturn = results.length > 0 ? results.reduce((s, r) => s + r.returnPct, 0) / results.length : 0;
+
+  let benchmark = 0;
+  const benchHist = await fetchHist(benchmarkSymbol);
+  if (benchHist && benchHist.closes.length > simDays) {
+    const bStart = benchHist.closes[benchHist.closes.length - simDays];
+    const bEnd = benchHist.closes[benchHist.closes.length - 1];
+    if (bStart > 0) benchmark = Math.round(((bEnd - bStart) / bStart) * 1000) / 10;
+  }
+
+  const periodLabel: Record<string, string> = {
+    "1mo": "1개월", "3mo": "3개월", "6mo": "6개월", "1y": "1년", "3y": "3년", "5y": "5년",
+  };
+
+  return {
+    period: periodLabel[period] || period,
+    stocks: results.sort((a, b) => b.returnPct - a.returnPct),
+    portfolioReturn: Math.round(avgReturn * 10) / 10,
+    benchmark,
+    benchmarkName: isKr ? "KODEX 200" : "SPY (S&P 500)",
+  };
+}
+
 const QuantRecommendView = () => {
   const { isGuest } = useGuestMode();
   const [market, setMarket] = useState<"us" | "kr">("us");
   const [activePerspective, setActivePerspective] = useState<"aggressive" | "neutral" | "conservative">("aggressive");
-  const [stocks, setStocks] = useState<StockData[]>([]);
+  const [stocks, setStocks] = useState<StockData[]>(() => {
+    try {
+      const cached = localStorage.getItem("sophia-quant-cache");
+      if (cached) {
+        const { data, market: m, timestamp } = JSON.parse(cached);
+        // 6시간 이내면 캐시 사용
+        if (Date.now() - timestamp < 6 * 60 * 60 * 1000 && data?.length > 0) return data;
+      }
+    } catch { /* ignore */ }
+    return [];
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
   const [aiResult, setAiResult] = useState<AIAnalysis | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+
+  // 스크리닝 필터
+  const [showFilter, setShowFilter] = useState(false);
+  const [filters, setFilters] = useState({
+    perMax: "30",
+    roeMin: "5",
+    betaMax: "",
+    revenueGrowthMin: "",
+    debtMax: "200",
+  });
+
+  // 시뮬레이션
+  const [simResult, setSimResult] = useState<SimResult | null>(null);
+  const [simLoading, setSimLoading] = useState(false);
+  const [simPeriod, setSimPeriod] = useState("1y");
+
+  const handleSimulation = useCallback(async (period: string) => {
+    setSimPeriod(period);
+    setSimLoading(true);
+    try {
+      const result = await runSimulation(stocks, period);
+      setSimResult(result);
+    } catch { setSimResult(null); }
+    setSimLoading(false);
+  }, [stocks]);
 
   // 종목 검색
   const [searchQuery, setSearchQuery] = useState("");
@@ -599,14 +889,36 @@ const QuantRecommendView = () => {
     setStocks([]);
     setSelectedStock(null);
     try {
-      const data = await fetchStocks(market);
+      let data = await fetchStocks(market);
+
+      // 사용자 필터 적용
+      const perMax = parseFloat(filters.perMax) || Infinity;
+      const roeMin = parseFloat(filters.roeMin) || -Infinity;
+      const betaMax = parseFloat(filters.betaMax) || Infinity;
+      const growthMin = parseFloat(filters.revenueGrowthMin) || -Infinity;
+      const debtMax = parseFloat(filters.debtMax) || Infinity;
+
+      data = data.filter((s) => {
+        if (s.pe != null && s.pe > perMax) return false;
+        if (s.pe != null && s.pe <= 0) return false; // 적자 제외
+        if (s.roe != null && s.roe < roeMin) return false;
+        if (s.beta != null && s.beta > betaMax) return false;
+        if (s.revenueGrowth != null && s.revenueGrowth < growthMin) return false;
+        if (s.debtToEquity != null && s.debtToEquity > debtMax) return false;
+        return true;
+      });
+
+      // 필터 후 재분류
+      data = applyRelativeClassification(data);
       setStocks(data);
+      // 캐시 저장
+      try { localStorage.setItem("sophia-quant-cache", JSON.stringify({ data, market, timestamp: Date.now() })); } catch { /* */ }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "로드 실패");
     } finally {
       setLoading(false);
     }
-  }, [market]);
+  }, [market, filters]);
 
   // 수동 로드: 미장/국장 버튼 클릭 시에만 fetch
 
@@ -719,6 +1031,10 @@ const QuantRecommendView = () => {
               {m === "us" ? "미장" : "국장"}
             </button>
           ))}
+          <button onClick={() => setShowFilter(!showFilter)}
+            className={`px-2 py-1.5 rounded-lg text-xs transition-colors ${showFilter ? "bg-amber-500/20 text-amber-500" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
+            필터
+          </button>
           <button onClick={handleFetch} disabled={loading}
             className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 disabled:opacity-50 flex items-center gap-1">
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
@@ -726,6 +1042,45 @@ const QuantRecommendView = () => {
           </button>
         </div>
       </div>
+
+      {/* 필터 패널 */}
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="bg-card rounded-xl p-4 space-y-3 border border-amber-500/20">
+              <p className="text-xs font-bold">스크리닝 필터</p>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <div>
+                  <label className="text-[9px] text-muted-foreground block mb-0.5">PER 최대</label>
+                  <input type="number" value={filters.perMax} onChange={(e) => setFilters({ ...filters, perMax: e.target.value })}
+                    placeholder="30" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground block mb-0.5">ROE 최소(%)</label>
+                  <input type="number" value={filters.roeMin} onChange={(e) => setFilters({ ...filters, roeMin: e.target.value })}
+                    placeholder="5" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground block mb-0.5">Beta 최대</label>
+                  <input type="number" value={filters.betaMax} onChange={(e) => setFilters({ ...filters, betaMax: e.target.value })}
+                    placeholder="제한없음" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground block mb-0.5">매출성장 최소(%)</label>
+                  <input type="number" value={filters.revenueGrowthMin} onChange={(e) => setFilters({ ...filters, revenueGrowthMin: e.target.value })}
+                    placeholder="제한없음" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground block mb-0.5">부채비율 최대(%)</label>
+                  <input type="number" value={filters.debtMax} onChange={(e) => setFilters({ ...filters, debtMax: e.target.value })}
+                    placeholder="200" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                </div>
+              </div>
+              <p className="text-[8px] text-muted-foreground">{"필터 설정 후 '스크리닝' 클릭. 적자기업(PER≤0) 자동 제외."}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 종목 검색 */}
       <div className="relative">
@@ -889,6 +1244,111 @@ const QuantRecommendView = () => {
           <p className="text-[9px] text-muted-foreground text-center">
             {"PER↓ = 저평가 · ROE↑ = 수익성좋음 · 종목 클릭 → AI 분석"}
           </p>
+
+          {/* 백테스팅 시뮬레이션 */}
+          <div className="bg-card rounded-xl p-4 mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-bold flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                포트폴리오 시뮬레이션
+              </h4>
+              <div className="flex gap-1">
+                {(["1mo" as const, "3mo" as const, "6mo" as const, "1y" as const, "3y" as const, "5y" as const]).map((p) => (
+                  <button key={p} onClick={() => handleSimulation(p as "1y" | "3y" | "5y")} disabled={simLoading}
+                    className={`px-2 py-1 text-[10px] rounded-lg font-medium transition-colors ${
+                      simPeriod === p && simResult ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                    }`}>
+                    {p === "1mo" ? "1개월" : p === "3mo" ? "3개월" : p === "6mo" ? "6개월" : p === "1y" ? "1년" : p === "3y" ? "3년" : "5년"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[9px] text-muted-foreground mb-3">{"과거 시점에도 퀀트 추천이었을 종목을 그때 매수 → 현재가 비교. 과거 PER = 그때 주가/현재 EPS로 추정"}</p>
+
+            {simLoading && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin text-primary mr-2" />
+                <span className="text-xs text-muted-foreground">과거 데이터 분석 중...</span>
+              </div>
+            )}
+
+            {simResult && !simLoading && (() => {
+              const investAmount = 1000000; // 100만원
+              const perStock = investAmount / simResult.stocks.length;
+              const totalNow = simResult.stocks.reduce((s, r) => s + perStock * (1 + r.returnPct / 100), 0);
+              const totalReturn = totalNow - investAmount;
+              const winners = simResult.stocks.filter((s) => s.returnPct > 0);
+              const losers = simResult.stocks.filter((s) => s.returnPct <= 0);
+
+              return (
+                <div className="space-y-3">
+                  {/* 100만원 투자 결과 */}
+                  <div className={`rounded-xl p-4 text-center ${totalReturn >= 0 ? "bg-primary/10" : "bg-destructive/10"}`}>
+                    <p className="text-[10px] text-muted-foreground">100만원 투자 → {simResult.period} 후</p>
+                    <p className={`text-2xl font-mono font-bold ${totalReturn >= 0 ? "text-primary" : "text-destructive"}`}>
+                      {Math.round(totalNow).toLocaleString()}원
+                    </p>
+                    <p className={`text-sm font-mono ${totalReturn >= 0 ? "text-primary" : "text-destructive"}`}>
+                      {totalReturn >= 0 ? "+" : ""}{Math.round(totalReturn).toLocaleString()}원 ({simResult.portfolioReturn >= 0 ? "+" : ""}{simResult.portfolioReturn}%)
+                    </p>
+                    <p className="text-[9px] text-muted-foreground mt-1">
+                      {simResult.stocks.length}종목 동일비중 · 종목당 {Math.round(perStock).toLocaleString()}원
+                    </p>
+                  </div>
+
+                  {/* 승/패 요약 */}
+                  <div className="flex gap-2">
+                    <div className="flex-1 bg-primary/5 rounded-lg p-2 text-center">
+                      <p className="text-[10px] text-primary font-bold">수익 {winners.length}종목</p>
+                    </div>
+                    <div className="flex-1 bg-destructive/5 rounded-lg p-2 text-center">
+                      <p className="text-[10px] text-destructive font-bold">손실 {losers.length}종목</p>
+                    </div>
+                  </div>
+
+                  {/* 종목별 상세 */}
+                  <div className="space-y-1.5">
+                    {simResult.stocks.map((s, i) => {
+                      const profit = Math.round(perStock * (s.returnPct / 100));
+                      return (
+                        <div key={s.symbol} className={`rounded-lg px-3 py-2 ${s.returnPct >= 0 ? "bg-card" : "bg-destructive/5"}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[10px] text-muted-foreground w-4">{i + 1}</span>
+                              <span className="text-xs font-medium truncate">{s.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className={`text-xs font-mono font-bold ${s.returnPct >= 0 ? "text-primary" : "text-destructive"}`}>
+                                {profit >= 0 ? "+" : ""}{profit.toLocaleString()}원
+                              </span>
+                              <span className={`text-[10px] font-mono ${s.returnPct >= 0 ? "text-primary" : "text-destructive"}`}>
+                                {s.returnPct >= 0 ? "+" : ""}{s.returnPct}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-[9px] text-muted-foreground mt-0.5">
+                            {s.startPrice.toLocaleString()} → {s.endPrice.toLocaleString()}
+                          </div>
+                          {s.returnPct <= -10 && (
+                            <p className="text-[9px] text-destructive mt-1">{"대폭 하락 - 실적 악화/섹터 약세/밸류에이션 조정 가능성"}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-[8px] text-muted-foreground text-center">
+                    {"과거 수익률은 미래 수익을 보장하지 않습니다. 과거 PER 추정 기반 시뮬레이션."}
+                  </p>
+                </div>
+              );
+            })()}
+
+            {!simResult && !simLoading && (
+              <p className="text-xs text-muted-foreground text-center py-4">기간을 선택하면 백테스팅 결과를 보여줍니다</p>
+            )}
+          </div>
         </>
       )}
     </div>

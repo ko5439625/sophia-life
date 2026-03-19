@@ -252,6 +252,152 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ articles });
       }
 
+      case "kis-ranking": {
+        // 한투 API 등락률/거래량 순위
+        const appkey = req.query.appkey as string;
+        const appsecret = req.query.appsecret as string;
+        const rankType = (req.query.type as string) || "fluctuation";
+        const marketCode = (req.query.market as string) || "J"; // J=KOSPI, Q=KOSDAQ
+        if (!appkey || !appsecret) return res.status(400).json({ error: "appkey, appsecret required" });
+
+        // 1. Get token
+        const tokenRes = await fetch("https://openapi.koreainvestment.com:9443/oauth2/tokenP", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ grant_type: "client_credentials", appkey, appsecret }),
+        });
+        if (!tokenRes.ok) return res.status(200).json({ error: "token failed", output: [] });
+        const tokenData = await tokenRes.json();
+        const token = tokenData.access_token;
+
+        // 2. Fetch ranking
+        const trId = rankType === "volume" ? "FHPST01710000" : "FHPST01700000";
+        const scrCode = rankType === "volume" ? "20171" : "20170";
+        const params = new URLSearchParams({
+          fid_cond_mrkt_div_code: marketCode,
+          fid_cond_scr_div_code: scrCode,
+          fid_input_iscd: "",
+          fid_rank_sort_cls_code: "0",
+          fid_input_cnt_1: "0",
+          fid_prc_cls_code: "1",
+          fid_input_price_1: "",
+          fid_input_price_2: "",
+          fid_vol_cnt: "",
+          fid_trgt_cls_code: "0",
+          fid_trgt_exls_cls_code: "0",
+          fid_div_cls_code: "0",
+          fid_rsfl_rate1: "",
+          fid_rsfl_rate2: "",
+        });
+        const rankRes = await fetch(
+          `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/ranking/fluctuation?${params}`,
+          {
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              authorization: `Bearer ${token}`,
+              appkey,
+              appsecret,
+              tr_id: trId,
+            },
+          }
+        );
+        if (!rankRes.ok) return res.status(200).json({ error: "rank failed", output: [] });
+        const rankData = await rankRes.json();
+        return res.status(200).json(rankData);
+      }
+
+      case "kis-daily-price": {
+        // 한투 API 일별 시세 (과거 데이터)
+        const appkey = req.query.appkey as string;
+        const appsecret = req.query.appsecret as string;
+        const stockCode = req.query.code as string;
+        const startDate = req.query.start as string; // YYYYMMDD
+        const endDate = req.query.end as string; // YYYYMMDD
+        if (!appkey || !appsecret || !stockCode) return res.status(400).json({ error: "appkey, appsecret, code required" });
+
+        // Token
+        const tokenRes2 = await fetch("https://openapi.koreainvestment.com:9443/oauth2/tokenP", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ grant_type: "client_credentials", appkey, appsecret }),
+        });
+        if (!tokenRes2.ok) return res.status(200).json({ output2: [] });
+        const tokenData2 = await tokenRes2.json();
+        const token2 = tokenData2.access_token;
+
+        const now = new Date();
+        const end = endDate || `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+        const start = startDate || (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`; })();
+
+        const params2 = new URLSearchParams({
+          FID_COND_MRKT_DIV_CODE: "J",
+          FID_INPUT_ISCD: stockCode,
+          FID_INPUT_DATE_1: start,
+          FID_INPUT_DATE_2: end,
+          FID_PERIOD_DIV_CODE: "D",
+          FID_ORG_ADJ_PRC: "0",
+        });
+        const priceRes = await fetch(
+          `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice?${params2}`,
+          {
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              authorization: `Bearer ${token2}`,
+              appkey, appsecret,
+              tr_id: "FHKST03010100",
+            },
+          }
+        );
+        if (!priceRes.ok) return res.status(200).json({ output2: [] });
+        const priceData = await priceRes.json();
+        return res.status(200).json(priceData);
+      }
+
+      case "kis-market-cap": {
+        // 한투 API 시가총액 상위 종목
+        const appkey = req.query.appkey as string;
+        const appsecret = req.query.appsecret as string;
+        if (!appkey || !appsecret) return res.status(400).json({ error: "appkey, appsecret required" });
+
+        const tokenRes3 = await fetch("https://openapi.koreainvestment.com:9443/oauth2/tokenP", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ grant_type: "client_credentials", appkey, appsecret }),
+        });
+        if (!tokenRes3.ok) return res.status(200).json({ output: [] });
+        const tokenData3 = await tokenRes3.json();
+        const token3 = tokenData3.access_token;
+
+        // 시가총액 상위 (FHPST01740000)
+        const capParams = new URLSearchParams({
+          fid_cond_mrkt_div_code: "J",
+          fid_cond_scr_div_code: "20174",
+          fid_input_iscd: "",
+          fid_div_cls_code: "0",
+          fid_blng_cls_code: "0",
+          fid_trgt_cls_code: "0",
+          fid_trgt_exls_cls_code: "0",
+          fid_input_price_1: "",
+          fid_input_price_2: "",
+          fid_vol_cnt: "",
+          fid_input_date_1: "",
+        });
+        const capRes = await fetch(
+          `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/ranking/market-cap?${capParams}`,
+          {
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              authorization: `Bearer ${token3}`,
+              appkey, appsecret,
+              tr_id: "FHPST01740000",
+            },
+          }
+        );
+        if (!capRes.ok) return res.status(200).json({ output: [] });
+        const capData = await capRes.json();
+        return res.status(200).json(capData);
+      }
+
       case "yahoo-search": {
         const query = req.query.q as string;
         if (!query) return res.status(400).json({ error: "q required" });
