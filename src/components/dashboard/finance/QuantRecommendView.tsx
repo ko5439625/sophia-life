@@ -1047,7 +1047,7 @@ const QuantRecommendView = () => {
         </div>
         <div className="flex gap-2">
           {(["us", "kr"] as const).map((m) => (
-            <button key={m} onClick={() => { setMarket(m); setStocks([]); setSelectedStock(null); }}
+            <button key={m} onClick={() => { setMarket(m); setSelectedStock(null); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${market === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
               {m === "us" ? "미장" : "국장"}
             </button>

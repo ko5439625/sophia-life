@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, TrendingUp, TrendingDown, X, ChevronDown, ChevronUp, Loader2, AlertTriangle, Target, DollarSign } from "lucide-react";
+import { ShoppingCart, TrendingUp, TrendingDown, X, ChevronDown, ChevronUp, Loader2, AlertTriangle, Target, DollarSign, Gauge } from "lucide-react";
+import { getSectorFearGreed } from "../../../services/marketApi";
 import { formatKRW } from "./budgetData";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 
@@ -39,6 +40,8 @@ const TradingView = () => {
   const [newsKr, setNewsKr] = useState<string[]>([]);
   const [newsUsOpen, setNewsUsOpen] = useState(false);
   const [newsKrOpen, setNewsKrOpen] = useState(false);
+  const [krListOpen, setKrListOpen] = useState(true);
+  const [usListOpen, setUsListOpen] = useState(false);
   const [newsLoading, setNewsLoading] = useState(false);
   const [sellId, setSellId] = useState<string | null>(null);
   const [sellPrice, setSellPrice] = useState("");
@@ -47,6 +50,17 @@ const TradingView = () => {
     symbol: "", name: "", market: "kr" as "us" | "kr",
     entryPrice: "", targetPrice: "", stopLoss: "", quantity: "1", currency: "KRW",
   });
+
+  // 공포탐욕지수
+  const [fg, setFg] = useState<{ nasdaq: number | null; kospi: number | null; crypto: number | null }>({ nasdaq: null, kospi: null, crypto: null });
+  useEffect(() => {
+    getSectorFearGreed().then((r) => setFg({
+      nasdaq: r.nasdaq?.value ?? null, kospi: r.kosdaq?.value ?? null, crypto: r.crypto?.value ?? null,
+    })).catch(() => {});
+  }, []);
+
+  const fgLabel = (v: number | null) => v === null ? "--" : v <= 25 ? "극단공포" : v <= 45 ? "공포" : v <= 55 ? "중립" : v <= 75 ? "탐욕" : "극단탐욕";
+  const fgColor = (v: number | null) => v === null ? "text-muted-foreground" : v <= 25 ? "text-red-500" : v <= 45 ? "text-orange-500" : v <= 55 ? "text-yellow-500" : v <= 75 ? "text-lime-500" : "text-green-500";
 
   // 퀀트 추천 Top 10 가져오기
   const [quantTop, setQuantTop] = useState<{ symbol: string; name: string; price: number; currency: string }[]>([]);
@@ -137,7 +151,14 @@ const TradingView = () => {
     setSellPrice("");
   };
 
-  const quickBuy = (stock: typeof quantTop[0]) => {
+  const [quickAiLoading, setQuickAiLoading] = useState<string | null>(null);
+
+  // AI 분석 캐시 (종목별)
+  const aiCacheRef = useRef<Record<string, { target: number; stop: number }>>(() => {
+    try { const c = localStorage.getItem("sophia-trade-ai-cache"); return c ? JSON.parse(c) : {}; } catch { return {}; }
+  });
+
+  const quickBuy = async (stock: typeof quantTop[0]) => {
     setBuyForm({
       symbol: stock.symbol, name: stock.name,
       market: stock.currency === "KRW" ? "kr" : "us",
@@ -145,6 +166,81 @@ const TradingView = () => {
       quantity: "1", currency: stock.currency,
     });
     setShowBuyForm(true);
+
+    // 캐시 확인
+    const cached = aiCacheRef.current[stock.symbol];
+    if (cached) {
+      setBuyForm((prev) => ({ ...prev, targetPrice: String(cached.target), stopLoss: String(cached.stop) }));
+      return;
+    }
+
+    // AI 분석 (퀀트 추천과 동일 수준)
+    const apiKey = localStorage.getItem("sophia-api-gemini");
+    if (!apiKey) return;
+
+    setQuickAiLoading(stock.symbol);
+    try {
+      const cur = stock.currency === "KRW" ? "₩" : "$";
+
+      // 뉴스 가져오기
+      let newsCtx = "";
+      try {
+        const nq = stock.currency === "KRW" ? stock.name : stock.symbol;
+        const nRes = await fetch(`/api/market?service=stock-news&q=${encodeURIComponent(nq)}`);
+        if (nRes.ok) { const nd = await nRes.json(); newsCtx = (nd.articles || []).slice(0, 3).join("\n"); }
+      } catch {}
+
+      // 차트 데이터
+      let chartCtx = "";
+      try {
+        const hRes = await fetch(`/api/market?service=historical&symbol=${encodeURIComponent(stock.symbol)}&range=3mo`);
+        if (hRes.ok) {
+          const hd = await hRes.json();
+          const closes = (hd?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []).filter((v: number | null) => v != null) as number[];
+          if (closes.length >= 20) {
+            const high = Math.max(...closes);
+            const low = Math.min(...closes);
+            const ma20 = closes.slice(-20).reduce((a: number, b: number) => a + b, 0) / 20;
+            const support = Math.min(...closes.slice(-20));
+            const resistance = Math.max(...closes.slice(-20));
+            chartCtx = `3개월 고가:${cur}${Math.round(high)} 저가:${cur}${Math.round(low)} MA20:${cur}${Math.round(ma20)} 지지:${cur}${Math.round(support)} 저항:${cur}${Math.round(resistance)}`;
+          }
+        }
+      } catch {}
+
+      const prompt = `주식 분석가로서 ${stock.name}(${stock.symbol}) 현재가 ${cur}${stock.price.toLocaleString()} 분석.
+${chartCtx ? `차트: ${chartCtx}` : ""}
+${newsCtx ? `뉴스: ${newsCtx}` : ""}
+목표가와 손절가를 차트 지지선/저항선 기반으로 계산. JSON만: {"target":숫자,"stop":숫자}`;
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 200, responseMimeType: "application/json" },
+          }),
+        }
+      );
+      if (res.ok) {
+        const json = await res.json();
+        const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        try {
+          const parsed = JSON.parse(text.replace(/```json\s*/g, "").replace(/```/g, "").trim());
+          if (parsed.target && parsed.stop) {
+            const t = Math.round(parsed.target);
+            const s = Math.round(parsed.stop);
+            setBuyForm((prev) => ({ ...prev, targetPrice: String(t), stopLoss: String(s) }));
+            // 캐시 저장
+            aiCacheRef.current[stock.symbol] = { target: t, stop: s };
+            try { localStorage.setItem("sophia-trade-ai-cache", JSON.stringify(aiCacheRef.current)); } catch {}
+          }
+        } catch {}
+      }
+    } catch {}
+    setQuickAiLoading(null);
   };
 
   const openTrades = trades.filter((t) => t.status === "open");
@@ -155,26 +251,67 @@ const TradingView = () => {
 
   return (
     <div className="space-y-4">
-      {/* 퀀트 추천 Top → 빠른 매수 */}
-      {quantTop.length > 0 && (
-        <div className="bg-card rounded-xl p-4">
-          <h4 className="text-xs font-bold mb-2 flex items-center gap-1.5">
-            <Target className="h-3.5 w-3.5 text-primary" /> 퀀트 추천 빠른 매수
-          </h4>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {quantTop.slice(0, 10).map((s, i) => (
-              <button key={s.symbol} onClick={() => quickBuy(s)}
-                className="flex-shrink-0 px-3 py-2 bg-muted/50 hover:bg-muted rounded-lg text-xs transition-colors">
-                <div className="flex items-center gap-1.5">
-                  {i < 3 && <span className="text-[9px]">{["🥇","🥈","🥉"][i]}</span>}
-                  <span className="font-medium">{s.name}</span>
-                </div>
-                <span className="text-[10px] font-mono text-muted-foreground">{fmt(s.price, s.currency)}</span>
-              </button>
-            ))}
+      {/* 시장 심리 한 줄 */}
+      <div className="flex items-center justify-center gap-3 text-[10px] font-mono py-1.5 bg-card rounded-lg px-3">
+        <span className={fgColor(fg.nasdaq)}>나스닥 {fg.nasdaq ?? "--"} {fgLabel(fg.nasdaq)}</span>
+        <span className="text-muted-foreground/30">·</span>
+        <span className={fgColor(fg.kospi)}>코스피 {fg.kospi ?? "--"} {fgLabel(fg.kospi)}</span>
+        <span className="text-muted-foreground/30">·</span>
+        <span className={fgColor(fg.crypto)}>코인 {fg.crypto ?? "--"} {fgLabel(fg.crypto)}</span>
+      </div>
+
+      {/* 퀀트 추천 빠른 매수 - 국장/미장 분리 */}
+      {quantTop.length > 0 && (() => {
+        const krTop = quantTop.filter((s) => s.currency === "KRW").slice(0, 10);
+        const usTop = quantTop.filter((s) => s.currency !== "KRW").slice(0, 10);
+        return (
+          <div className="bg-card rounded-xl p-4 space-y-3">
+            <h4 className="text-xs font-bold flex items-center gap-1.5">
+              <Target className="h-3.5 w-3.5 text-primary" /> 퀀트 추천 빠른 매수
+            </h4>
+            {krTop.length > 0 && (
+              <div>
+                <button onClick={() => setKrListOpen(!krListOpen)} className="w-full flex items-center justify-between py-1">
+                  <span className="text-[10px] font-bold">국장 Top {krTop.length}</span>
+                  {krListOpen ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
+                </button>
+                {krListOpen && <div className="space-y-0.5">
+                  {krTop.map((s, i) => (
+                    <button key={s.symbol} onClick={() => quickBuy(s)}
+                      className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-muted/50 rounded text-xs transition-colors">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 text-[10px] text-muted-foreground">{i < 3 ? ["🥇","🥈","🥉"][i] : `${i+1}`}</span>
+                        <span className="font-medium">{s.name}</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-muted-foreground">{fmt(s.price, s.currency)}</span>
+                    </button>
+                  ))}
+                </div>}
+              </div>
+            )}
+            {usTop.length > 0 && (
+              <div>
+                <button onClick={() => setUsListOpen(!usListOpen)} className="w-full flex items-center justify-between py-1">
+                  <span className="text-[10px] font-bold">미장 Top {usTop.length}</span>
+                  {usListOpen ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
+                </button>
+                {usListOpen && <div className="space-y-0.5">
+                  {usTop.map((s, i) => (
+                    <button key={s.symbol} onClick={() => quickBuy(s)}
+                      className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-muted/50 rounded text-xs transition-colors">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 text-[10px] text-muted-foreground">{i < 3 ? ["🥇","🥈","🥉"][i] : `${i+1}`}</span>
+                        <span className="font-medium">{s.name}</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-muted-foreground">{fmt(s.price, s.currency)}</span>
+                    </button>
+                  ))}
+                </div>}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 매수 폼 */}
       <div className="flex justify-between items-center">
@@ -202,12 +339,16 @@ const TradingView = () => {
                     className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono" /></div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div><label className="text-[9px] text-primary">목표가</label>
+                <div><label className="text-[9px] text-primary">목표가 {quickAiLoading && <Loader2 className="h-2.5 w-2.5 animate-spin inline ml-1" />}</label>
                   <input type="number" value={buyForm.targetPrice} onChange={(e) => setBuyForm({ ...buyForm, targetPrice: e.target.value })}
-                    className="w-full bg-background border border-primary/30 rounded px-2 py-1.5 text-xs font-mono" /></div>
-                <div><label className="text-[9px] text-destructive">손절가</label>
+                    placeholder={quickAiLoading ? "AI 분석 중..." : "자동 입력됨"}
+                    className="w-full bg-background border border-primary/30 rounded px-2 py-1.5 text-xs font-mono placeholder:text-muted-foreground/30" />
+                </div>
+                <div><label className="text-[9px] text-destructive">손절가 {quickAiLoading && <Loader2 className="h-2.5 w-2.5 animate-spin inline ml-1" />}</label>
                   <input type="number" value={buyForm.stopLoss} onChange={(e) => setBuyForm({ ...buyForm, stopLoss: e.target.value })}
-                    className="w-full bg-background border border-destructive/30 rounded px-2 py-1.5 text-xs font-mono" /></div>
+                    placeholder={quickAiLoading ? "AI 분석 중..." : "자동 입력됨"}
+                    className="w-full bg-background border border-destructive/30 rounded px-2 py-1.5 text-xs font-mono placeholder:text-muted-foreground/30" />
+                </div>
               </div>
               <button onClick={handleBuy} disabled={!buyForm.symbol || !buyForm.entryPrice}
                 className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-40">매수 등록</button>

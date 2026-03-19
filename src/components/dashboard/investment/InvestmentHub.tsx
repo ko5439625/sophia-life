@@ -26,7 +26,7 @@ const InvestmentHub = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 relative px-2 sm:px-3 py-2.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[60px] min-h-[44px] flex-shrink-0 ${
+            className={`flex-1 relative px-2 sm:px-4 py-2.5 text-[11px] sm:text-sm font-medium rounded-md transition-colors min-h-[40px] ${
               activeTab === tab.id
                 ? tab.id === "hedging"
                   ? "text-primary-foreground"
