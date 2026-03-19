@@ -28,17 +28,17 @@ def load_active_filters(supabase):
 async def crawl_cycle():
     """한 사이클: 모든 활성 필터 크롤링"""
     print(f"\n{'='*60}")
-    print(f"🏠 크롤링 시작: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"[집] 크롤링 시작: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}")
 
     supabase = get_supabase()
     filters = load_active_filters(supabase)
 
     if not filters:
-        print("⚠️ 활성 필터가 없습니다. sophia.life > 부동산 > 매물 모니터에서 필터를 추가하세요.")
+        print("[경고] 활성 필터가 없습니다. sophia.life > 부동산 > 매물 모니터에서 필터를 추가하세요.")
         return
 
-    print(f"📋 {len(filters)}개 필터 처리 예정\n")
+    print(f" {len(filters)}개 필터 처리 예정\n")
 
     total_new = 0
     total_changed = 0
@@ -60,7 +60,7 @@ async def crawl_cycle():
             total_changed += changed_count
             total_removed += removed_count
 
-            print(f"  📊 결과: 신규 {new_count} / 변동 {changed_count} / 삭제 {removed_count}")
+            print(f"   결과: 신규 {new_count} / 변동 {changed_count} / 삭제 {removed_count}")
 
             # Discord 알림
             if new_count > 0:
@@ -71,10 +71,10 @@ async def crawl_cycle():
                 notify_removed(f["name"], result["removed"])
 
         except Exception as e:
-            print(f"  ❌ 필터 '{f['name']}' 처리 실패: {e}")
+            print(f"  [실패] 필터 '{f['name']}' 처리 실패: {e}")
 
     print(f"\n{'='*60}")
-    print(f"✅ 크롤링 완료: 신규 {total_new} / 변동 {total_changed} / 삭제 {total_removed}")
+    print(f"[완료] 크롤링 완료: 신규 {total_new} / 변동 {total_changed} / 삭제 {total_removed}")
     print(f"{'='*60}\n")
 
 
@@ -96,7 +96,7 @@ def run_schedule():
         name="네이버 부동산 크롤링",
     )
 
-    print("🕐 스케줄러 시작 (06:00, 12:00, 18:00, 00:00)")
+    print(" 스케줄러 시작 (06:00, 12:00, 18:00, 00:00)")
     print("   종료하려면 Ctrl+C")
 
     # 시작 시 1회 즉시 실행
@@ -105,7 +105,7 @@ def run_schedule():
     try:
         scheduler.start()
     except KeyboardInterrupt:
-        print("\n⏹️ 스케줄러 종료")
+        print("\n[중지] 스케줄러 종료")
 
 
 if __name__ == "__main__":

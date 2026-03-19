@@ -154,31 +154,30 @@ const TradingView = () => {
   const [quickAiLoading, setQuickAiLoading] = useState<string | null>(null);
 
   // AI 분석 캐시 (종목별)
-  const aiCacheRef = useRef<Record<string, { target: number; stop: number }>>(() => {
-    try { const c = localStorage.getItem("sophia-trade-ai-cache"); return c ? JSON.parse(c) : {}; } catch { return {}; }
-  });
+  const aiCacheRef = useRef<Record<string, { target: number; stop: number }>>(
+    (() => { try { const c = localStorage.getItem("sophia-trade-ai-cache"); return c ? JSON.parse(c) : {}; } catch { return {}; } })()
+  );
 
-  const quickBuy = async (stock: typeof quantTop[0]) => {
+  const quickBuy = (stock: typeof quantTop[0]) => {
+    const cached = aiCacheRef.current[stock.symbol];
     setBuyForm({
       symbol: stock.symbol, name: stock.name,
       market: stock.currency === "KRW" ? "kr" : "us",
-      entryPrice: String(stock.price), targetPrice: "", stopLoss: "",
+      entryPrice: String(stock.price),
+      targetPrice: cached ? String(cached.target) : "",
+      stopLoss: cached ? String(cached.stop) : "",
       quantity: "1", currency: stock.currency,
     });
     setShowBuyForm(true);
 
-    // 캐시 확인
-    const cached = aiCacheRef.current[stock.symbol];
-    if (cached) {
-      setBuyForm((prev) => ({ ...prev, targetPrice: String(cached.target), stopLoss: String(cached.stop) }));
-      return;
-    }
+    if (cached) return; // 캐시 있으면 끝
 
-    // AI 분석 (퀀트 추천과 동일 수준)
     const apiKey = localStorage.getItem("sophia-api-gemini");
     if (!apiKey) return;
 
+    // 백그라운드 AI 분석
     setQuickAiLoading(stock.symbol);
+    (async () => {
     try {
       const cur = stock.currency === "KRW" ? "₩" : "$";
 
@@ -208,10 +207,7 @@ const TradingView = () => {
         }
       } catch {}
 
-      const prompt = `주식 분석가로서 ${stock.name}(${stock.symbol}) 현재가 ${cur}${stock.price.toLocaleString()} 분석.
-${chartCtx ? `차트: ${chartCtx}` : ""}
-${newsCtx ? `뉴스: ${newsCtx}` : ""}
-목표가와 손절가를 차트 지지선/저항선 기반으로 계산. JSON만: {"target":숫자,"stop":숫자}`;
+      const prompt = `${stock.name} 현재가 ${cur}${stock.price.toLocaleString()}. ${chartCtx} 목표가와 손절가 숫자만. 예시: {"target":55000,"stop":42000}`;
 
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -220,27 +216,43 @@ ${newsCtx ? `뉴스: ${newsCtx}` : ""}
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 200, responseMimeType: "application/json" },
+            generationConfig: { temperature: 0.3, maxOutputTokens: 200 },
           }),
         }
       );
       if (res.ok) {
         const json = await res.json();
         const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        const cleaned = text.replace(/```json\s*/g, "").replace(/```/g, "").replace(/<[^>]+>/g, "").trim();
+        // 여러 파싱 시도
+        let t = 0, s = 0;
         try {
-          const parsed = JSON.parse(text.replace(/```json\s*/g, "").replace(/```/g, "").trim());
-          if (parsed.target && parsed.stop) {
-            const t = Math.round(parsed.target);
-            const s = Math.round(parsed.stop);
-            setBuyForm((prev) => ({ ...prev, targetPrice: String(t), stopLoss: String(s) }));
-            // 캐시 저장
-            aiCacheRef.current[stock.symbol] = { target: t, stop: s };
-            try { localStorage.setItem("sophia-trade-ai-cache", JSON.stringify(aiCacheRef.current)); } catch {}
+          const parsed = JSON.parse(cleaned);
+          t = Math.round(parsed.target || 0);
+          s = Math.round(parsed.stop || parsed.stopLoss || 0);
+        } catch {
+          // JSON 블록 추출
+          const m = cleaned.match(/\{[\s\S]*?\}/);
+          if (m) {
+            try {
+              const p = JSON.parse(m[0].replace(/,\s*}/g, "}"));
+              t = Math.round(p.target || 0);
+              s = Math.round(p.stop || p.stopLoss || 0);
+            } catch {}
           }
-        } catch {}
+          // 숫자 직접 추출 fallback
+          if (!t) { const tm = cleaned.match(/target["\s:]*(\d+)/i); if (tm) t = parseInt(tm[1]); }
+          if (!s) { const sm = cleaned.match(/stop["\s:]*(\d+)/i); if (sm) s = parseInt(sm[1]); }
+        }
+        if (t > 0 && s > 0) {
+          setBuyForm((prev) => ({ ...prev, targetPrice: String(t), stopLoss: String(s) }));
+          aiCacheRef.current[stock.symbol] = { target: t, stop: s };
+          try { localStorage.setItem("sophia-trade-ai-cache", JSON.stringify(aiCacheRef.current)); } catch {}
+        }
       }
-    } catch {}
+    } catch (e) { console.warn("AI analysis failed:", e); }
     setQuickAiLoading(null);
+    })();
   };
 
   const openTrades = trades.filter((t) => t.status === "open");

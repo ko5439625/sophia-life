@@ -82,7 +82,7 @@ async def get_articles(page: Page, complex_no: str, trade_type: str = "A1",
             price_man = a.get("dealOrWarrantPrc", "0")
             if isinstance(price_man, str):
                 price_man = price_man.replace(",", "").replace("억", "0000").replace(" ", "")
-                # "5억 4,000" → 54000
+                # "5억 4,000"  54000
                 try:
                     if "0000" in price_man:
                         parts = price_man.split("0000")
@@ -123,12 +123,13 @@ async def get_articles(page: Page, complex_no: str, trade_type: str = "A1",
 
 async def crawl_filter(filter_data: dict) -> list[dict]:
     """하나의 필터에 대해 크롤링 실행"""
-    print(f"  📡 크롤링 시작: {filter_data['name']} ({filter_data['region_name']})")
+    print(f"   크롤링 시작: {filter_data['name']} ({filter_data['region_name']})")
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            ignore_https_errors=True
         )
         page = await context.new_page()
 
@@ -141,7 +142,7 @@ async def crawl_filter(filter_data: dict) -> list[dict]:
 
             # 2. 단지 목록 가져오기
             complexes = await get_complexes(page, filter_data["region_code"])
-            print(f"    → {len(complexes)}개 단지 발견")
+            print(f"     {len(complexes)}개 단지 발견")
 
             # 3. 각 단지별 매물 조회
             for i, cx in enumerate(complexes):
@@ -161,9 +162,9 @@ async def crawl_filter(filter_data: dict) -> list[dict]:
                     print(f"    [{i+1}/{len(complexes)}] {cx['complexName']}: 오류 - {e}")
 
         except Exception as e:
-            print(f"  ❌ 크롤링 실패: {e}")
+            print(f"   크롤링 실패: {e}")
         finally:
             await browser.close()
 
-        print(f"  ✅ 총 {len(all_articles)}건 수집 완료")
+        print(f"   총 {len(all_articles)}건 수집 완료")
         return all_articles
