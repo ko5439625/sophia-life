@@ -570,8 +570,8 @@ const SubscriptionView = () => {
                         {/* 청약홈 바로가기 */}
                         <a
                           href={item.id.startsWith("mock-")
-                            ? "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancList.do"
-                            : `https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=${item.id}&pblancNo=${item.id}`
+                            ? "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancListView.do"
+                            : `https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetailView.do?houseManageNo=${item.id}&pblancNo=${item.id}`
                           }
                           target="_blank"
                           rel="noopener noreferrer"

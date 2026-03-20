@@ -21,7 +21,7 @@ import {
 const RECENT_SEARCH_KEY = "sophia-re-recent-searches";
 const MAX_RECENT = 8;
 
-type SortKey = "latest" | "priceHigh" | "priceLow" | "txCount";
+type SortKey = "latest" | "priceHigh" | "priceLow" | "txCount" | "changeUp" | "changeDown";
 
 // ---------------------------------------------------------------------------
 // 카테고리 탭 구조
@@ -583,6 +583,15 @@ const RealEstateSearch = () => {
 
   const stats = useMemo(() => (results.length > 0 ? calcStats(results) : null), [results]);
 
+  // 아파트별 가격 변동률 계산
+  const calcChangePct = useCallback((apt: ApartmentSearchResult): number => {
+    const txSorted = [...apt.transactions].sort((a, b) => a.dealDate.localeCompare(b.dealDate));
+    if (txSorted.length < 2) return 0;
+    const first = txSorted[0].price;
+    const last = txSorted[txSorted.length - 1].price;
+    return first > 0 ? ((last - first) / first) * 100 : 0;
+  }, []);
+
   const sortedResults = useMemo(() => {
     const list = [...results];
     switch (sortKey) {
@@ -590,8 +599,10 @@ const RealEstateSearch = () => {
       case "priceHigh": return list.sort((a, b) => b.recentPrice - a.recentPrice);
       case "priceLow": return list.sort((a, b) => a.recentPrice - b.recentPrice);
       case "txCount": return list.sort((a, b) => b.transactions.length - a.transactions.length);
+      case "changeUp": return list.sort((a, b) => calcChangePct(b) - calcChangePct(a));
+      case "changeDown": return list.sort((a, b) => calcChangePct(a) - calcChangePct(b));
     }
-  }, [results, sortKey]);
+  }, [results, sortKey, calcChangePct]);
 
   const totalPages = Math.ceil(sortedResults.length / PAGE_SIZE);
   const pagedResults = sortedResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -971,12 +982,14 @@ const RealEstateSearch = () => {
                 <h3 className="text-sm font-bold">아파트별 실거래 정보</h3>
                 <span className="text-[10px] text-muted-foreground font-mono">{results.length}개 아파트</span>
               </div>
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+              <div className="flex flex-wrap items-center gap-1 bg-muted rounded-lg p-0.5">
                 {([
                   { key: "latest", label: "최신순" },
                   { key: "priceHigh", label: "고가순" },
                   { key: "priceLow", label: "저가순" },
                   { key: "txCount", label: "거래많은순" },
+                  { key: "changeUp", label: "상승률순" },
+                  { key: "changeDown", label: "하락률순" },
                 ] as { key: SortKey; label: string }[]).map(({ key, label }) => (
                   <button key={key} onClick={() => { setSortKey(key); setPage(1); }}
                     className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
