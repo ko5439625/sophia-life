@@ -591,27 +591,30 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
       >
         <div className="flex items-start justify-between">
           <div className="space-y-1.5">
-            <h2 className="text-xl sm:text-2xl font-bold">{isGuest ? "안녕하세요, 게스트 님!" : "안녕하세요, 무요 & 데굴 님! ❣️"}</h2>
-            {weather && weather.description ? (
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                <Cloud className="h-3.5 w-3.5" />
-                오늘의 날씨는 {weather.description}, 기온 {weather.temp}도입니다.
-                {weather.temp <= 10
-                  ? " 따뜻하게 입고 다니세요."
-                  : weather.temp >= 30
-                    ? " 더위 조심하세요."
-                    : " 좋은 날씨네요."}
-              </p>
+            <h2 className="text-xl sm:text-2xl font-bold">
+              {isGuest ? "안녕하세요, 게스트 님!" : <>안녕하세요,<br />무요 & 데굴 님! 🩷</>}
+            </h2>
+            {weather && weather.temp != null ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="text-lg">{
+                  weather.description?.includes("맑") ? "☀️" :
+                  weather.description?.includes("구름") ? "⛅" :
+                  weather.description?.includes("흐") ? "☁️" :
+                  weather.description?.includes("비") ? "🌧️" :
+                  weather.description?.includes("눈") ? "🌨️" :
+                  weather.description?.includes("안개") ? "🌫️" : "🌤️"
+                }</span>
+                <span className="font-mono">{weather.tempMin ?? Math.round(weather.temp - 3)}° / {weather.tempMax ?? Math.round(weather.temp + 3)}°</span>
+                <span className="text-[10px] text-muted-foreground/50">체감 {weather.feelsLike}°</span>
+              </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                오늘도 좋은 하루 되세요!
-              </p>
+              <p className="text-sm text-muted-foreground">오늘도 좋은 하루 되세요!</p>
             )}
-            {/* Upcoming event within 3 days */}
+            {/* Upcoming event within 3 days - inline */}
             {(() => {
               const todayDate = new Date();
               todayDate.setHours(0, 0, 0, 0);
-              const upcomingEvents = events
+              const nearEvents = (events || [])
                 .map((event) => {
                   const target = new Date(event.date);
                   target.setHours(0, 0, 0, 0);
@@ -621,12 +624,12 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
                 .filter((e) => e.diffDays >= 0 && e.diffDays <= 3)
                 .sort((a, b) => a.diffDays - b.diffDays);
 
-              if (upcomingEvents.length === 0) return null;
-              const nearest = upcomingEvents[0];
+              if (nearEvents.length === 0) return null;
+              const nearest = nearEvents[0];
               const dayLabel = nearest.diffDays === 0 ? "오늘" : nearest.diffDays === 1 ? "내일" : `${nearest.diffDays}일 후`;
               return (
-                <p className="text-sm text-primary font-medium">
-                  {isGuest ? `${dayLabel} 일정이 있습니다.` : `${dayLabel} ${nearest.title} 일정이 있습니다.`}
+                <p className="text-xs text-primary font-medium">
+                  {isGuest ? `📅 ${dayLabel} 일정` : `📅 ${dayLabel} ${nearest.title}`}
                 </p>
               );
             })()}
