@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, ExternalLink, Loader2, X, Bell, ChevronDown, ChevronRight, ArrowUpDown, Building2, Check, Pencil } from "lucide-react";
+import { Plus, Search, ExternalLink, Loader2, X, Bell, ChevronDown, ChevronRight, ArrowUpDown, Building2, Check, Pencil, Star } from "lucide-react";
 import {
-  loadReFilters, loadReListings, loadReRegions, saveReFilter, deleteReFilter,
+  loadReFilters, loadReListings, loadReRegions, saveReFilter, deleteReFilter, toggleListingFavorite,
   type ReFilterRow, type ReListingRow, type ReRegionRow,
 } from "../../../services/supabaseSync";
 
@@ -262,6 +262,18 @@ const ListingMonitor = () => {
     // 정렬: 매물 수 많은 순
     return groups.sort((a, b) => b.listings.length - a.listings.length);
   }, [activeListings]);
+
+  const handleToggleFavorite = async (listing: ReListingRow) => {
+    const newVal = !listing.is_favorited;
+    await toggleListingFavorite(listing.id, newVal);
+    setListings((prev) => prev.map((l) => l.id === listing.id ? { ...l, is_favorited: newVal } : l));
+  };
+
+  // 즐겨찾기 매물 (상단 고정)
+  const favoritedListings = useMemo(() =>
+    activeListings.filter((l) => l.is_favorited),
+    [activeListings]
+  );
 
   const toggleComplex = (name: string) => {
     setExpandedComplex((prev) => {
@@ -540,6 +552,45 @@ const ListingMonitor = () => {
         </div>
       )}
 
+      {/* 즐겨찾기 매물 (상단 고정) */}
+      {favoritedListings.length > 0 && (
+        <div className="bg-card rounded-xl overflow-hidden border border-amber-400/30">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-500/5 border-b border-amber-400/20">
+            <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+            <span className="text-xs font-bold text-amber-600">관심 매물</span>
+            <span className="text-[10px] text-muted-foreground">{favoritedListings.length}건</span>
+          </div>
+          <div className="divide-y divide-border/50">
+            {favoritedListings.map((listing) => (
+              <div key={listing.id} className="flex items-center gap-3 px-4 py-3">
+                <button onClick={() => handleToggleFavorite(listing)} className="flex-shrink-0">
+                  <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">{listing.complex_name}</span>
+                    <span className="text-sm font-bold">{listing.price_text || formatPrice(listing.price_man)}</span>
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+                      {listing.area_pyeong != null && <span>{listing.area_pyeong}평</span>}
+                      {listing.floor_info && <span>{listing.floor_info}</span>}
+                    </div>
+                  </div>
+                  {listing.description && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{listing.description}</p>
+                  )}
+                </div>
+                {listing.detail_url && (
+                  <a href={listing.detail_url} target="_blank" rel="noopener noreferrer"
+                    className="p-1 text-muted-foreground hover:text-primary flex-shrink-0">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 매물 리스트 (아파트별 그룹) */}
       {groupedByComplex.length > 0 && (
         <div className="space-y-2">
@@ -585,7 +636,10 @@ const ListingMonitor = () => {
                         {group.listings.map((listing) => {
                           const hlClass = getListingHighlight(listing.description);
                           return (
-                          <div key={listing.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${hlClass || "hover:bg-muted/20"}`}>
+                          <div key={listing.id} className={`flex items-center gap-2 px-4 py-3 transition-colors ${hlClass || "hover:bg-muted/20"}`}>
+                            <button onClick={() => handleToggleFavorite(listing)} className="flex-shrink-0 p-0.5">
+                              <Star className={`h-3.5 w-3.5 ${listing.is_favorited ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30 hover:text-amber-300"}`} />
+                            </button>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 {listing.is_new && (

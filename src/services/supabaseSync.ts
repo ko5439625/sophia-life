@@ -866,6 +866,15 @@ export async function loadReListings(filterId?: string): Promise<ReListingRow[]>
   }
 }
 
+export async function toggleListingFavorite(id: string, isFavorited: boolean): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("re_listings").update({ is_favorited: isFavorited }).eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] toggleListingFavorite error:", e);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // RE Regions (지역)
 // ---------------------------------------------------------------------------
