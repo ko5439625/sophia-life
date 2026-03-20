@@ -23,10 +23,10 @@ function formatPrice(priceMan: number): string {
 // 키워드 하이라이트
 // ---------------------------------------------------------------------------
 // 키워드 → 매물 행 배경색 하이라이트
-const KEYWORD_HIGHLIGHTS: { keywords: string[]; bg: string; label: string }[] = [
-  { keywords: ["역세권", "역근처", "역도보", "역 도보", "지하철"], bg: "bg-blue-500/10 border-l-2 border-l-blue-400", label: "역세권" },
-  { keywords: ["리모델링", "올수리", "풀옵션", "인테리어"], bg: "bg-amber-500/10 border-l-2 border-l-amber-400", label: "리모델링" },
-  { keywords: ["급매", "급처분", "급전세", "급월세", "네고가능", "네고 가능", "파격"], bg: "bg-red-500/10 border-l-2 border-l-red-400", label: "급매" },
+const KEYWORD_HIGHLIGHTS: { keywords: string[]; bg: string; label: string; legendText: string }[] = [
+  { keywords: ["역세권", "역근처", "역도보", "역 도보", "지하철"], bg: "bg-blue-500/15 dark:bg-blue-500/25 border-l-2 border-l-blue-400 dark:border-l-blue-300", legendText: "text-blue-600 dark:text-blue-300", label: "역세권" },
+  { keywords: ["리모델링", "올수리", "풀옵션", "인테리어"], bg: "bg-amber-500/15 dark:bg-amber-500/25 border-l-2 border-l-amber-400 dark:border-l-amber-300", legendText: "text-amber-600 dark:text-amber-300", label: "리모델링" },
+  { keywords: ["급매", "급처분", "급전세", "급월세", "네고가능", "네고 가능", "파격"], bg: "bg-red-500/15 dark:bg-red-500/25 border-l-2 border-l-red-400 dark:border-l-red-300", legendText: "text-red-600 dark:text-red-300", label: "급매" },
 ];
 
 function getListingHighlight(description?: string): string {
@@ -551,9 +551,9 @@ const ListingMonitor = () => {
       {activeListings.length > 0 && (
         <div className="flex items-center gap-2 px-1 flex-wrap">
           <span className="text-[10px] text-muted-foreground/50">하이라이트</span>
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 border-l-2 border-l-blue-400 text-blue-600">역세권</span>
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 border-l-2 border-l-amber-400 text-amber-600">리모델링</span>
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-500/10 border-l-2 border-l-red-400 text-red-600">급매</span>
+          {KEYWORD_HIGHLIGHTS.map((h) => (
+            <span key={h.label} className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${h.bg} ${h.legendText}`}>{h.label}</span>
+          ))}
         </div>
       )}
 

@@ -163,6 +163,8 @@ const ReportSection = ({
 // SubscriptionView
 // ---------------------------------------------------------------------------
 
+type StatusFilter = "all" | "ongoing" | "upcoming" | "recent_closed";
+
 const SubscriptionView = () => {
   const { totalCash, state } = useFinancial();
   const annualIncome = state.annualIncome1 + state.annualIncome2;
@@ -170,6 +172,7 @@ const SubscriptionView = () => {
   const [items, setItems] = useState<SubscriptionInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState(ALL_REGIONS);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notificationIds, setNotificationIds] = useState<string[]>(getNotificationIds());
   const [showFilter, setShowFilter] = useState(false);
@@ -203,15 +206,52 @@ const SubscriptionView = () => {
 
   const regions = useMemo(() => extractRegions(items), [items]);
 
+  // 상태별 카운트
+  const statusCounts = useMemo(() => {
+    const counts = { all: items.length, ongoing: 0, upcoming: 0, recent_closed: 0 };
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    items.forEach((item) => {
+      const st = getSubscriptionStatus(item);
+      if (st === "ongoing") counts.ongoing++;
+      else if (st === "upcoming") counts.upcoming++;
+      else if (st === "closed") {
+        const endDate = new Date(item.applyEndDate);
+        if (endDate >= thirtyDaysAgo) counts.recent_closed++;
+      }
+    });
+    return counts;
+  }, [items]);
+
   const filtered = useMemo(() => {
     let list = items;
+
+    // 상태 필터
+    if (statusFilter !== "all") {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      list = list.filter((item) => {
+        const st = getSubscriptionStatus(item);
+        if (statusFilter === "ongoing") return st === "ongoing";
+        if (statusFilter === "upcoming") return st === "upcoming";
+        if (statusFilter === "recent_closed") {
+          if (st !== "closed") return false;
+          const endDate = new Date(item.applyEndDate);
+          return endDate >= thirtyDaysAgo;
+        }
+        return true;
+      });
+    }
+
+    // 지역 필터
     if (selectedRegion !== ALL_REGIONS) {
       list = list.filter((item) => item.region === selectedRegion);
     }
+
     // Sort: ongoing first, then upcoming, then closed
     const order: Record<SubscriptionStatus, number> = { ongoing: 0, upcoming: 1, closed: 2 };
     return [...list].sort((a, b) => order[getSubscriptionStatus(a)] - order[getSubscriptionStatus(b)]);
-  }, [items, selectedRegion]);
+  }, [items, selectedRegion, statusFilter]);
 
   const handleToggleNotification = (item: SubscriptionInfo) => {
     const enabled = toggleNotification(item.id);
@@ -317,10 +357,45 @@ const SubscriptionView = () => {
 
   return (
     <div className="space-y-4">
+      {/* 상태 필터 탭 */}
+      <div className="flex gap-1 bg-muted/50 rounded-lg p-0.5">
+        {([
+          { key: "all" as StatusFilter, label: "전체", count: statusCounts.all },
+          { key: "ongoing" as StatusFilter, label: "진행 중", count: statusCounts.ongoing },
+          { key: "upcoming" as StatusFilter, label: "예정", count: statusCounts.upcoming },
+          { key: "recent_closed" as StatusFilter, label: "최근 마감", count: statusCounts.recent_closed },
+        ]).map(({ key, label, count }) => (
+          <button
+            key={key}
+            onClick={() => setStatusFilter(key)}
+            className={`relative flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
+              statusFilter === key
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {statusFilter === key && (
+              <motion.div
+                layoutId="subscription-status-tab"
+                className="absolute inset-0 bg-card rounded-md shadow-sm"
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+            )}
+            <span className="relative z-10">
+              {label}
+              <span className="ml-1 text-[9px] font-mono opacity-60">{count}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Header + Region Filter */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground font-mono">
           {filtered.length}건의 분양 정보
+          {!localStorage.getItem("sophia-api-data") && (
+            <span className="text-[9px] text-amber-500 ml-2">샘플 데이터</span>
+          )}
         </p>
         <button
           onClick={() => setShowFilter(!showFilter)}
@@ -603,11 +678,18 @@ const SubscriptionView = () => {
       </div>
 
       {filtered.length === 0 && (
-        <p className="text-center text-muted-foreground text-sm py-10 font-mono">
-          {selectedRegion === ALL_REGIONS
-            ? "분양 정보가 없습니다"
-            : `${selectedRegion} 지역의 분양 정보가 없습니다`}
-        </p>
+        <div className="text-center py-10 space-y-2">
+          <p className="text-sm text-muted-foreground font-mono">
+            {selectedRegion === ALL_REGIONS
+              ? "분양 정보가 없습니다"
+              : `${selectedRegion} 지역의 분양 정보가 없습니다`}
+          </p>
+          {!localStorage.getItem("sophia-api-data") && (
+            <p className="text-xs text-amber-500">
+              {"설정 > 공공데이터포털 API 키를 입력하면 실시간 청약 정보를 확인할 수 있습니다"}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
