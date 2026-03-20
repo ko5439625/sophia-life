@@ -71,7 +71,18 @@ async function callGemini(prompt: string, jsonMode = false): Promise<string> {
   }
 
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  // gemini-2.5-flash는 thinking 모델이라 parts가 여러 개:
+  // parts[0] = thinking (thought: true), parts[last] = 실제 응답
+  const parts = data.candidates?.[0]?.content?.parts;
+  if (!parts || parts.length === 0) return "";
+  // thinking이 아닌 마지막 part에서 텍스트 추출
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (!parts[i].thought && parts[i].text) {
+      return parts[i].text;
+    }
+  }
+  // fallback: 아무 텍스트나 반환
+  return parts[parts.length - 1]?.text ?? "";
 }
 
 // ---------------------------------------------------------------------------
