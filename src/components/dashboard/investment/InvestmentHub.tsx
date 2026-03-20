@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import InvestmentView from "../finance/InvestmentView";
 import HedgingView from "../finance/HedgingView";
@@ -14,8 +14,15 @@ const tabs = [
   { id: "hedging", label: "헷징 분석" },
 ];
 
-const InvestmentHub = () => {
-  const [activeTab, setActiveTab] = useState("portfolio");
+const InvestmentHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void }) => {
+  const [activeTab, setActiveTab] = useState(initialTab || "portfolio");
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+      onTabUsed?.();
+    }
+  }, [initialTab]);
 
   return (
     <div className="space-y-6">

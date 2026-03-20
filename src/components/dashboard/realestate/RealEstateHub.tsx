@@ -70,9 +70,13 @@ const tabs = [
 // Component
 // ---------------------------------------------------------------------------
 
-const RealEstateHub = () => {
+const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void }) => {
   const { isGuest } = useGuestMode();
-  const [activeTab, setActiveTab] = useState("monitor");
+  const [activeTab, setActiveTab] = useState(initialTab || "monitor");
+
+  useEffect(() => {
+    if (initialTab) { setActiveTab(initialTab); onTabUsed?.(); }
+  }, [initialTab]);
 
   // Inspection state (Supabase 연동)
   const [inspections, setInspections] = useState<InspectionRow[]>([]);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import ChecklistTab from "./ChecklistTab";
 import CalendarTab from "./CalendarTab";
@@ -10,8 +10,12 @@ const tabs = [
   { id: "planner", label: "플래너" },
 ];
 
-const ScheduleView = () => {
-  const [activeTab, setActiveTab] = useState("checklist");
+const ScheduleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void } = {}) => {
+  const [activeTab, setActiveTab] = useState(initialTab || "checklist");
+
+  useEffect(() => {
+    if (initialTab) { setActiveTab(initialTab); onTabUsed?.(); }
+  }, [initialTab]);
 
   return (
     <div className="space-y-6">

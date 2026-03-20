@@ -55,9 +55,17 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const { isGuest } = useGuestMode();
 
-  // Allow child components to navigate to tabs
+  // Allow child components to navigate to tabs (supports "tab:subtab" format)
+  const [subTabTarget, setSubTabTarget] = useState<string | null>(null);
   const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
+    if (tabId.includes(":")) {
+      const [main, sub] = tabId.split(":");
+      setActiveTab(main);
+      setSubTabTarget(sub);
+    } else {
+      setActiveTab(tabId);
+      setSubTabTarget(null);
+    }
   };
 
   const handleLogout = () => {
@@ -73,17 +81,17 @@ const DashboardLayout = () => {
       case "blog":
         return <BlogManagement />;
       case "schedule":
-        return <ScheduleView />;
+        return <ScheduleView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "finance":
-        return <FinanceView />;
+        return <FinanceView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "couple":
         return <CoupleView />;
       case "investment":
-        return <InvestmentHub />;
+        return <InvestmentHub initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "news":
         return <div className="space-y-6"><h2 className="text-xl sm:text-2xl font-bold">뉴스</h2><NewsView /></div>;
       case "realestate":
-        return <RealEstateHub />;
+        return <RealEstateHub initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "settings":
         return <SettingsView />;
       default:

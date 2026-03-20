@@ -115,7 +115,7 @@ function generateAlerts(
               message: `청약 시작일 D-${daysUntilStart}`,
               timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
               actionLabel: "청약 정보 보기",
-              actionTab: "realestate",
+              actionTab: "realestate:subscription",
             });
           } else if (todayDate >= startDate && todayDate <= endDate) {
             // Currently ongoing
@@ -127,7 +127,7 @@ function generateAlerts(
               message: `마감일: ${endDateStr}`,
               timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
               actionLabel: "청약 정보 보기",
-              actionTab: "realestate",
+              actionTab: "realestate:subscription",
             });
           }
         }
@@ -147,7 +147,7 @@ function generateAlerts(
         message: `공포탐욕지수 ${fearGreedValue} - 극단적 공포 구간. 헷징 전략 즉시 점검 필요`,
         timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
         actionLabel: "헷징 분석 보기",
-        actionTab: "investment",
+        actionTab: "investment:hedging",
       });
     } else if (fearGreedValue <= 40) {
       alerts.push({
@@ -157,7 +157,7 @@ function generateAlerts(
         message: `공포탐욕지수 ${fearGreedValue} - 공포 구간 진입. 포트폴리오 점검 권장`,
         timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
         actionLabel: "헷징 분석",
-        actionTab: "investment",
+        actionTab: "investment:hedging",
       });
     }
   }
@@ -173,7 +173,7 @@ function generateAlerts(
         message: `${symbol} 전일 대비 ${quote.changePercent}% 하락`,
         timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
         actionLabel: "투자 현황",
-        actionTab: "investment",
+        actionTab: "investment:portfolio",
       });
     }
   }
@@ -187,7 +187,7 @@ function generateAlerts(
       message: `현재 USD/KRW ${exchangeRate.rate.toFixed(2)}원. 환율 리스크 주의`,
       timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
       actionLabel: "헷징 분석",
-      actionTab: "investment",
+      actionTab: "investment:hedging",
     });
   }
 
@@ -219,7 +219,7 @@ function generateAlerts(
       message: `이번 달 예산 ${Math.round(budgetPct)}% 소진`,
       timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
       actionLabel: "지출 현황",
-      actionTab: "finance",
+      actionTab: "finance:analysis",
     });
   }
 
@@ -238,7 +238,7 @@ function generateAlerts(
         message: "다음 달 예산 계획을 아직 세우지 않았습니다. 예산 탭에서 작성해주세요.",
         timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
         actionLabel: "예산 작성하기",
-        actionTab: "finance",
+        actionTab: "finance:budget",
       });
     }
   }
@@ -576,7 +576,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
   };
 
   const handleNewsClick = () => {
-    onNavigate?.("investment");
+    onNavigate?.("news");
   };
 
   return (
@@ -758,7 +758,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
           className="bg-card rounded-xl p-5"
         >
           <button
-            onClick={() => onNavigate?.("schedule")}
+            onClick={() => onNavigate?.("schedule:checklist")}
             className="flex items-center justify-between mb-3 w-full group"
           >
             <h3 className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">오늘 할 일</h3>
@@ -799,7 +799,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
           className="bg-card rounded-xl p-5"
         >
           <button
-            onClick={() => onNavigate?.("schedule")}
+            onClick={() => onNavigate?.("schedule:calendar")}
             className="flex items-center justify-between mb-3 w-full group"
           >
             <div className="flex items-center gap-2">

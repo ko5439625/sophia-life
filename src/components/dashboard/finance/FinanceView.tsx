@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import BudgetPlan from "./BudgetPlan";
 import AssetOverview from "./AssetOverview";
@@ -10,8 +10,12 @@ const tabs = [
   { id: "asset", label: "자산 현황" },
 ];
 
-const FinanceView = () => {
-  const [activeTab, setActiveTab] = useState("budget");
+const FinanceView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void }) => {
+  const [activeTab, setActiveTab] = useState(initialTab || "budget");
+
+  useEffect(() => {
+    if (initialTab) { setActiveTab(initialTab); onTabUsed?.(); }
+  }, [initialTab]);
 
   return (
     <div className="space-y-6">
