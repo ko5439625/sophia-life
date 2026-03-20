@@ -1133,7 +1133,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
             initial="hidden"
             animate="visible"
             className="bg-card rounded-xl p-5 cursor-pointer hover:ring-1 hover:ring-primary/20 transition-all"
-            onClick={() => onNavigate?.("couple")}
+            onClick={() => onNavigate?.("couple:memo")}
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -1146,18 +1146,33 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
             </div>
             {pinnedMemos.length > 0 ? (
               <div className="space-y-2">
-                {pinnedMemos.slice(0, 3).map((memo, idx) => (
-                  <div
-                    key={memo.id}
-                    className="bg-yellow-400/10 border border-yellow-400/20 rounded-lg p-3"
-                    style={{ transform: `rotate(${idx % 2 === 0 ? "-0.5" : "0.3"}deg)` }}
-                  >
-                    <p className="text-sm mb-1">{memo.message}</p>
-                    <p className="text-xs text-muted-foreground font-mono text-right">
-                      - {memo.author === "sophia" ? "데굴" : "무요"}, {(() => { try { const d = new Date(memo.timestamp); return isNaN(d.getTime()) ? memo.timestamp : d.toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return memo.timestamp; } })()}
-                    </p>
-                  </div>
-                ))}
+                {pinnedMemos.slice(0, 3).map((memo) => {
+                  const isSophia = memo.author === "sophia";
+                  return (
+                    <div
+                      key={memo.id}
+                      className={`flex ${isSophia ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-3 py-2 ${
+                          isSophia
+                            ? "bg-pink-500/10 border border-pink-500/20 rounded-br-md"
+                            : "bg-blue-500/10 border border-blue-500/20 rounded-bl-md"
+                        }`}
+                      >
+                        <p className={`text-[10px] font-medium mb-0.5 ${
+                          isSophia ? "text-pink-400" : "text-blue-400"
+                        }`}>
+                          {isSophia ? "데굴" : "무요"}
+                        </p>
+                        <p className="text-sm">{memo.message}</p>
+                        <p className="text-[10px] text-muted-foreground/60 font-mono text-right mt-0.5">
+                          {(() => { try { const d = new Date(memo.timestamp); return isNaN(d.getTime()) ? memo.timestamp : d.toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return memo.timestamp; } })()}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-4">

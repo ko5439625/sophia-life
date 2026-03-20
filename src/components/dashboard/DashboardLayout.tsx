@@ -85,7 +85,7 @@ const DashboardLayout = () => {
       case "finance":
         return <FinanceView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "couple":
-        return <CoupleView />;
+        return <CoupleView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "investment":
         return <InvestmentHub initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "news":

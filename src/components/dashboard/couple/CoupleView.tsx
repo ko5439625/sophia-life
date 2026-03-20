@@ -40,9 +40,16 @@ const categoryIcons = {
   "\uACBD\uD5D8": Sparkles,
 };
 
-const CoupleView = () => {
+const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void } = {}) => {
   const { isGuest, maskText } = useGuestMode();
-  const [activeTab, setActiveTab] = useState("dday");
+  const [activeTab, setActiveTab] = useState(initialTab || "dday");
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+      onTabUsed?.();
+    }
+  }, [initialTab]);
   const [ddays, setDdays] = useState<Dday[]>(initialDdays);
   const [wishes, setWishes] = useState<WishItem[]>(initialWishes);
   const [memos, setMemos] = useState<CoupleMemo[]>(() => loadMemos());
