@@ -79,6 +79,8 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
     captured_articles = []
     complex_info = {}
 
+    cortar_info = {}
+
     async def on_response(response: Response):
         url = response.url
         if f"/api/articles/complex/{complex_no}" in url:
@@ -88,13 +90,23 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
             except Exception:
                 pass
         # 단지 상세 정보 캡처 (주소, 준공연도 등)
-        elif f"/api/complexes/{complex_no}" in url and "/articles/" not in url and "/markers" not in url:
+        elif f"/api/complexes/" in url and str(complex_no) in url and "/articles/" not in url and "/markers" not in url:
             try:
                 data = await response.json()
-                if isinstance(data, dict) and "complexDetail" in data:
-                    complex_info.update(data["complexDetail"])
-                elif isinstance(data, dict) and ("address" in data or "complexName" in data):
-                    complex_info.update(data)
+                if isinstance(data, dict):
+                    if "complexDetail" in data:
+                        complex_info.update(data["complexDetail"])
+                    else:
+                        # overview API 등 최상위에 바로 데이터가 있는 경우
+                        complex_info.update(data)
+            except Exception:
+                pass
+        # cortars API에서 지역 주소 정보 캡처
+        elif "/api/cortars?" in url:
+            try:
+                data = await response.json()
+                if isinstance(data, dict) and "cortarName" in data:
+                    cortar_info.update(data)
             except Exception:
                 pass
 
@@ -112,7 +124,22 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
     page.remove_listener("response", on_response)
 
     # 단지 주소/준공연도 추출
+    # 1) address: complexDetail에 있으면 사용, 없으면 cortars 정보로 조합
     address = complex_info.get("address", complex_info.get("roadAddress", ""))
+    if not address and cortar_info:
+        # cortars API: cityName="경기도", divisionName="성남시 분당구", sectorName="백현동"
+        parts = []
+        city = cortar_info.get("cityName", "")
+        div = cortar_info.get("divisionName", "")
+        sector = cortar_info.get("sectorName", "")
+        if city:
+            parts.append(city)
+        if div:
+            parts.append(div)
+        if sector:
+            parts.append(sector)
+        address = " ".join(parts)
+
     build_year = complex_info.get("useApproveYmd", "")
     if build_year and len(build_year) >= 4:
         build_year = build_year[:4]  # YYYYMMDD → YYYY
