@@ -46,8 +46,8 @@ async def crawl_cycle():
 
     for f in filters:
         try:
-            # 크롤링
-            articles = await crawl_filter(f)
+            # 크롤링 (supabase 전달하여 시→구 확장 지원)
+            articles = await crawl_filter(f, supabase=supabase)
 
             # Diff 처리 + DB 저장
             result = process_crawled_data(supabase, f["id"], articles)

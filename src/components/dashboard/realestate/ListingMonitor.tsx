@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, ExternalLink, Loader2, X, Bell, ChevronDown, ChevronRight, ArrowUpDown, Building2 } from "lucide-react";
+import { Plus, Search, ExternalLink, Loader2, X, Bell, ChevronDown, ChevronRight, ArrowUpDown, Building2, Check, Pencil } from "lucide-react";
 import {
   loadReFilters, loadReListings, loadReRegions, saveReFilter, deleteReFilter,
   type ReFilterRow, type ReListingRow, type ReRegionRow,
@@ -17,6 +17,31 @@ function formatPrice(priceMan: number): string {
     return rest > 0 ? `${eok}억 ${rest.toLocaleString()}` : `${eok}억`;
   }
   return `${priceMan.toLocaleString()}만`;
+}
+
+// ---------------------------------------------------------------------------
+// 키워드 하이라이트
+// ---------------------------------------------------------------------------
+const KEYWORD_HIGHLIGHTS: { keywords: string[]; className: string }[] = [
+  { keywords: ["역세권", "역근처", "역도보", "역 도보", "지하철"], className: "text-blue-500 font-bold" },
+  { keywords: ["리모델링", "올수리", "풀옵션", "인테리어"], className: "text-amber-500 font-bold" },
+  { keywords: ["급매", "급처분", "급전세", "급월세", "네고가능", "네고 가능", "파격"], className: "text-red-500 font-bold" },
+];
+
+function highlightDescription(text: string): React.ReactNode {
+  // 모든 키워드를 하나의 regex로
+  const allKeywords = KEYWORD_HIGHLIGHTS.flatMap((h) => h.keywords);
+  if (allKeywords.length === 0) return text;
+  const regex = new RegExp(`(${allKeywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|")})`, "gi");
+  const parts = text.split(regex);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    const highlight = KEYWORD_HIGHLIGHTS.find((h) => h.keywords.some((k) => k.toLowerCase() === part.toLowerCase()));
+    if (highlight) {
+      return <span key={i} className={highlight.className}>{part}</span>;
+    }
+    return part;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -91,9 +116,12 @@ const ListingMonitor = () => {
   const [showSort, setShowSort] = useState(false);
   const [expandedComplex, setExpandedComplex] = useState<Set<string>>(new Set());
 
+  const [expandedGroup, setExpandedGroup] = useState<Set<string>>(new Set());
+  const [editingFilterId, setEditingFilterId] = useState<string | null>(null);
+
   // Filter form
   const [form, setForm] = useState({
-    name: "", regionCode: "", regionName: "",
+    name: "", regionCodes: [] as string[], regionNames: [] as string[],
     tradeType: "A1", priceMin: "", priceMax: "", areaMin: "",
   });
 
@@ -127,7 +155,11 @@ const ListingMonitor = () => {
   // 자동 필터명 생성
   const autoName = useMemo(() => {
     const parts: string[] = [];
-    if (form.regionName) parts.push(form.regionName.replace("서울 ", "").replace("성남시 ", "").replace("용인시 ", ""));
+    if (form.regionNames.length > 0) {
+      const shortNames = form.regionNames.map(n => n.replace("서울 ", "").replace("성남시 ", "").replace("용인시 ", "").replace(" 전체", ""));
+      if (shortNames.length <= 2) parts.push(shortNames.join("+"));
+      else parts.push(`${shortNames[0]} 외 ${shortNames.length - 1}곳`);
+    }
     const tradeLabel = form.tradeType === "A1" ? "매매" : form.tradeType === "B1" ? "전세" : "월세";
     parts.push(tradeLabel);
     if (form.priceMin || form.priceMax) {
@@ -138,14 +170,49 @@ const ListingMonitor = () => {
     return parts.join(" ");
   }, [form]);
 
+  const toggleRegion = (code: string, name: string) => {
+    setForm((prev) => {
+      const idx = prev.regionCodes.indexOf(code);
+      if (idx >= 0) {
+        return {
+          ...prev,
+          regionCodes: prev.regionCodes.filter((_, i) => i !== idx),
+          regionNames: prev.regionNames.filter((_, i) => i !== idx),
+        };
+      }
+      return {
+        ...prev,
+        regionCodes: [...prev.regionCodes, code],
+        regionNames: [...prev.regionNames, name],
+      };
+    });
+  };
+
+  const handleEditFilter = (f: ReFilterRow) => {
+    const codes = f.region_code.split(",").filter(Boolean);
+    const names = f.region_name.split(",").filter(Boolean);
+    const mult = f.trade_type === "B2" ? 1 : 10000;
+    setForm({
+      name: f.name,
+      regionCodes: codes,
+      regionNames: names,
+      tradeType: f.trade_type,
+      priceMin: f.price_min ? String(f.price_min / mult) : "",
+      priceMax: f.price_max ? String(f.price_max / mult) : "",
+      areaMin: f.area_min ? String(Math.round(f.area_min / 3.3058)) : "",
+    });
+    setEditingFilterId(f.id);
+    setShowForm(true);
+  };
+
   const handleAddFilter = async () => {
-    if (!form.regionCode) return;
+    if (form.regionCodes.length === 0) return;
     const filterName = form.name.trim() || autoName;
     const filter: ReFilterRow = {
-      id: crypto.randomUUID(),
+      id: editingFilterId || crypto.randomUUID(),
       name: filterName,
-      region_code: form.regionCode,
-      region_name: form.regionName,
+      region_code: form.regionCodes.join(","),
+      region_name: form.regionNames.join(","),
       trade_type: form.tradeType,
       price_min: form.priceMin ? parseInt(form.priceMin) * priceMultiplier : null,
       price_max: form.priceMax ? parseInt(form.priceMax) * priceMultiplier : null,
@@ -154,10 +221,15 @@ const ListingMonitor = () => {
       is_active: true,
     };
     await saveReFilter(filter);
-    setFilters((prev) => [...prev, filter]);
-    setForm({ name: "", regionCode: "", regionName: "", tradeType: "A1", priceMin: "", priceMax: "", areaMin: "" });
+    if (editingFilterId) {
+      setFilters((prev) => prev.map((f) => f.id === editingFilterId ? filter : f));
+    } else {
+      setFilters((prev) => [...prev, filter]);
+    }
+    setForm({ name: "", regionCodes: [], regionNames: [], tradeType: "A1", priceMin: "", priceMax: "", areaMin: "" });
+    setEditingFilterId(null);
     setShowForm(false);
-    setSavedMsg(`"${filterName}" 필터가 저장되었습니다. 다음 크롤링 시 매물이 수집됩니다.`);
+    setSavedMsg(`"${filterName}" 필터가 ${editingFilterId ? "수정" : "저장"}되었습니다.`);
     setTimeout(() => setSavedMsg(""), 5000);
   };
 
@@ -238,22 +310,57 @@ const ListingMonitor = () => {
                   <button onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5 text-muted-foreground" /></button>
                 </div>
 
-                {/* 지역 선택 */}
+                {/* 지역 선택 (다중) */}
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1.5 block font-medium">지역 선택</label>
-                  <select value={form.regionCode} onChange={(e) => {
-                    const r = regions.find((r) => r.cortar_no === e.target.value);
-                    setForm({ ...form, regionCode: e.target.value, regionName: r?.display_name || "" });
-                  }} className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    <option value="">지역을 선택하세요</option>
-                    {Object.entries(regionGroups).map(([group, items]) => (
-                      <optgroup key={group} label={`── ${group} ──`}>
-                        {items.map((r) => (
-                          <option key={r.cortar_no} value={r.cortar_no}>{r.display_name}</option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
+                  <label className="text-[10px] text-muted-foreground mb-1.5 block font-medium">
+                    지역 선택 {form.regionCodes.length > 0 && <span className="text-primary">({form.regionCodes.length}개)</span>}
+                  </label>
+                  {/* 선택된 지역 태그 */}
+                  {form.regionNames.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {form.regionNames.map((name, i) => (
+                        <span key={form.regionCodes[i]} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-medium">
+                          {name}
+                          <button onClick={() => toggleRegion(form.regionCodes[i], name)} className="hover:text-primary/60"><X className="h-2.5 w-2.5" /></button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="bg-background border border-border rounded-lg max-h-48 overflow-y-auto">
+                    {Object.entries(regionGroups).map(([group, items]) => {
+                      const isOpen = expandedGroup.has(group);
+                      const selectedCount = items.filter(r => form.regionCodes.includes(r.cortar_no)).length;
+                      return (
+                        <div key={group}>
+                          <button type="button" onClick={() => setExpandedGroup(prev => {
+                            const next = new Set(prev);
+                            if (next.has(group)) next.delete(group); else next.add(group);
+                            return next;
+                          })} className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors border-b border-border/50">
+                            <span>{group} {selectedCount > 0 && <span className="text-primary font-medium">({selectedCount})</span>}</span>
+                            {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                          </button>
+                          {isOpen && (
+                            <div className="py-1">
+                              {items.map((r) => {
+                                const checked = form.regionCodes.includes(r.cortar_no);
+                                return (
+                                  <button key={r.cortar_no} type="button"
+                                    onClick={() => toggleRegion(r.cortar_no, r.display_name || "")}
+                                    className={`w-full flex items-center gap-2 px-4 py-1.5 text-xs hover:bg-muted/30 transition-colors ${checked ? "text-primary font-medium" : "text-foreground"}`}>
+                                    <div className={`h-3.5 w-3.5 rounded border flex items-center justify-center flex-shrink-0 ${checked ? "bg-primary border-primary" : "border-border"}`}>
+                                      {checked && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                                    </div>
+                                    {r.display_name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* 매매유형 */}
@@ -344,9 +451,9 @@ const ListingMonitor = () => {
                   )}
                 </div>
 
-                <button onClick={handleAddFilter} disabled={!form.regionCode}
+                <button onClick={handleAddFilter} disabled={form.regionCodes.length === 0}
                   className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
-                  필터 저장
+                  {editingFilterId ? "필터 수정" : "필터 저장"}
                 </button>
               </div>
             </motion.div>
@@ -370,7 +477,6 @@ const ListingMonitor = () => {
             </button>
             {filters.map((f) => {
               const count = listings.filter((l) => l.filter_id === f.id && l.status === "active").length;
-              const tradeLabel = f.trade_type === "A1" ? "매매" : f.trade_type === "B1" ? "전세" : "월세";
               return (
                 <div key={f.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0 transition-colors cursor-pointer ${
                   activeFilter === f.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -379,8 +485,10 @@ const ListingMonitor = () => {
                   <span className={`text-[9px] ${activeFilter === f.id ? "opacity-70" : "opacity-50"}`}>
                     {count}건
                   </span>
+                  <button onClick={(e) => { e.stopPropagation(); handleEditFilter(f); }}
+                    className="ml-0.5 opacity-50 hover:opacity-100"><Pencil className="h-2.5 w-2.5" /></button>
                   <button onClick={(e) => { e.stopPropagation(); handleDeleteFilter(f.id); }}
-                    className="ml-0.5 hover:text-destructive opacity-60 hover:opacity-100"><X className="h-3 w-3" /></button>
+                    className="hover:text-destructive opacity-50 hover:opacity-100"><X className="h-3 w-3" /></button>
                 </div>
               );
             })}
@@ -486,7 +594,7 @@ const ListingMonitor = () => {
                                 </div>
                               </div>
                               {listing.description && (
-                                <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{listing.description}</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{highlightDescription(listing.description)}</p>
                               )}
                             </div>
                             {listing.detail_url && (

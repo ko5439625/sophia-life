@@ -148,9 +148,59 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
     return articles
 
 
-async def crawl_filter(filter_data: dict) -> list[dict]:
-    """하나의 필터에 대해 크롤링 실행"""
+def resolve_region_codes(filter_data: dict, supabase=None) -> list[str]:
+    """
+    콤마 구분 지역코드를 분리하고, 시 단위 코드는 하위 구로 확장.
+    예: "4113000000" (성남시 전체) → ["4113100000", "4113300000", "4113500000"]
+    """
+    raw_codes = filter_data.get("region_code", "").split(",")
+    raw_codes = [c.strip() for c in raw_codes if c.strip()]
+
+    if not supabase:
+        return raw_codes
+
+    resolved = []
+    for code in raw_codes:
+        # 하위 구가 있는지 DB에서 조회 (같은 city_name이면서 district_name이 있는 것들)
+        try:
+            # 먼저 이 코드의 지역 정보 가져오기
+            r = supabase.table("re_regions").select("*").eq("cortar_no", code).execute()
+            if not r.data:
+                resolved.append(code)
+                continue
+
+            region = r.data[0]
+            city_name = region.get("city_name", "")
+            district_name = region.get("district_name")
+
+            # district_name이 None이면 시 단위 → 하위 구 찾기
+            if district_name is None and city_name:
+                sub = supabase.table("re_regions").select("cortar_no,display_name") \
+                    .eq("city_name", city_name) \
+                    .not_.is_("district_name", "null") \
+                    .execute()
+                if sub.data and len(sub.data) > 0:
+                    sub_codes = [s["cortar_no"] for s in sub.data]
+                    print(f"     [{region.get('display_name')}] → 하위 {len(sub_codes)}개 구로 확장: {', '.join(s['display_name'] for s in sub.data)}")
+                    resolved.extend(sub_codes)
+                else:
+                    # 하위 구가 없으면 (단일 시) 그대로 사용
+                    resolved.append(code)
+            else:
+                resolved.append(code)
+        except Exception:
+            resolved.append(code)
+
+    return resolved
+
+
+async def crawl_filter(filter_data: dict, supabase=None) -> list[dict]:
+    """하나의 필터에 대해 크롤링 실행 (다중 지역 지원)"""
     print(f"   크롤링 시작: {filter_data['name']} ({filter_data['region_name']})")
+
+    # 지역코드 확장 (콤마 구분 + 시→구 확장)
+    region_codes = resolve_region_codes(filter_data, supabase)
+    print(f"     크롤링 대상 지역: {len(region_codes)}개")
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(
@@ -178,27 +228,29 @@ async def crawl_filter(filter_data: dict) -> list[dict]:
             await page.goto(NAVER_LAND_URL, wait_until="domcontentloaded", timeout=15000)
             await asyncio.sleep(2)
 
-            # 2. 지역 페이지 방문하면서 단지 목록 캡처
             trade_type = filter_data.get("trade_type", "A1")
-            complexes = await get_complexes_via_page(page, filter_data["region_code"], trade_type)
-            print(f"     {len(complexes)}개 단지 발견")
 
-            # 3. 각 단지별 매물 조회
-            for i, cx in enumerate(complexes):
-                try:
-                    articles = await get_articles_via_page(
-                        page,
-                        cx["complexNo"],
-                        trade_type=trade_type,
-                        price_min=filter_data.get("price_min"),
-                        price_max=filter_data.get("price_max"),
-                        area_min=filter_data.get("area_min"),
-                    )
-                    all_articles.extend(articles)
-                    if articles:
-                        print(f"    [{i+1}/{len(complexes)}] {cx['complexName']}: {len(articles)}건")
-                except Exception as e:
-                    print(f"    [{i+1}/{len(complexes)}] {cx['complexName']}: 오류 - {e}")
+            # 2. 각 지역별로 크롤링
+            for region_idx, cortar_no in enumerate(region_codes):
+                complexes = await get_complexes_via_page(page, cortar_no, trade_type)
+                print(f"     [지역 {region_idx+1}/{len(region_codes)}] {cortar_no}: {len(complexes)}개 단지")
+
+                # 3. 각 단지별 매물 조회
+                for i, cx in enumerate(complexes):
+                    try:
+                        articles = await get_articles_via_page(
+                            page,
+                            cx["complexNo"],
+                            trade_type=trade_type,
+                            price_min=filter_data.get("price_min"),
+                            price_max=filter_data.get("price_max"),
+                            area_min=filter_data.get("area_min"),
+                        )
+                        all_articles.extend(articles)
+                        if articles:
+                            print(f"      [{i+1}/{len(complexes)}] {cx['complexName']}: {len(articles)}건")
+                    except Exception as e:
+                        print(f"      [{i+1}/{len(complexes)}] {cx['complexName']}: 오류 - {e}")
 
         except Exception as e:
             print(f"   크롤링 실패: {e}")
