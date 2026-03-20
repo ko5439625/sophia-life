@@ -35,6 +35,13 @@ def process_crawled_data(
         if article_id in existing:
             # 기존 매물 → 가격 변동 체크
             db_row = existing[article_id]
+            # address/build_year 보완 (기존에 비어있으면 새 데이터로 채움)
+            extra_update = {}
+            if not db_row.get("address") and article.get("address"):
+                extra_update["address"] = article["address"]
+            if not db_row.get("build_year") and article.get("build_year"):
+                extra_update["build_year"] = article["build_year"]
+
             if article["price_man"] != db_row["price_man"] and article["price_man"] > 0:
                 # 가격 변동!
                 old_price = db_row["price_man"]
@@ -45,6 +52,7 @@ def process_crawled_data(
                     "price_man": new_price,
                     "price_text": article.get("price_text", ""),
                     "last_seen_at": now,
+                    **extra_update,
                 }).eq("id", db_row["id"]).execute()
 
                 # 히스토리 기록
@@ -59,10 +67,11 @@ def process_crawled_data(
                     "old_price_man": old_price,
                 })
             else:
-                # 동일 → last_seen_at만 업데이트
+                # 동일 → last_seen_at 업데이트 + address/build_year 보완
                 supabase.table("re_listings").update({
                     "last_seen_at": now,
                     "is_new": False,
+                    **extra_update,
                 }).eq("id", db_row["id"]).execute()
         else:
             # 신규 매물!
@@ -80,6 +89,8 @@ def process_crawled_data(
                 "description": article.get("description"),
                 "confirm_date": article.get("confirm_date"),
                 "detail_url": article.get("detail_url"),
+                "address": article.get("address", ""),
+                "build_year": article.get("build_year", ""),
                 "status": "active",
                 "is_new": True,
                 "is_favorited": False,

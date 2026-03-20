@@ -851,6 +851,7 @@ export interface ReListingRow {
   is_new: boolean;
   is_favorited: boolean;
   first_seen_at: string;
+  last_seen_at?: string | null;
   address?: string | null;
   build_year?: string | null;
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, ExternalLink, Loader2, X, Bell, ChevronDown, ChevronRight, ArrowUpDown, Building2, Check, Pencil, Star } from "lucide-react";
+import { Plus, Search, ExternalLink, Loader2, X, Bell, ChevronDown, ChevronRight, ArrowUpDown, Building2, Check, Pencil, Star, Clock } from "lucide-react";
 import {
   loadReFilters, loadReListings, loadReRegions, saveReFilter, deleteReFilter, toggleListingFavorite,
   type ReFilterRow, type ReListingRow, type ReRegionRow,
@@ -9,6 +9,28 @@ import {
 // ---------------------------------------------------------------------------
 // 가격 포맷
 // ---------------------------------------------------------------------------
+function formatRelativeTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "방금 전";
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}시간 전`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}일 전`;
+}
+
+function formatCrawlTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const hour = d.getHours().toString().padStart(2, "0");
+  const min = d.getMinutes().toString().padStart(2, "0");
+  return `${month}/${day} ${hour}:${min}`;
+}
+
 function formatPrice(priceMan: number): string {
   if (!priceMan) return "-";
   if (priceMan >= 10000) {
@@ -239,6 +261,16 @@ const ListingMonitor = () => {
 
   // 현재 필터 요약
   const activeFilterObj = filters.find((f) => f.id === activeFilter);
+
+  // 마지막 크롤링 시간 (last_seen_at 중 가장 최근)
+  const lastCrawlTime = useMemo(() => {
+    let latest = "";
+    for (const l of activeListings) {
+      const t = l.last_seen_at || l.first_seen_at;
+      if (t && t > latest) latest = t;
+    }
+    return latest;
+  }, [activeListings]);
 
   // 아파트별 그룹화
   const groupedByComplex = useMemo(() => {
@@ -506,44 +538,55 @@ const ListingMonitor = () => {
         )}
       </div>
 
-      {/* 매물 헤더 (필터 요약 + 정렬) */}
+      {/* 매물 헤더 (필터 요약 + 크롤링 시간 + 정렬) */}
       {activeListings.length > 0 && (
-        <div className="flex items-center justify-between px-1">
-          <div className="text-xs text-muted-foreground">
-            {activeFilterObj ? (
-              <span>
-                <span className="font-medium text-foreground">{activeFilterObj.region_name}</span>
-                {" · "}
-                {activeFilterObj.trade_type === "A1" ? "매매" : activeFilterObj.trade_type === "B1" ? "전세" : "월세"}
-                {activeFilterObj.price_min || activeFilterObj.price_max ? (
-                  <> · {formatPrice(activeFilterObj.price_min || 0)}~{activeFilterObj.price_max ? formatPrice(activeFilterObj.price_max) : "∞"}</>
-                ) : null}
-              </span>
-            ) : (
-              <span className="font-medium text-foreground">{activeListings.length}건</span>
-            )}
+        <div className="space-y-1 px-1">
+          {/* 첫 줄: 필터 요약 + 정렬 */}
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              {activeFilterObj ? (
+                <span>
+                  <span className="font-medium text-foreground">{activeFilterObj.region_name}</span>
+                  {" · "}
+                  {activeFilterObj.trade_type === "A1" ? "매매" : activeFilterObj.trade_type === "B1" ? "전세" : "월세"}
+                  {activeFilterObj.price_min || activeFilterObj.price_max ? (
+                    <> · {formatPrice(activeFilterObj.price_min || 0)}~{activeFilterObj.price_max ? formatPrice(activeFilterObj.price_max) : "∞"}</>
+                  ) : null}
+                </span>
+              ) : (
+                <span className="font-medium text-foreground">{activeListings.length}건</span>
+              )}
+            </div>
+            <div className="relative">
+              <button onClick={() => setShowSort(!showSort)}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                <ArrowUpDown className="h-3 w-3" />
+                {SORT_OPTIONS.find((o) => o.key === sortKey)?.label}
+                <ChevronDown className="h-3 w-3" />
+              </button>
+              {showSort && (
+                <div className="absolute right-0 top-6 z-10 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[120px]">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button key={opt.key}
+                      onClick={() => { setSortKey(opt.key); setShowSort(false); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors ${
+                        sortKey === opt.key ? "text-primary font-medium" : "text-foreground"
+                      }`}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="relative">
-            <button onClick={() => setShowSort(!showSort)}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowUpDown className="h-3 w-3" />
-              {SORT_OPTIONS.find((o) => o.key === sortKey)?.label}
-              <ChevronDown className="h-3 w-3" />
-            </button>
-            {showSort && (
-              <div className="absolute right-0 top-6 z-10 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[120px]">
-                {SORT_OPTIONS.map((opt) => (
-                  <button key={opt.key}
-                    onClick={() => { setSortKey(opt.key); setShowSort(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors ${
-                      sortKey === opt.key ? "text-primary font-medium" : "text-foreground"
-                    }`}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* 둘째 줄: 크롤링 시간 */}
+          {lastCrawlTime && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60" title={`마지막 크롤링: ${new Date(lastCrawlTime).toLocaleString("ko-KR")}`}>
+              <Clock className="h-3 w-3" />
+              <span>마지막 수집: {formatCrawlTime(lastCrawlTime)}</span>
+              <span>({formatRelativeTime(lastCrawlTime)})</span>
+            </div>
+          )}
         </div>
       )}
 

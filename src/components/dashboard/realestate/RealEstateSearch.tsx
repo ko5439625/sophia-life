@@ -238,7 +238,23 @@ const INSIGHT_REGIONS = [
   { label: "광명시", code: "41210" },
 ];
 
-async function detectAnomalies(): Promise<AnomalyItem[]> {
+// 지역별 추세 요약
+interface RegionTrend {
+  region: string;
+  regionCode: string;
+  latestMonth: string;
+  latestAvg: number;
+  latestCount: number;
+  prevAvg: number;
+  prevCount: number;
+  thirdAvg: number;
+  thirdCount: number;
+  priceChangePct: number;   // 전월 대비
+  volumeChangePct: number;  // 전월 대비
+  trend3m: "up" | "down" | "flat"; // 3개월 추세
+}
+
+async function detectAnomalies(): Promise<{ anomalies: AnomalyItem[]; trends: RegionTrend[] }> {
   const now = new Date();
   const months: string[] = [];
   for (let i = 0; i < 3; i++) {
@@ -247,6 +263,7 @@ async function detectAnomalies(): Promise<AnomalyItem[]> {
   }
 
   const anomalies: AnomalyItem[] = [];
+  const trends: RegionTrend[] = [];
 
   // 각 지역별로 최근 3개월 데이터 수집
   const regionDataPromises = INSIGHT_REGIONS.map(async (region) => {
@@ -279,7 +296,42 @@ async function detectAnomalies(): Promise<AnomalyItem[]> {
       }
     });
 
-    // 최근 달 vs 이전 달 비교
+    // 추세 데이터 수집
+    if (monthlyAvg.length >= 2) {
+      const latest = monthlyAvg[0];
+      const prev = monthlyAvg[1];
+      const third = monthlyAvg[2] || { avg: 0, count: 0, month: "" };
+      const pricePct = prev.avg > 0 ? ((latest.avg - prev.avg) / prev.avg) * 100 : 0;
+      const volPct = prev.count > 0 ? ((latest.count - prev.count) / prev.count) * 100 : 0;
+
+      // 3개월 추세 판단
+      let trend3m: "up" | "down" | "flat" = "flat";
+      if (monthlyAvg.length >= 3 && third.avg > 0) {
+        const total3mChange = ((latest.avg - third.avg) / third.avg) * 100;
+        if (total3mChange >= 3) trend3m = "up";
+        else if (total3mChange <= -3) trend3m = "down";
+      } else {
+        if (pricePct >= 3) trend3m = "up";
+        else if (pricePct <= -3) trend3m = "down";
+      }
+
+      trends.push({
+        region: region.label,
+        regionCode: region.code,
+        latestMonth: latest.month,
+        latestAvg: latest.avg,
+        latestCount: latest.count,
+        prevAvg: prev.avg,
+        prevCount: prev.count,
+        thirdAvg: third.avg,
+        thirdCount: third.count,
+        priceChangePct: Math.round(pricePct * 10) / 10,
+        volumeChangePct: Math.round(volPct),
+        trend3m,
+      });
+    }
+
+    // 최근 달 vs 이전 달 비교 (이상 변동 감지)
     if (monthlyAvg.length >= 2) {
       const latest = monthlyAvg[0]; // 가장 최근
       const prev = monthlyAvg[1]; // 그 이전
@@ -371,7 +423,10 @@ async function detectAnomalies(): Promise<AnomalyItem[]> {
   const order = { high: 0, medium: 1, low: 2 };
   anomalies.sort((a, b) => order[a.severity] - order[b.severity]);
 
-  return anomalies;
+  // trends: 거래량 많은 순
+  trends.sort((a, b) => b.latestCount - a.latestCount);
+
+  return { anomalies, trends };
 }
 
 // ---------------------------------------------------------------------------
@@ -461,12 +516,15 @@ const RealEstateSearch = () => {
   const [showChart, setShowChart] = useState(true);
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>(loadRecentSearches());
   const [searchLabel, setSearchLabel] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   // 카테고리 탭
   const [activeCategory, setActiveCategory] = useState("gangnam");
 
-  // 참고사항 (이상 변동) 상태
+  // 참고사항 (이상 변동 + 추세 분석) 상태
   const [anomalies, setAnomalies] = useState<AnomalyItem[]>([]);
+  const [regionTrends, setRegionTrends] = useState<RegionTrend[]>([]);
   const [anomalyLoading, setAnomalyLoading] = useState(false);
   const [anomalyLoaded, setAnomalyLoaded] = useState(false);
 
@@ -480,6 +538,7 @@ const RealEstateSearch = () => {
     setSearchLabel(targetLabel);
     setLoading(true);
     setSearched(true);
+    setPage(1);
     // insights 탭에서 상세보기 클릭 시 카테고리 전환 안 함
     try {
       const data = await searchByRegion(targetCode);
@@ -500,7 +559,8 @@ const RealEstateSearch = () => {
     setAnomalyLoading(true);
     try {
       const result = await detectAnomalies();
-      setAnomalies(result);
+      setAnomalies(result.anomalies);
+      setRegionTrends(result.trends);
       setAnomalyLoaded(true);
     } catch (e) {
       console.warn("이상 변동 감지 실패:", e);
@@ -532,6 +592,9 @@ const RealEstateSearch = () => {
       case "txCount": return list.sort((a, b) => b.transactions.length - a.transactions.length);
     }
   }, [results, sortKey]);
+
+  const totalPages = Math.ceil(sortedResults.length / PAGE_SIZE);
+  const pagedResults = sortedResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const trendDirection = useMemo(() => {
     if (!stats || stats.monthlyAvg.length < 2) return null;
@@ -707,6 +770,65 @@ const RealEstateSearch = () => {
               </p>
             </div>
           )}
+
+          {/* 지역별 추세 분석 테이블 */}
+          {regionTrends.length > 0 && (
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-bold">지역별 추세 분석</h3>
+                <span className="text-[10px] text-muted-foreground">최근 3개월</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                12개 주요 지역의 평균 매매가와 거래량 변동을 한눈에 비교합니다.
+              </p>
+              <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+                {/* 테이블 헤더 */}
+                <div className="grid grid-cols-[1fr_80px_60px_60px_56px] gap-1 px-3 py-2 bg-muted/50 border-b border-border/50 text-[10px] font-medium text-muted-foreground">
+                  <span>지역</span>
+                  <span className="text-right">평균가</span>
+                  <span className="text-right">가격변동</span>
+                  <span className="text-right">거래량</span>
+                  <span className="text-center">3개월</span>
+                </div>
+                {/* 테이블 행 */}
+                {regionTrends.map((t) => {
+                  const trendIcon = t.trend3m === "up" ? "text-red-500" : t.trend3m === "down" ? "text-blue-500" : "text-muted-foreground";
+                  const trendLabel = t.trend3m === "up" ? "상승" : t.trend3m === "down" ? "하락" : "보합";
+                  return (
+                    <button
+                      key={t.regionCode}
+                      onClick={() => handleAnomalyRegionClick(t.regionCode, t.region)}
+                      className="grid grid-cols-[1fr_80px_60px_60px_56px] gap-1 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors border-b border-border/30 last:border-0 items-center"
+                    >
+                      <span className="text-xs font-medium">{t.region}</span>
+                      <span className="text-xs font-mono text-right">{formatPrice(t.latestAvg)}</span>
+                      <span className={`text-[11px] font-mono text-right font-medium ${t.priceChangePct > 0 ? "text-red-500" : t.priceChangePct < 0 ? "text-blue-500" : "text-muted-foreground"}`}>
+                        {t.priceChangePct > 0 ? "+" : ""}{t.priceChangePct}%
+                      </span>
+                      <span className="text-xs text-muted-foreground text-right font-mono">
+                        {t.latestCount}건
+                        {t.volumeChangePct !== 0 && (
+                          <span className={`text-[9px] ml-0.5 ${t.volumeChangePct > 0 ? "text-amber-500" : "text-purple-500"}`}>
+                            {t.volumeChangePct > 0 ? "+" : ""}{t.volumeChangePct}%
+                          </span>
+                        )}
+                      </span>
+                      <span className={`text-[10px] text-center font-medium flex items-center justify-center gap-0.5 ${trendIcon}`}>
+                        {t.trend3m === "up" && <TrendingUp className="h-3 w-3" />}
+                        {t.trend3m === "down" && <TrendingDown className="h-3 w-3" />}
+                        {t.trend3m === "flat" && <Minus className="h-3 w-3" />}
+                        {trendLabel}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground/50 text-center">
+                * 지역명 클릭 시 해당 지역 실거래 상세 조회 | 3개월 추세: ±3% 이상 변동 시 상승/하락 판정
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -841,29 +963,42 @@ const RealEstateSearch = () => {
             )}
           </AnimatePresence>
 
-          {/* 정렬 바 */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground font-mono">{results.length}개 아파트</p>
-            <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-              {([
-                { key: "latest", label: "최신순" },
-                { key: "priceHigh", label: "고가순" },
-                { key: "priceLow", label: "저가순" },
-                { key: "txCount", label: "거래많은순" },
-              ] as { key: SortKey; label: string }[]).map(({ key, label }) => (
-                <button key={key} onClick={() => setSortKey(key)}
-                  className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
-                    sortKey === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                  }`}>
-                  {label}
-                </button>
-              ))}
+          {/* 아파트별 실거래 정보 섹션 */}
+          <div className="mt-2 pt-3 border-t border-border/50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-bold">아파트별 실거래 정보</h3>
+                <span className="text-[10px] text-muted-foreground font-mono">{results.length}개 아파트</span>
+              </div>
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                {([
+                  { key: "latest", label: "최신순" },
+                  { key: "priceHigh", label: "고가순" },
+                  { key: "priceLow", label: "저가순" },
+                  { key: "txCount", label: "거래많은순" },
+                ] as { key: SortKey; label: string }[]).map(({ key, label }) => (
+                  <button key={key} onClick={() => { setSortKey(key); setPage(1); }}
+                    className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                      sortKey === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* 페이지 정보 */}
+            {totalPages > 1 && (
+              <p className="text-[10px] text-muted-foreground mb-2">
+                {(page - 1) * PAGE_SIZE + 1}~{Math.min(page * PAGE_SIZE, sortedResults.length)}개 표시 / 총 {sortedResults.length}개
+              </p>
+            )}
           </div>
 
-          {/* 결과 리스트 */}
+          {/* 결과 리스트 (페이징) */}
           <div className="space-y-2">
-            {sortedResults.map((apt, i) => {
+            {pagedResults.map((apt, i) => {
               const isExpanded = expanded === apt.aptName;
               const txSorted = [...apt.transactions].sort((a, b) => a.dealDate.localeCompare(b.dealDate));
               const priceChange = txSorted.length >= 2 ? txSorted[txSorted.length - 1].price - txSorted[0].price : 0;
@@ -947,6 +1082,50 @@ const RealEstateSearch = () => {
               );
             })}
           </div>
+
+          {/* 페이징 컨트롤 */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1 pt-2">
+              <button
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page === 1}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+              >
+                이전
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1]) > 1) acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "..." ? (
+                    <span key={`dot-${idx}`} className="px-1 text-xs text-muted-foreground">...</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
+                        page === p
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              <button
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+              >
+                다음
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

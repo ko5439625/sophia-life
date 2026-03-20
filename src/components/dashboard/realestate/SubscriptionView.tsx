@@ -20,6 +20,7 @@ import {
   GraduationCap,
   TrendingUp,
   MessageSquare,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -37,8 +38,8 @@ import { useFinancial } from "@/store/financialStore";
 // ---------------------------------------------------------------------------
 
 const statusConfig: Record<SubscriptionStatus, { label: string; className: string }> = {
-  ongoing: { label: "청약 중", className: "bg-primary/15 text-primary border border-primary/30" },
-  upcoming: { label: "청약 예정", className: "bg-blue-500/15 text-blue-400 border border-blue-500/30" },
+  ongoing: { label: "청약 중", className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30" },
+  upcoming: { label: "청약 예정", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30" },
   closed: { label: "마감", className: "bg-muted text-muted-foreground border border-border" },
 };
 
@@ -565,6 +566,21 @@ const SubscriptionView = () => {
                             </>
                           )}
                         </button>
+
+                        {/* 청약홈 바로가기 */}
+                        <a
+                          href={item.id.startsWith("mock-")
+                            ? "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancList.do"
+                            : `https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=${item.id}&pblancNo=${item.id}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-lg text-xs font-medium transition-colors bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/15"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          청약홈
+                        </a>
 
                         {/* AI 분석 button */}
                         <button
