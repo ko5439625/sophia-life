@@ -247,6 +247,45 @@ const AssetOverview = () => {
     });
   }, [assetHistory]);
 
+  // Chart view mode: monthly or yearly
+  const [chartView, setChartView] = useState<"monthly" | "yearly">("monthly");
+
+  const yearlyChartData = useMemo(() => {
+    if (chartData.length === 0) return [];
+    // Group by year, take the last month of each year as the representative
+    const yearMap: Record<string, typeof chartData[0][]> = {};
+    for (const point of chartData) {
+      const year = point.month.split(".")[0];
+      if (!yearMap[year]) yearMap[year] = [];
+      yearMap[year].push(point);
+    }
+    return Object.entries(yearMap).map(([year, points]) => {
+      const last = points[points.length - 1];
+      // Sum up plan/actual across months in that year
+      const planSavings = points.reduce((s, p) => s + p.planSavings, 0);
+      const planEmergency = points.reduce((s, p) => s + p.planEmergency, 0);
+      const planInvestment = points.reduce((s, p) => s + p.planInvestment, 0);
+      const actualSavings = points.some(p => p.actualSavings !== undefined)
+        ? points.reduce((s, p) => s + (p.actualSavings || 0), 0) : undefined;
+      const actualEmergency = points.some(p => p.actualEmergency !== undefined)
+        ? points.reduce((s, p) => s + (p.actualEmergency || 0), 0) : undefined;
+      const actualInvestment = points.some(p => p.actualInvestment !== undefined)
+        ? points.reduce((s, p) => s + (p.actualInvestment || 0), 0) : undefined;
+      return {
+        ...last,
+        month: `${year}년`,
+        planSavings,
+        planEmergency,
+        planInvestment,
+        actualSavings,
+        actualEmergency,
+        actualInvestment,
+      };
+    });
+  }, [chartData]);
+
+  const activeChartData = chartView === "monthly" ? chartData : yearlyChartData;
+
   // AI Report state
   const [showReport, setShowReport] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
@@ -419,13 +458,30 @@ const AssetOverview = () => {
 
       {/* 자산 추이 (콤보: 스택 막대 + 선 그래프) */}
       <div className="bg-card rounded-xl p-5">
-        <h3 className="text-sm font-bold mb-1 flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          자산 추이
-        </h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-sm font-bold flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            자산 추이
+          </h3>
+          <div className="flex bg-muted rounded-lg p-0.5">
+            {(["monthly", "yearly"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setChartView(mode)}
+                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-all ${
+                  chartView === mode
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {mode === "monthly" ? "월간" : "연간"}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="h-72 sm:h-96">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} barGap={2} barCategoryGap="20%">
+            <ComposedChart data={activeChartData} barGap={2} barCategoryGap="20%">
               <XAxis
                 dataKey="month"
                 tick={{ fontSize: 10, fill: "#8B949E" }}
@@ -452,7 +508,7 @@ const AssetOverview = () => {
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
-                  const point = chartData.find((d) => d.month === label);
+                  const point = activeChartData.find((d) => d.month === label);
                   if (!point || isGuest) return null;
                   const isFuture = point.actualSavings === undefined;
                   return (
