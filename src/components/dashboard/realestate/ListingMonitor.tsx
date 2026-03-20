@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, ExternalLink, Loader2, X, Bell, ChevronDown, ArrowUpDown, TrendingDown, TrendingUp } from "lucide-react";
+import { Plus, Search, ExternalLink, Loader2, X, Bell, ChevronDown, ChevronRight, ArrowUpDown, Building2 } from "lucide-react";
 import {
   loadReFilters, loadReListings, loadReRegions, saveReFilter, deleteReFilter,
   type ReFilterRow, type ReListingRow, type ReRegionRow,
@@ -89,6 +89,7 @@ const ListingMonitor = () => {
   const [savedMsg, setSavedMsg] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("newest");
   const [showSort, setShowSort] = useState(false);
+  const [expandedComplex, setExpandedComplex] = useState<Set<string>>(new Set());
 
   // Filter form
   const [form, setForm] = useState({
@@ -173,6 +174,38 @@ const ListingMonitor = () => {
 
   // 현재 필터 요약
   const activeFilterObj = filters.find((f) => f.id === activeFilter);
+
+  // 아파트별 그룹화
+  const groupedByComplex = useMemo(() => {
+    const groups: { name: string; listings: ReListingRow[]; minPrice: number; maxPrice: number; newCount: number }[] = [];
+    const map = new Map<string, ReListingRow[]>();
+    for (const l of activeListings) {
+      const key = l.complex_name || "기타";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(l);
+    }
+    for (const [name, items] of map) {
+      const prices = items.map((l) => l.price_man).filter(Boolean);
+      groups.push({
+        name,
+        listings: items,
+        minPrice: prices.length > 0 ? Math.min(...prices) : 0,
+        maxPrice: prices.length > 0 ? Math.max(...prices) : 0,
+        newCount: items.filter((l) => l.is_new).length,
+      });
+    }
+    // 정렬: 매물 수 많은 순
+    return groups.sort((a, b) => b.listings.length - a.listings.length);
+  }, [activeListings]);
+
+  const toggleComplex = (name: string) => {
+    setExpandedComplex((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   if (loading) {
     return (
@@ -396,43 +429,81 @@ const ListingMonitor = () => {
         </div>
       )}
 
-      {/* 매물 리스트 */}
-      {activeListings.length > 0 && (
+      {/* 매물 리스트 (아파트별 그룹) */}
+      {groupedByComplex.length > 0 && (
         <div className="space-y-2">
-          {activeListings.map((listing) => (
-            <motion.div key={listing.id} className="bg-card rounded-xl p-4"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {listing.is_new && (
-                      <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">NEW</span>
-                    )}
-                    <h4 className="text-sm font-bold truncate">{listing.complex_name}</h4>
+          {groupedByComplex.map((group) => {
+            const isExpanded = expandedComplex.has(group.name);
+            const priceRange = group.minPrice === group.maxPrice
+              ? formatPrice(group.minPrice)
+              : `${formatPrice(group.minPrice)} ~ ${formatPrice(group.maxPrice)}`;
+            return (
+              <div key={group.name} className="bg-card rounded-xl overflow-hidden">
+                {/* 아파트 헤더 (클릭하면 펼침) */}
+                <button
+                  onClick={() => toggleComplex(group.name)}
+                  className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex-shrink-0 text-muted-foreground">
+                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </div>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-base font-bold text-foreground">{listing.price_text || formatPrice(listing.price_man)}</span>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                      {listing.area_pyeong != null && <span>{listing.area_pyeong}평</span>}
-                      {listing.floor_info && <span>{listing.floor_info}</span>}
-                      {listing.direction && <span>{listing.direction}</span>}
+                  <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold truncate">{group.name}</h4>
+                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{group.listings.length}건</span>
+                      {group.newCount > 0 && (
+                        <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">NEW {group.newCount}</span>
+                      )}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 font-mono">{priceRange}</p>
                   </div>
-                  {listing.description && (
-                    <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{listing.description}</p>
+                </button>
+
+                {/* 펼침 내용: 개별 매물 목록 */}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="border-t border-border divide-y divide-border/50">
+                        {group.listings.map((listing) => (
+                          <div key={listing.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                {listing.is_new && (
+                                  <span className="text-[9px] font-bold text-primary bg-primary/10 px-1 py-0.5 rounded">N</span>
+                                )}
+                                <span className="text-sm font-bold">{listing.price_text || formatPrice(listing.price_man)}</span>
+                                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+                                  {listing.area_pyeong != null && <span>{listing.area_pyeong}평</span>}
+                                  {listing.floor_info && <span>{listing.floor_info}</span>}
+                                  {listing.direction && <span>{listing.direction}</span>}
+                                </div>
+                              </div>
+                              {listing.description && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{listing.description}</p>
+                              )}
+                            </div>
+                            {listing.detail_url && (
+                              <a href={listing.detail_url} target="_blank" rel="noopener noreferrer"
+                                className="p-1 text-muted-foreground hover:text-primary flex-shrink-0">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
                   )}
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                  {listing.detail_url && (
-                    <a href={listing.detail_url} target="_blank" rel="noopener noreferrer"
-                      className="p-1.5 text-muted-foreground hover:text-primary rounded-lg hover:bg-muted transition-colors">
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  )}
-                </div>
+                </AnimatePresence>
               </div>
-            </motion.div>
-          ))}
+            );
+          })}
         </div>
       )}
 
