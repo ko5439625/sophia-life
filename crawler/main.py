@@ -1,8 +1,8 @@
 """
 sophia.life 부동산 매물 크롤러 메인
 사용법:
-  python main.py          # 즉시 1회 실행
-  python main.py --schedule  # 하루 4회 스케줄 (06/12/18/00시)
+  python main.py              # 즉시 1회 실행
+  python main.py --schedule   # 하루 5회 스케줄 (08/12/16/20/00시)
 """
 import sys
 import asyncio
@@ -84,19 +84,19 @@ def run_once():
 
 
 def run_schedule():
-    """스케줄 실행 (하루 4회)"""
+    """스케줄 실행 (하루 5회: 08/12/16/20/00시)"""
     from apscheduler.schedulers.blocking import BlockingScheduler
     from apscheduler.triggers.cron import CronTrigger
 
     scheduler = BlockingScheduler()
     scheduler.add_job(
         lambda: asyncio.run(crawl_cycle()),
-        CronTrigger(hour="6,12,18,0", minute=0),
+        CronTrigger(hour="8,12,16,20,0", minute=0),
         id="naver_realestate_crawl",
         name="네이버 부동산 크롤링",
     )
 
-    print(" 스케줄러 시작 (06:00, 12:00, 18:00, 00:00)")
+    print(" 스케줄러 시작 (08:00, 12:00, 16:00, 20:00, 00:00)")
     print("   종료하려면 Ctrl+C")
 
     # 시작 시 1회 즉시 실행
