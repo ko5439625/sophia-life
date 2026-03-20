@@ -71,17 +71,24 @@ async function callGemini(prompt: string, jsonMode = false): Promise<string> {
   }
 
   const data = await res.json();
+  console.log("[callGemini] raw response:", JSON.stringify(data).substring(0, 500));
   // gemini-2.5-flash는 thinking 모델이라 parts가 여러 개:
   // parts[0] = thinking (thought: true), parts[last] = 실제 응답
   const parts = data.candidates?.[0]?.content?.parts;
-  if (!parts || parts.length === 0) return "";
+  if (!parts || parts.length === 0) {
+    console.warn("[callGemini] no parts found, full data:", JSON.stringify(data).substring(0, 1000));
+    return "";
+  }
+  console.log("[callGemini] parts count:", parts.length, "parts:", parts.map((p: Record<string, unknown>, i: number) => ({ i, thought: p.thought, hasText: !!p.text, textLen: typeof p.text === "string" ? p.text.length : 0 })));
   // thinking이 아닌 마지막 part에서 텍스트 추출
   for (let i = parts.length - 1; i >= 0; i--) {
     if (!parts[i].thought && parts[i].text) {
+      console.log("[callGemini] using part", i, "text:", String(parts[i].text).substring(0, 200));
       return parts[i].text;
     }
   }
   // fallback: 아무 텍스트나 반환
+  console.warn("[callGemini] fallback to last part");
   return parts[parts.length - 1]?.text ?? "";
 }
 
@@ -232,14 +239,19 @@ ${sections}
 {"headline":"오늘의 핵심 한줄 요약","sections":[{"category":"카테고리명","summary":"해당 카테고리 핵심 요약 2~3문장"}],"keyTakeaway":"투자자/독자가 알아야 할 핵심 포인트"}`;
 
   const text = await callGemini(prompt, true);
+  console.log("[summarizeNews] raw text length:", text.length, "text:", text.substring(0, 300));
+  if (!text) throw new Error("Gemini 응답이 비어있습니다");
   const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  console.log("[summarizeNews] cleaned:", cleaned.substring(0, 300));
 
   try {
     return JSON.parse(cleaned) as NewsSummary;
-  } catch {
+  } catch (e1) {
+    console.warn("[summarizeNews] direct parse failed:", e1);
     // thinking 모델이 앞에 텍스트를 붙일 수 있으므로 JSON 객체 추출
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("뉴스 요약 파싱 실패");
+    console.log("[summarizeNews] extracted json:", jsonMatch[0].substring(0, 300));
     try {
       return JSON.parse(jsonMatch[0]) as NewsSummary;
     } catch {
