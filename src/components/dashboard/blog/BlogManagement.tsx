@@ -968,7 +968,16 @@ const BlogManagement = () => {
               onAddCategory={addCategory}
               onRemoveCategory={removeCategory}
               subtitle={subtitle}
-              onSubtitleChange={(v: string) => { setSubtitle(v); localStorage.setItem("sophia-blog-subtitle", v); saveBlogSettings({ blog_subtitle: v }); }}
+              onSubtitleChange={(v: string) => {
+                setSubtitle(v);
+                localStorage.setItem("sophia-blog-subtitle", v);
+                // debounce Supabase save
+                if ((window as Record<string, unknown>).__subtitleTimer) clearTimeout((window as Record<string, unknown>).__subtitleTimer as number);
+                (window as Record<string, unknown>).__subtitleTimer = setTimeout(() => {
+                  saveBlogSettings({ blog_subtitle: v });
+                  console.log("[BlogSettings] subtitle saved to Supabase:", v);
+                }, 500);
+              }}
             />
 
             {/* Post list */}

@@ -344,7 +344,7 @@ export async function loadBlogSettings(): Promise<BlogSettings> {
     const { data } = await supabase
       .from("user_settings")
       .select("locked_categories, blog_subtitle, dismissed_alerts")
-      .limit(1)
+      .eq("id", "c7a9defe-0e45-57e0-9b26-4ef82dd867c1")
       .maybeSingle();
 
     if (!data) return {};
