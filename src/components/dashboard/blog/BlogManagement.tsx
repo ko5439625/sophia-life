@@ -818,10 +818,14 @@ const BlogManagement = () => {
     // Load categories & subtitle from Supabase
     import("@/lib/supabase").then(({ supabase }) => {
       if (!supabase) return;
-      supabase.from("user_settings").select("blog_categories").limit(1).maybeSingle().then(({ data }) => {
+      supabase.from("user_settings").select("blog_categories, blog_subtitle").limit(1).maybeSingle().then(({ data }) => {
         if (data?.blog_categories && Array.isArray(data.blog_categories) && data.blog_categories.length > 0) {
           setCategories(data.blog_categories);
           localStorage.setItem(BLOG_CATEGORIES_KEY, JSON.stringify(data.blog_categories));
+        }
+        if (data?.blog_subtitle) {
+          setSubtitle(data.blog_subtitle);
+          localStorage.setItem("sophia-blog-subtitle", data.blog_subtitle);
         }
         categoriesLoaded.current = true;
       });

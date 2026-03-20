@@ -366,7 +366,7 @@ export async function saveBlogSettings(settings: Partial<{
 }>): Promise<void> {
   if (!isReady() || !supabase) return;
   try {
-    await supabase.from("user_settings").upsert({ id: "default", ...settings });
+    await supabase.from("user_settings").upsert({ id: "c7a9defe-0e45-57e0-9b26-4ef82dd867c1", ...settings });
   } catch (e) {
     console.error("[supabaseSync] saveBlogSettings error:", e);
   }
