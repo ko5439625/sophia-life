@@ -47,16 +47,21 @@ function getApiKey(): string | null {
   return localStorage.getItem("sophia-api-gemini");
 }
 
-async function callGemini(prompt: string): Promise<string> {
+async function callGemini(prompt: string, jsonMode = false): Promise<string> {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("No Gemini API key");
+
+  const generationConfig: Record<string, unknown> = { temperature: 0.7, maxOutputTokens: 2048 };
+  if (jsonMode) {
+    generationConfig.responseMimeType = "application/json";
+  }
 
   const res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+      generationConfig,
     }),
   });
 
@@ -109,10 +114,15 @@ ${marketData.vix != null ? `- VIX: ${marketData.vix}` : ""}
   "marketOutlook": "한국 시장 중심의 향후 3개월 전망 (부동산, 환율, 금리 포함)"
 }`;
 
-  const text = await callGemini(prompt);
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to parse Gemini response as JSON");
-  return JSON.parse(jsonMatch[0]) as HedgingAnalysis;
+  const text = await callGemini(prompt, true);
+  const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  try {
+    return JSON.parse(cleaned) as HedgingAnalysis;
+  } catch {
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Failed to parse Gemini response as JSON");
+    return JSON.parse(jsonMatch[0]) as HedgingAnalysis;
+  }
 }
 
 async function realAnalyzeEconomy(
@@ -207,21 +217,21 @@ async function realSummarizeNews(
 
 ${sections}
 
-반드시 유효한 JSON만 응답하세요. 설명 없이 JSON만. summary 안에 큰따옴표를 쓰지 마세요.
-{"headline":"핵심 한줄","sections":[{"category":"카테고리","summary":"요약"}],"keyTakeaway":"포인트"}`;
+아래 JSON 스키마에 맞춰 응답하세요:
+{"headline":"오늘의 핵심 한줄 요약","sections":[{"category":"카테고리명","summary":"해당 카테고리 핵심 요약 2~3문장"}],"keyTakeaway":"투자자/독자가 알아야 할 핵심 포인트"}`;
 
-  const text = await callGemini(prompt);
+  const text = await callGemini(prompt, true);
   const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
 
   try {
     return JSON.parse(cleaned) as NewsSummary;
   } catch {
+    // thinking 모델이 앞에 텍스트를 붙일 수 있으므로 JSON 객체 추출
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("뉴스 요약 파싱 실패");
     try {
       return JSON.parse(jsonMatch[0]) as NewsSummary;
     } catch {
-      // Fix trailing commas and retry
       const fixed = jsonMatch[0].replace(/,\s*([}\]])/g, "$1");
       return JSON.parse(fixed) as NewsSummary;
     }
