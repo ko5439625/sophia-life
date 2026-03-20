@@ -47,13 +47,16 @@ function getApiKey(): string | null {
   return localStorage.getItem("sophia-api-gemini");
 }
 
-async function callGemini(prompt: string, jsonMode = false): Promise<string> {
+async function callGemini(prompt: string, opts?: { jsonMode?: boolean; responseSchema?: Record<string, unknown> }): Promise<string> {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("No Gemini API key");
 
   const generationConfig: Record<string, unknown> = { temperature: 0.7, maxOutputTokens: 2048 };
-  if (jsonMode) {
+  if (opts?.jsonMode || opts?.responseSchema) {
     generationConfig.responseMimeType = "application/json";
+  }
+  if (opts?.responseSchema) {
+    generationConfig.responseSchema = opts.responseSchema;
   }
 
   const res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
@@ -91,6 +94,48 @@ async function callGemini(prompt: string, jsonMode = false): Promise<string> {
   console.warn("[callGemini] fallback to last part");
   return parts[parts.length - 1]?.text ?? "";
 }
+
+/** Robust JSON parser: cleans markdown fences, extracts JSON object, fixes trailing commas */
+function safeParseJson<T>(text: string, errorMsg: string): T {
+  if (!text) throw new Error(`${errorMsg}: 응답이 비어있습니다`);
+  const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  // 1차: 직접 파싱
+  try { return JSON.parse(cleaned) as T; } catch { /* continue */ }
+  // 2차: JSON 객체 추출
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error(errorMsg);
+  // 3차: 추출된 JSON 파싱
+  try { return JSON.parse(jsonMatch[0]) as T; } catch { /* continue */ }
+  // 4차: trailing comma 수정
+  const fixed = jsonMatch[0].replace(/,\s*([}\]])/g, "$1");
+  try { return JSON.parse(fixed) as T; } catch { /* continue */ }
+  // 5차: 제어문자/이스케이프 문제 수정
+  const sanitized = fixed
+    .replace(/[\x00-\x1f]/g, " ")  // 제어문자 제거
+    .replace(/\\'/g, "'");          // 잘못된 이스케이프
+  return JSON.parse(sanitized) as T;
+}
+
+// News summary response schema for Gemini structured output
+const NEWS_SUMMARY_SCHEMA = {
+  type: "object",
+  properties: {
+    headline: { type: "string", description: "오늘의 핵심 한줄 요약" },
+    sections: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          category: { type: "string", description: "카테고리명" },
+          summary: { type: "string", description: "해당 카테고리 핵심 요약 2~3문장" },
+        },
+        required: ["category", "summary"],
+      },
+    },
+    keyTakeaway: { type: "string", description: "투자자/독자가 알아야 할 핵심 포인트" },
+  },
+  required: ["headline", "sections", "keyTakeaway"],
+};
 
 // ---------------------------------------------------------------------------
 // Real API functions
@@ -132,15 +177,8 @@ ${marketData.vix != null ? `- VIX: ${marketData.vix}` : ""}
   "marketOutlook": "한국 시장 중심의 향후 3개월 전망 (부동산, 환율, 금리 포함)"
 }`;
 
-  const text = await callGemini(prompt, true);
-  const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-  try {
-    return JSON.parse(cleaned) as HedgingAnalysis;
-  } catch {
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Failed to parse Gemini response as JSON");
-    return JSON.parse(jsonMatch[0]) as HedgingAnalysis;
-  }
+  const text = await callGemini(prompt, { jsonMode: true });
+  return safeParseJson<HedgingAnalysis>(text, "헤징 분석 파싱 실패");
 }
 
 async function realAnalyzeEconomy(
@@ -238,27 +276,9 @@ ${sections}
 아래 JSON 스키마에 맞춰 응답하세요:
 {"headline":"오늘의 핵심 한줄 요약","sections":[{"category":"카테고리명","summary":"해당 카테고리 핵심 요약 2~3문장"}],"keyTakeaway":"투자자/독자가 알아야 할 핵심 포인트"}`;
 
-  const text = await callGemini(prompt, true);
-  console.log("[summarizeNews] raw text length:", text.length, "text:", text.substring(0, 300));
-  if (!text) throw new Error("Gemini 응답이 비어있습니다");
-  const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-  console.log("[summarizeNews] cleaned:", cleaned.substring(0, 300));
-
-  try {
-    return JSON.parse(cleaned) as NewsSummary;
-  } catch (e1) {
-    console.warn("[summarizeNews] direct parse failed:", e1);
-    // thinking 모델이 앞에 텍스트를 붙일 수 있으므로 JSON 객체 추출
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("뉴스 요약 파싱 실패");
-    console.log("[summarizeNews] extracted json:", jsonMatch[0].substring(0, 300));
-    try {
-      return JSON.parse(jsonMatch[0]) as NewsSummary;
-    } catch {
-      const fixed = jsonMatch[0].replace(/,\s*([}\]])/g, "$1");
-      return JSON.parse(fixed) as NewsSummary;
-    }
-  }
+  const text = await callGemini(prompt, { responseSchema: NEWS_SUMMARY_SCHEMA });
+  console.log("[summarizeNews] response length:", text.length, "preview:", text.substring(0, 300));
+  return safeParseJson<NewsSummary>(text, "뉴스 요약 파싱 실패");
 }
 
 // ---------------------------------------------------------------------------
