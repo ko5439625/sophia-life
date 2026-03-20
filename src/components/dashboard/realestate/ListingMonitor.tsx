@@ -537,6 +537,16 @@ const ListingMonitor = () => {
         </div>
       )}
 
+      {/* 키워드 하이라이트 범례 */}
+      {activeListings.length > 0 && (
+        <div className="flex items-center gap-3 px-1 flex-wrap">
+          <span className="text-[10px] text-muted-foreground/60">키워드:</span>
+          <span className="text-[10px] text-blue-500 font-medium">● 역세권·지하철</span>
+          <span className="text-[10px] text-amber-500 font-medium">● 리모델링·수리</span>
+          <span className="text-[10px] text-red-500 font-medium">● 급매·네고</span>
+        </div>
+      )}
+
       {/* 매물 리스트 (아파트별 그룹) */}
       {groupedByComplex.length > 0 && (
         <div className="space-y-2">
