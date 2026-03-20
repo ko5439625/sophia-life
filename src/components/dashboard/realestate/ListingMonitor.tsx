@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, ExternalLink, Loader2, X, Bell, ChevronDown, ChevronRight, ArrowUpDown, Building2, Check, Pencil } from "lucide-react";
 import {
@@ -22,26 +22,19 @@ function formatPrice(priceMan: number): string {
 // ---------------------------------------------------------------------------
 // 키워드 하이라이트
 // ---------------------------------------------------------------------------
-const KEYWORD_HIGHLIGHTS: { keywords: string[]; className: string }[] = [
-  { keywords: ["역세권", "역근처", "역도보", "역 도보", "지하철"], className: "text-blue-500 font-bold" },
-  { keywords: ["리모델링", "올수리", "풀옵션", "인테리어"], className: "text-amber-500 font-bold" },
-  { keywords: ["급매", "급처분", "급전세", "급월세", "네고가능", "네고 가능", "파격"], className: "text-red-500 font-bold" },
+// 키워드 → 매물 행 배경색 하이라이트
+const KEYWORD_HIGHLIGHTS: { keywords: string[]; bg: string; label: string }[] = [
+  { keywords: ["역세권", "역근처", "역도보", "역 도보", "지하철"], bg: "bg-blue-500/10 border-l-2 border-l-blue-400", label: "역세권" },
+  { keywords: ["리모델링", "올수리", "풀옵션", "인테리어"], bg: "bg-amber-500/10 border-l-2 border-l-amber-400", label: "리모델링" },
+  { keywords: ["급매", "급처분", "급전세", "급월세", "네고가능", "네고 가능", "파격"], bg: "bg-red-500/10 border-l-2 border-l-red-400", label: "급매" },
 ];
 
-function highlightDescription(text: string): React.ReactNode {
-  // 모든 키워드를 하나의 regex로
-  const allKeywords = KEYWORD_HIGHLIGHTS.flatMap((h) => h.keywords);
-  if (allKeywords.length === 0) return text;
-  const regex = new RegExp(`(${allKeywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|")})`, "gi");
-  const parts = text.split(regex);
-  if (parts.length === 1) return text;
-  return parts.map((part, i) => {
-    const highlight = KEYWORD_HIGHLIGHTS.find((h) => h.keywords.some((k) => k.toLowerCase() === part.toLowerCase()));
-    if (highlight) {
-      return <span key={i} className={highlight.className}>{part}</span>;
-    }
-    return part;
-  });
+function getListingHighlight(description?: string): string {
+  if (!description) return "";
+  for (const h of KEYWORD_HIGHLIGHTS) {
+    if (h.keywords.some((k) => description.includes(k))) return h.bg;
+  }
+  return "";
 }
 
 // ---------------------------------------------------------------------------
@@ -539,11 +532,11 @@ const ListingMonitor = () => {
 
       {/* 키워드 하이라이트 범례 */}
       {activeListings.length > 0 && (
-        <div className="flex items-center gap-3 px-1 flex-wrap">
-          <span className="text-[10px] text-muted-foreground/60">키워드:</span>
-          <span className="text-[10px] text-blue-500 font-medium">● 역세권·지하철</span>
-          <span className="text-[10px] text-amber-500 font-medium">● 리모델링·수리</span>
-          <span className="text-[10px] text-red-500 font-medium">● 급매·네고</span>
+        <div className="flex items-center gap-2 px-1 flex-wrap">
+          <span className="text-[10px] text-muted-foreground/50">하이라이트</span>
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 border-l-2 border-l-blue-400 text-blue-600">역세권</span>
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 border-l-2 border-l-amber-400 text-amber-600">리모델링</span>
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-500/10 border-l-2 border-l-red-400 text-red-600">급매</span>
         </div>
       )}
 
@@ -589,8 +582,10 @@ const ListingMonitor = () => {
                       className="overflow-hidden"
                     >
                       <div className="border-t border-border divide-y divide-border/50">
-                        {group.listings.map((listing) => (
-                          <div key={listing.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                        {group.listings.map((listing) => {
+                          const hlClass = getListingHighlight(listing.description);
+                          return (
+                          <div key={listing.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${hlClass || "hover:bg-muted/20"}`}>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 {listing.is_new && (
@@ -604,7 +599,7 @@ const ListingMonitor = () => {
                                 </div>
                               </div>
                               {listing.description && (
-                                <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{highlightDescription(listing.description)}</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{listing.description}</p>
                               )}
                             </div>
                             {listing.detail_url && (
@@ -614,7 +609,8 @@ const ListingMonitor = () => {
                               </a>
                             )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </motion.div>
                   )}
