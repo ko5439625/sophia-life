@@ -851,6 +851,8 @@ export interface ReListingRow {
   is_new: boolean;
   is_favorited: boolean;
   first_seen_at: string;
+  address?: string | null;
+  build_year?: string | null;
 }
 
 export async function loadReListings(filterId?: string): Promise<ReListingRow[]> {

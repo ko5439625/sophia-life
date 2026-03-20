@@ -242,7 +242,7 @@ const ListingMonitor = () => {
 
   // 아파트별 그룹화
   const groupedByComplex = useMemo(() => {
-    const groups: { name: string; listings: ReListingRow[]; minPrice: number; maxPrice: number; newCount: number }[] = [];
+    const groups: { name: string; listings: ReListingRow[]; minPrice: number; maxPrice: number; newCount: number; address: string; buildYear: string }[] = [];
     const map = new Map<string, ReListingRow[]>();
     for (const l of activeListings) {
       const key = l.complex_name || "기타";
@@ -251,12 +251,17 @@ const ListingMonitor = () => {
     }
     for (const [name, items] of map) {
       const prices = items.map((l) => l.price_man).filter(Boolean);
+      // 주소/연식은 같은 단지의 첫 번째 매물에서 가져옴
+      const firstWithAddress = items.find((l) => l.address);
+      const firstWithYear = items.find((l) => l.build_year);
       groups.push({
         name,
         listings: items,
         minPrice: prices.length > 0 ? Math.min(...prices) : 0,
         maxPrice: prices.length > 0 ? Math.max(...prices) : 0,
         newCount: items.filter((l) => l.is_new).length,
+        address: firstWithAddress?.address || "",
+        buildYear: firstWithYear?.build_year || "",
       });
     }
     // 정렬: 매물 수 많은 순
@@ -613,11 +618,17 @@ const ListingMonitor = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h4 className="text-sm font-bold truncate">{group.name}</h4>
+                      {group.buildYear && (
+                        <span className="text-[10px] text-muted-foreground/70">{group.buildYear}년</span>
+                      )}
                       <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{group.listings.length}건</span>
                       {group.newCount > 0 && (
                         <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">NEW {group.newCount}</span>
                       )}
                     </div>
+                    {group.address && (
+                      <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate">{group.address}</p>
+                    )}
                     <p className="text-xs text-muted-foreground mt-0.5 font-mono">{priceRange}</p>
                   </div>
                 </button>

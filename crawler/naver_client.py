@@ -74,9 +74,10 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
                                 price_min: Optional[int] = None, price_max: Optional[int] = None,
                                 area_min: Optional[float] = None) -> list[dict]:
     """
-    단지 상세 페이지를 방문하여 매물 API 응답을 캡처
+    단지 상세 페이지를 방문하여 매물 API 응답 + 단지 정보(주소/준공연도)를 캡처
     """
     captured_articles = []
+    complex_info = {}
 
     async def on_response(response: Response):
         url = response.url
@@ -84,6 +85,16 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
             try:
                 data = await response.json()
                 captured_articles.append(data)
+            except Exception:
+                pass
+        # 단지 상세 정보 캡처 (주소, 준공연도 등)
+        elif f"/api/complexes/{complex_no}" in url and "/articles/" not in url and "/markers" not in url:
+            try:
+                data = await response.json()
+                if isinstance(data, dict) and "complexDetail" in data:
+                    complex_info.update(data["complexDetail"])
+                elif isinstance(data, dict) and ("address" in data or "complexName" in data):
+                    complex_info.update(data)
             except Exception:
                 pass
 
@@ -99,6 +110,12 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
     await asyncio.sleep(CRAWL_DELAY_SEC)
 
     page.remove_listener("response", on_response)
+
+    # 단지 주소/준공연도 추출
+    address = complex_info.get("address", complex_info.get("roadAddress", ""))
+    build_year = complex_info.get("useApproveYmd", "")
+    if build_year and len(build_year) >= 4:
+        build_year = build_year[:4]  # YYYYMMDD → YYYY
 
     articles = []
     for data in captured_articles:
@@ -143,6 +160,8 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
                 "description": a.get("articleFeatureDesc", a.get("tagList", "")),
                 "confirm_date": a.get("articleConfirmYmd", ""),
                 "detail_url": f"https://new.land.naver.com/complexes/{complex_no}?ms=37.38,127.12,16&articleNo={a.get('articleNo', '')}",
+                "address": address,
+                "build_year": build_year,
             })
 
     return articles
