@@ -138,7 +138,8 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
     page.remove_listener("response", on_response)
 
     # 단지 주소/준공연도 추출
-    # 우선순위: 1) complexDetail의 address/roadAddress 2) cortars API 3) fallback_address (re_regions)
+    # 우선순위: 1) complexDetail의 address/roadAddress 2) fallback_address (re_regions) 3) cortars API
+    # cortars API는 이전 페이지의 캐시된 좌표로 호출되는 타이밍 이슈가 있어 최후수단으로만 사용
     address = ""
     # 1) complexDetail에서 추출
     ci_addr = complex_info.get("address", "")
@@ -147,7 +148,10 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
         address = ci_addr
     elif ci_road and len(ci_road) > 3:
         address = ci_road
-    # 2) cortars API에서 조합
+    # 2) re_regions 기반 fallback (신뢰도 높음)
+    if not address and fallback_address:
+        address = fallback_address
+    # 3) cortars API에서 조합 (최후수단 - 타이밍 이슈 가능)
     if not address and cortar_info:
         parts = []
         city = cortar_info.get("cityName", "")
@@ -160,9 +164,6 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
         if sector:
             parts.append(sector)
         address = " ".join(parts)
-    # 3) re_regions 기반 fallback
-    if not address and fallback_address:
-        address = fallback_address
 
     build_year = complex_info.get("useApproveYmd", "")
     if build_year and len(build_year) >= 4:
