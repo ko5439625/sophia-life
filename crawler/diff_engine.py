@@ -83,7 +83,6 @@ def process_crawled_data(
                 "naver_article_id": article_id,
                 "complex_name": article.get("complex_name", ""),
                 "complex_no": article.get("complex_no"),
-                # "trade_type": article.get("trade_type", ""),  # DB 컬럼 추가 후 활성화
                 "price_text": article.get("price_text", ""),
                 "price_man": article.get("price_man", 0),
                 "area_m2": article.get("area_m2"),
@@ -99,8 +98,16 @@ def process_crawled_data(
                 "is_new": True,
                 "is_favorited": False,
             }
-            supabase.table("re_listings").insert(insert_data).execute()
-            result["new"].append(article)
+            try:
+                supabase.table("re_listings").insert(insert_data).execute()
+                result["new"].append(article)
+            except Exception as e:
+                err_msg = str(e)
+                if "23505" in err_msg or "duplicate" in err_msg.lower():
+                    # 같은 매물이 다른 필터에 이미 존재 → 스킵
+                    pass
+                else:
+                    raise
 
     # 삭제 감지: DB에 있지만 이번 크롤링에 없는 매물
     for article_id, db_row in existing.items():
