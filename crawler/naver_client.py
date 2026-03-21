@@ -7,12 +7,19 @@ import json
 from typing import Optional
 from playwright.async_api import async_playwright, Page, Response
 
-from config import NAVER_LAND_URL, CRAWL_DELAY_SEC, MAX_COMPLEXES_PER_FILTER
+from config import (
+    NAVER_LAND_URL, CRAWL_DELAY_SEC, MAX_COMPLEXES_PER_FILTER,
+    SEOUL_GU_COORDS, GYEONGGI_GU_COORDS,
+)
+
+# 전체 좌표 맵 (서울 + 경기)
+REGION_COORDS = {**SEOUL_GU_COORDS, **GYEONGGI_GU_COORDS}
 
 
 async def get_complexes_via_page(page: Page, cortar_no: str, trade_type: str = "A1") -> list[dict]:
     """
     실제 네이버 부동산 페이지를 방문하여 단지 마커 API 응답을 캡처
+    구별 중심 좌표가 있으면 ms 파라미터로 지도 위치/줌을 지정
     """
     captured_markers = []
 
@@ -30,8 +37,13 @@ async def get_complexes_via_page(page: Page, cortar_no: str, trade_type: str = "
 
     page.on("response", on_response)
 
-    # 지역 페이지 방문 (실제 유저처럼)
-    url = f"{NAVER_LAND_URL}/complexes?cortarNo={cortar_no}&realEstateType=APT&tradeType={trade_type}"
+    # 지역 페이지 방문 (구별 좌표가 있으면 ms 파라미터로 줌 지정)
+    coords = REGION_COORDS.get(cortar_no)
+    if coords:
+        lat, lng = coords
+        url = f"{NAVER_LAND_URL}/complexes?cortarNo={cortar_no}&realEstateType=APT&tradeType={trade_type}&ms={lat},{lng},16"
+    else:
+        url = f"{NAVER_LAND_URL}/complexes?cortarNo={cortar_no}&realEstateType=APT&tradeType={trade_type}"
     try:
         await page.goto(url, wait_until="networkidle", timeout=20000)
     except Exception:
