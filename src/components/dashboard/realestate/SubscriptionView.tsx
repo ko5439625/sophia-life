@@ -100,7 +100,14 @@ async function callGemini(prompt: string): Promise<string> {
   }
 
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  // thinking model: thought part가 아닌 마지막 text part 추출
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (!parts[i].thought && parts[i].text) {
+      return parts[i].text;
+    }
+  }
+  return parts?.[0]?.text ?? "";
 }
 
 // ---------------------------------------------------------------------------
@@ -171,6 +178,7 @@ const SubscriptionView = () => {
   const annualIncome = state.annualIncome1 + state.annualIncome2;
 
   const [items, setItems] = useState<SubscriptionInfo[]>([]);
+  const [isMockData, setIsMockData] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState(ALL_REGIONS);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -189,6 +197,8 @@ const SubscriptionView = () => {
     fetchSubscriptions().then((data) => {
       if (!cancelled) {
         setItems(data);
+        // mock 데이터인지 판별: id가 "mock-"으로 시작하면 mock
+        setIsMockData(data.length > 0 && data[0].id.startsWith("mock-"));
         setLoading(false);
         // Cache subscription items for DashboardHome alerts
         try {
@@ -394,7 +404,7 @@ const SubscriptionView = () => {
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground font-mono">
           {filtered.length}건의 분양 정보
-          {!localStorage.getItem("sophia-api-data") && (
+          {isMockData && (
             <span className="text-[9px] text-amber-500 ml-2">샘플 데이터</span>
           )}
         </p>
@@ -700,9 +710,9 @@ const SubscriptionView = () => {
               ? "분양 정보가 없습니다"
               : `${selectedRegion} 지역의 분양 정보가 없습니다`}
           </p>
-          {!localStorage.getItem("sophia-api-data") && (
+          {isMockData && (
             <p className="text-xs text-amber-500">
-              {"설정 > 공공데이터포털 API 키를 입력하면 실시간 청약 정보를 확인할 수 있습니다"}
+              {"설정 > 공공데이터포털 API 키를 입력하거나, Supabase 환경변수(DATA_GO_KR_API_KEY)를 설정하면 실시간 청약 정보를 확인할 수 있습니다"}
             </p>
           )}
         </div>

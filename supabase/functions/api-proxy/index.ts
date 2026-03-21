@@ -128,13 +128,23 @@ serve(async (req) => {
 
       // ====== 청약홈 분양정보 ======
       case "subscription": {
-        const { apiKey, page } = params;
+        // 서버 환경변수 API 키 우선, 클라이언트 전달 키 fallback
+        const serverKey = Deno.env.get("DATA_GO_KR_API_KEY") || "";
+        const clientKey = params.apiKey as string || "";
+        const finalKey = serverKey || clientKey;
+        if (!finalKey) {
+          return new Response(
+            JSON.stringify({ error: "No API key configured", data: [] }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        const { page } = params;
         const url = new URL(
           "https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/getAPTLttotPblancDetail"
         );
-        url.searchParams.set("serviceKey", apiKey);
+        url.searchParams.set("serviceKey", finalKey);
         url.searchParams.set("page", String(page || 1));
-        url.searchParams.set("perPage", "20");
+        url.searchParams.set("perPage", "30");
         const res = await fetch(url.toString());
         data = await res.json();
         break;

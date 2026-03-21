@@ -11,6 +11,7 @@ import {
 import SubscriptionView from "./SubscriptionView";
 import ListingMonitor from "./ListingMonitor";
 import RealEstateSearch from "./RealEstateSearch";
+import AuctionMonitor from "./AuctionMonitor";
 import {
   loadInspections, saveInspection, deleteInspection,
   type InspectionRow,
@@ -61,6 +62,7 @@ const StarRating = ({ value, onChange, readonly = false }: {
 
 const tabs = [
   { id: "monitor", label: "매물 모니터" },
+  { id: "auction", label: "경매" },
   { id: "search", label: "실거래가" },
   { id: "subscription", label: "분양 정보" },
   { id: "inspection", label: "임장 노트" },
@@ -190,6 +192,16 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
               <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
             </div>
           ) : <ListingMonitor />
+        )}
+
+        {/* 경매 */}
+        {activeTab === "auction" && (
+          isGuest ? (
+            <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+              <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+            </div>
+          ) : <AuctionMonitor />
         )}
 
         {/* 실거래가 */}

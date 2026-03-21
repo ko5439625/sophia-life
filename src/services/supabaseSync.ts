@@ -900,3 +900,119 @@ export async function loadReRegions(): Promise<ReRegionRow[]> {
     return [];
   }
 }
+
+// ---------------------------------------------------------------------------
+// Auction Items (경매 물건)
+// ---------------------------------------------------------------------------
+
+export interface AuctionItemRow {
+  id: string;
+  case_no: string; // 사건번호 (예: 2025타경12345)
+  court: string; // 법원명
+  property_type: string; // 물건종류 (아파트, 다세대, 오피스텔 등)
+  address: string; // 소재지
+  area_m2: number | null; // 면적
+  area_pyeong: number | null;
+  appraisal_price: number; // 감정가 (만원)
+  min_bid_price: number; // 최저매각가 (만원)
+  bid_date: string | null; // 매각기일
+  bid_count: number; // 유찰횟수
+  status: string; // 상태 (진행중, 낙찰, 유찰, 취하)
+  detail_url: string | null;
+  note: string; // 메모
+  is_favorited: boolean;
+  analysis: unknown | null; // AI 분석 결과 (jsonb)
+  blog_analyses: unknown | null; // 블로그 분석 목록 (jsonb)
+  created_at: string;
+}
+
+export async function loadAuctionItems(): Promise<AuctionItemRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("auction_items").select("*").order("created_at", { ascending: false });
+    return (data || []) as AuctionItemRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadAuctionItems error:", e);
+    return [];
+  }
+}
+
+export async function saveAuctionItem(item: Omit<AuctionItemRow, "id" | "created_at"> & { id?: string }): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("auction_items").upsert({ id: item.id || crypto.randomUUID(), ...item });
+  } catch (e) {
+    console.error("[supabaseSync] saveAuctionItem error:", e);
+  }
+}
+
+export async function deleteAuctionItem(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("auction_items").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteAuctionItem error:", e);
+  }
+}
+
+export async function updateAuctionAnalysis(id: string, analysis: unknown): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("auction_items").update({ analysis }).eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] updateAuctionAnalysis error:", e);
+  }
+}
+
+export async function toggleAuctionFavorite(id: string, isFavorited: boolean): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("auction_items").update({ is_favorited: isFavorited }).eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] toggleAuctionFavorite error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auction Filters (경매 필터)
+// ---------------------------------------------------------------------------
+
+export interface AuctionFilterRow {
+  id: string;
+  name: string;
+  court: string; // 법원 (콤마 구분)
+  property_type: string; // 물건종류 (콤마 구분)
+  region: string; // 지역
+  price_min: number | null; // 감정가 최소 (만원)
+  price_max: number | null; // 감정가 최대 (만원)
+  is_active: boolean;
+}
+
+export async function loadAuctionFilters(): Promise<AuctionFilterRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase.from("auction_filters").select("*").order("created_at");
+    return (data || []) as AuctionFilterRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadAuctionFilters error:", e);
+    return [];
+  }
+}
+
+export async function saveAuctionFilter(filter: Omit<AuctionFilterRow, "id"> & { id?: string }): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("auction_filters").upsert({ id: filter.id || crypto.randomUUID(), ...filter });
+  } catch (e) {
+    console.error("[supabaseSync] saveAuctionFilter error:", e);
+  }
+}
+
+export async function deleteAuctionFilter(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("auction_filters").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteAuctionFilter error:", e);
+  }
+}

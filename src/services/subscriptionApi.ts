@@ -91,21 +91,29 @@ function mapApiItems(items: ApiResponseItem[]): SubscriptionInfo[] {
 export async function fetchSubscriptions(): Promise<SubscriptionInfo[]> {
   const apiKey = getApiKey();
 
-  // 1. Try Supabase proxy
+  // 1. Try Supabase proxy (서버 환경변수에 API 키가 설정되어 있으면 클라이언트 키 없이도 동작)
   try {
     const proxyResult = await proxyFetch<{
       data?: ApiResponseItem[];
       currentCount?: number;
+      error?: string;
     }>("subscription", { apiKey: apiKey || "", page: 1 });
 
-    if (proxyResult && proxyResult.data && proxyResult.data.length > 0) {
-      return mapApiItems(proxyResult.data);
+    if (proxyResult) {
+      const items = proxyResult.data ?? [];
+      if (Array.isArray(items) && items.length > 0) {
+        console.log(`[fetchSubscriptions] proxy success: ${items.length} items`);
+        return mapApiItems(items);
+      }
+      if (proxyResult.error) {
+        console.warn("[fetchSubscriptions] proxy error:", proxyResult.error);
+      }
     }
   } catch (e) {
     console.warn("[fetchSubscriptions] proxy failed:", e);
   }
 
-  // 2. Try direct API
+  // 2. Try direct API (클라이언트에 API 키가 있는 경우)
   if (apiKey) {
     try {
       const params = new URLSearchParams({
@@ -123,6 +131,7 @@ export async function fetchSubscriptions(): Promise<SubscriptionInfo[]> {
         const items: ApiResponseItem[] = json.data ?? [];
 
         if (items.length > 0) {
+          console.log(`[fetchSubscriptions] direct API success: ${items.length} items`);
           return mapApiItems(items);
         }
       } else {
@@ -134,7 +143,7 @@ export async function fetchSubscriptions(): Promise<SubscriptionInfo[]> {
   }
 
   // 3. Mock fallback (API 키 미설정 시)
-  console.warn("[subscriptionApi] Using mock data - set API key for real data");
+  console.warn("[subscriptionApi] Using mock data - set API key or configure DATA_GO_KR_API_KEY in Supabase secrets");
   return getMockSubscriptions();
 }
 
