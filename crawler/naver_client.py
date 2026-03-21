@@ -87,12 +87,10 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
                                 area_min: Optional[float] = None,
                                 fallback_address: str = "") -> list[dict]:
     """
-    단지 상세 페이지를 방문하여 매물 API 응답 + 단지 정보(주소/준공연도)를 캡처
+    단지 상세 페이지를 방문하여 매물 API 응답을 캡처하고,
+    overview + cortars API를 직접 fetch하여 동 단위 주소와 준공연도를 획득
     """
     captured_articles = []
-    complex_info = {}
-
-    cortar_info = {}
 
     async def on_response(response: Response):
         url = response.url
@@ -102,31 +100,10 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
                 captured_articles.append(data)
             except Exception:
                 pass
-        # 단지 상세 정보 캡처 (주소, 준공연도 등)
-        elif f"/api/complexes/" in url and str(complex_no) in url and "/articles/" not in url and "/markers" not in url:
-            try:
-                data = await response.json()
-                if isinstance(data, dict):
-                    if "complexDetail" in data:
-                        complex_info.update(data["complexDetail"])
-                    else:
-                        # overview API 등 최상위에 바로 데이터가 있는 경우
-                        complex_info.update(data)
-            except Exception:
-                pass
-        # cortars API에서 지역 주소 정보 캡처 (최신 값만 사용)
-        elif "/api/cortars?" in url:
-            try:
-                data = await response.json()
-                if isinstance(data, dict) and "cortarName" in data:
-                    cortar_info.clear()
-                    cortar_info.update(data)
-            except Exception:
-                pass
 
     page.on("response", on_response)
 
-    # 단지 상세 페이지 방문
+    # 단지 상세 페이지 방문 (매물 목록 API 응답 캡처용)
     url = f"{NAVER_LAND_URL}/complexes/{complex_no}?ms=37.38,127.12,16&a={trade_type}&e=RETAIL"
     try:
         await page.goto(url, wait_until="networkidle", timeout=15000)
@@ -137,35 +114,53 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
 
     page.remove_listener("response", on_response)
 
-    # 단지 주소/준공연도 추출
-    # 우선순위: 1) complexDetail의 address/roadAddress 2) fallback_address (re_regions) 3) cortars API
-    # cortars API는 이전 페이지의 캐시된 좌표로 호출되는 타이밍 이슈가 있어 최후수단으로만 사용
+    # overview API 직접 호출 → 정확한 좌표 + 준공연도
+    overview = {}
+    try:
+        overview = await page.evaluate(f'''
+            async () => {{
+                const r = await fetch("/api/complexes/overview/{complex_no}");
+                return await r.json();
+            }}
+        ''')
+    except Exception:
+        pass
+
+    # 주소 추출: overview의 정확한 lat/lng → cortars API 직접 호출 (동 단위)
     address = ""
-    # 1) complexDetail에서 추출
-    ci_addr = complex_info.get("address", "")
-    ci_road = complex_info.get("roadAddress", "")
-    if ci_addr and len(ci_addr) > 3:
-        address = ci_addr
-    elif ci_road and len(ci_road) > 3:
-        address = ci_road
-    # 2) re_regions 기반 fallback (신뢰도 높음)
+    lat = overview.get("latitude", 0) if isinstance(overview, dict) else 0
+    lng = overview.get("longitude", 0) if isinstance(overview, dict) else 0
+
+    if lat and lng:
+        try:
+            cortars = await page.evaluate(f'''
+                async () => {{
+                    const r = await fetch("/api/cortars?zoom=16&centerLat={lat}&centerLon={lng}");
+                    return await r.json();
+                }}
+            ''')
+            if isinstance(cortars, dict):
+                parts = []
+                city = cortars.get("cityName", "")
+                div = cortars.get("divisionName", "")
+                sector = cortars.get("sectorName", "")
+                if city:
+                    parts.append(city)
+                if div:
+                    parts.append(div)
+                if sector:
+                    parts.append(sector)
+                address = " ".join(parts)
+        except Exception:
+            pass
+
+    # fallback: re_regions 기반 구 단위 주소
     if not address and fallback_address:
         address = fallback_address
-    # 3) cortars API에서 조합 (최후수단 - 타이밍 이슈 가능)
-    if not address and cortar_info:
-        parts = []
-        city = cortar_info.get("cityName", "")
-        div = cortar_info.get("divisionName", "")
-        sector = cortar_info.get("sectorName", "")
-        if city:
-            parts.append(city)
-        if div:
-            parts.append(div)
-        if sector:
-            parts.append(sector)
-        address = " ".join(parts)
 
-    build_year = complex_info.get("useApproveYmd", "")
+    build_year = ""
+    if isinstance(overview, dict):
+        build_year = overview.get("useApproveYmd", "")
     if build_year and len(build_year) >= 4:
         build_year = build_year[:4]  # YYYYMMDD → YYYY
 
