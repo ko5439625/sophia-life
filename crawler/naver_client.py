@@ -101,11 +101,12 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
                         complex_info.update(data)
             except Exception:
                 pass
-        # cortars API에서 지역 주소 정보 캡처
+        # cortars API에서 지역 주소 정보 캡처 (최신 값만 사용)
         elif "/api/cortars?" in url:
             try:
                 data = await response.json()
                 if isinstance(data, dict) and "cortarName" in data:
+                    cortar_info.clear()
                     cortar_info.update(data)
             except Exception:
                 pass
@@ -144,10 +145,19 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
     if build_year and len(build_year) >= 4:
         build_year = build_year[:4]  # YYYYMMDD → YYYY
 
+    # 거래 유형 코드 매핑: A1=매매, B1=전세, B2=월세, B3=단기임대
+    trade_type_map = {"A1": "A1", "B1": "B1", "B2": "B2", "B3": "B2"}
+
     articles = []
     for data in captured_articles:
         article_list = data.get("articleList", [])
         for a in article_list:
+            # 거래 유형 필터링: 요청한 거래 유형과 일치하는 매물만 수집
+            article_trade = a.get("tradeTypeCode", "")
+            mapped_trade = trade_type_map.get(article_trade, article_trade)
+            if trade_type and mapped_trade != trade_type:
+                continue
+
             # 가격 파싱 (만원 단위)
             price_man = a.get("dealOrWarrantPrc", "0")
             if isinstance(price_man, str):
@@ -178,6 +188,8 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
                 "naver_article_id": str(a.get("articleNo", "")),
                 "complex_name": a.get("complexName", a.get("articleName", "")),
                 "complex_no": complex_no,
+                "trade_type": article_trade,  # A1/B1/B2
+                "trade_type_name": a.get("tradeTypeName", ""),  # 매매/전세/월세
                 "price_text": a.get("dealOrWarrantPrc", ""),
                 "price_man": price_man,
                 "area_m2": area_m2,

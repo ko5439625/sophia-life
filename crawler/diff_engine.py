@@ -35,12 +35,15 @@ def process_crawled_data(
         if article_id in existing:
             # 기존 매물 → 가격 변동 체크
             db_row = existing[article_id]
-            # address/build_year 보완 (기존에 비어있으면 새 데이터로 채움)
+            # address/build_year/trade_type 보완 (기존에 비어있으면 새 데이터로 채움)
             extra_update = {}
             if not db_row.get("address") and article.get("address"):
                 extra_update["address"] = article["address"]
             if not db_row.get("build_year") and article.get("build_year"):
                 extra_update["build_year"] = article["build_year"]
+            # trade_type은 DB 컬럼 추가 후 활성화
+            # if not db_row.get("trade_type") and article.get("trade_type"):
+            #     extra_update["trade_type"] = article["trade_type"]
 
             if article["price_man"] != db_row["price_man"] and article["price_man"] > 0:
                 # 가격 변동!
@@ -80,6 +83,7 @@ def process_crawled_data(
                 "naver_article_id": article_id,
                 "complex_name": article.get("complex_name", ""),
                 "complex_no": article.get("complex_no"),
+                # "trade_type": article.get("trade_type", ""),  # DB 컬럼 추가 후 활성화
                 "price_text": article.get("price_text", ""),
                 "price_man": article.get("price_man", 0),
                 "area_m2": article.get("area_m2"),
