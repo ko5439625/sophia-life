@@ -35,11 +35,11 @@ def process_crawled_data(
         if article_id in existing:
             # 기존 매물 → 가격 변동 체크
             db_row = existing[article_id]
-            # address/build_year/trade_type 보완 (기존에 비어있으면 새 데이터로 채움)
+            # address/build_year/trade_type 보완 (항상 최신 데이터로 업데이트)
             extra_update = {}
-            if not db_row.get("address") and article.get("address"):
+            if article.get("address"):
                 extra_update["address"] = article["address"]
-            if not db_row.get("build_year") and article.get("build_year"):
+            if article.get("build_year"):
                 extra_update["build_year"] = article["build_year"]
             # trade_type은 DB 컬럼 추가 후 활성화
             # if not db_row.get("trade_type") and article.get("trade_type"):

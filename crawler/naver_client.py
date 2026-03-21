@@ -72,7 +72,8 @@ async def get_complexes_via_page(page: Page, cortar_no: str, trade_type: str = "
 
 async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "A1",
                                 price_min: Optional[int] = None, price_max: Optional[int] = None,
-                                area_min: Optional[float] = None) -> list[dict]:
+                                area_min: Optional[float] = None,
+                                fallback_address: str = "") -> list[dict]:
     """
     단지 상세 페이지를 방문하여 매물 API 응답 + 단지 정보(주소/준공연도)를 캡처
     """
@@ -125,10 +126,17 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
     page.remove_listener("response", on_response)
 
     # 단지 주소/준공연도 추출
-    # 1) address: complexDetail에 있으면 사용, 없으면 cortars 정보로 조합
-    address = complex_info.get("address", complex_info.get("roadAddress", ""))
+    # 우선순위: 1) complexDetail의 address/roadAddress 2) cortars API 3) fallback_address (re_regions)
+    address = ""
+    # 1) complexDetail에서 추출
+    ci_addr = complex_info.get("address", "")
+    ci_road = complex_info.get("roadAddress", "")
+    if ci_addr and len(ci_addr) > 3:
+        address = ci_addr
+    elif ci_road and len(ci_road) > 3:
+        address = ci_road
+    # 2) cortars API에서 조합
     if not address and cortar_info:
-        # cortars API: cityName="경기도", divisionName="성남시 분당구", sectorName="백현동"
         parts = []
         city = cortar_info.get("cityName", "")
         div = cortar_info.get("divisionName", "")
@@ -140,6 +148,9 @@ async def get_articles_via_page(page: Page, complex_no: str, trade_type: str = "
         if sector:
             parts.append(sector)
         address = " ".join(parts)
+    # 3) re_regions 기반 fallback
+    if not address and fallback_address:
+        address = fallback_address
 
     build_year = complex_info.get("useApproveYmd", "")
     if build_year and len(build_year) >= 4:
@@ -293,6 +304,22 @@ async def crawl_filter(filter_data: dict, supabase=None) -> list[dict]:
                 complexes = await get_complexes_via_page(page, cortar_no, trade_type)
                 print(f"     [지역 {region_idx+1}/{len(region_codes)}] {cortar_no}: {len(complexes)}개 단지")
 
+                # 지역 주소 fallback: re_regions에서 display_name 가져오기
+                region_address = ""
+                if supabase:
+                    try:
+                        r = supabase.table("re_regions").select("city_name,district_name,display_name").eq("cortar_no", cortar_no).execute()
+                        if r.data:
+                            rg = r.data[0]
+                            parts = []
+                            if rg.get("city_name"):
+                                parts.append(rg["city_name"])
+                            if rg.get("district_name"):
+                                parts.append(rg["district_name"])
+                            region_address = " ".join(parts) if parts else rg.get("display_name", "")
+                    except Exception:
+                        pass
+
                 # 3. 각 단지별 매물 조회
                 for i, cx in enumerate(complexes):
                     try:
@@ -303,6 +330,7 @@ async def crawl_filter(filter_data: dict, supabase=None) -> list[dict]:
                             price_min=filter_data.get("price_min"),
                             price_max=filter_data.get("price_max"),
                             area_min=filter_data.get("area_min"),
+                            fallback_address=region_address,
                         )
                         all_articles.extend(articles)
                         if articles:

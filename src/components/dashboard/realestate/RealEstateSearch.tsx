@@ -1015,6 +1015,8 @@ const RealEstateSearch = () => {
               const isExpanded = expanded === apt.aptName;
               const txSorted = [...apt.transactions].sort((a, b) => a.dealDate.localeCompare(b.dealDate));
               const priceChange = txSorted.length >= 2 ? txSorted[txSorted.length - 1].price - txSorted[0].price : 0;
+              const firstPrice = txSorted.length >= 2 ? txSorted[0].price : 0;
+              const changePct = firstPrice > 0 ? ((priceChange / firstPrice) * 100) : 0;
               return (
                 <motion.div key={apt.aptName}
                   className="bg-card rounded-xl overflow-hidden border border-border/30 hover:border-border/60 transition-colors"
@@ -1036,7 +1038,8 @@ const RealEstateSearch = () => {
                           <span className="text-sm font-mono font-bold">{formatPrice(apt.recentPrice)}</span>
                           {priceChange !== 0 && (
                             <span className={`text-[10px] font-mono ${priceChange > 0 ? "text-red-500" : "text-blue-500"}`}>
-                              {priceChange > 0 ? "+" : ""}{formatPrice(Math.abs(priceChange))}
+                              {changePct > 0 ? "+" : ""}{changePct.toFixed(1)}%
+                              <span className="text-[9px] ml-0.5 opacity-70">({priceChange > 0 ? "+" : ""}{formatPrice(Math.abs(priceChange))})</span>
                             </span>
                           )}
                         </div>
