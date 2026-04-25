@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, Heart, MapPin, Gift, Sparkles, Trash2, Search, Loader2, Send, User, Smile, Pin, Lock } from "lucide-react";
 import GalleryView from "../gallery/GalleryView";
+
 import { searchPlaces } from "../../../services/kakaoApi";
 import type { PlaceResult } from "../../../services/kakaoApi";
 import { loadMemos, saveMemos, loadMemosAsync, addMemoToDB, updateMemoInDB, removeMemoFromDB } from "../../../lib/memoStore";

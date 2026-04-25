@@ -25,7 +25,7 @@ import { getWeather } from "../../../services/weatherApi";
 import type { WeatherResult } from "../../../services/weatherApi";
 import type { FearGreedResult, StockQuote, ExchangeRateResult } from "../../../services/marketApi";
 import type { NewsArticle } from "../../../services/newsApi";
-import { getPinnedMemos } from "../../../lib/memoStore";
+import { getRecentMemos } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
@@ -265,7 +265,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
   const [checklist, setChecklist] = useState(mockChecklist);
   const [events, setEvents] = useState(initialEvents);
   const [ddays, setDdays] = useState<{ id: string; title: string; emoji: string; date: string }[]>([]);
-  const [pinnedMemos, setPinnedMemos] = useState<CoupleMemo[]>([]);
+  const [recentMemos, setRecentMemos] = useState<CoupleMemo[]>([]);
   const [marketExpanded, setMarketExpanded] = useState(() => {
     // Mobile: collapsed by default, Desktop: expanded
     return window.innerWidth >= 768;
@@ -273,7 +273,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
 
   // Load checklist, events, pinned memos from Supabase
   useEffect(() => {
-    setPinnedMemos(getPinnedMemos());
+    setRecentMemos(getRecentMemos(3));
 
     // Load today's todos
     loadTodos().then((rows) => {
@@ -1125,7 +1125,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
           </p>
         </motion.div>
 
-        {/* 속닥속닥 - pinned memos (hidden for guest) */}
+        {/* 속닥속닥 - recent memos (hidden for guest) */}
         {!isGuest && (
           <motion.div
             custom={7}
@@ -1144,9 +1144,9 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
               </div>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
             </div>
-            {pinnedMemos.length > 0 ? (
+            {recentMemos.length > 0 ? (
               <div className="space-y-2">
-                {pinnedMemos.slice(0, 3).map((memo) => {
+                {recentMemos.map((memo) => {
                   const isSophia = memo.author === "sophia";
                   return (
                     <div
@@ -1177,7 +1177,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
             ) : (
               <div className="text-center py-4">
                 <p className="text-sm text-muted-foreground">
-                  속닥속닥에서 공지를 등록해보세요
+                  아직 메모가 없어요
                 </p>
               </div>
             )}

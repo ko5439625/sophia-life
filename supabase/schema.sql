@@ -216,6 +216,43 @@ create table if not exists memos (
 );
 
 -- ============================================================
+-- 14-1. 기록 - 웨딩 준비
+-- ============================================================
+create table if not exists wedding_items (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) on delete cascade,
+  category text not null default '기타',
+  sub_category text not null default '',
+  title text not null,
+  is_done boolean default false,
+  memo text default '',
+  budget numeric default 0,
+  sort_order integer default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- ============================================================
+-- 14-2. 기록 - 웨딩 업체 비교
+-- ============================================================
+create table if not exists wedding_vendors (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) on delete cascade,
+  section text not null check (section in ('venue', 'sdm_studio', 'sdm_dress', 'sdm_makeup', 'honeymoon', 'reservation', 'misc')),
+  name text not null,
+  price numeric default 0,
+  memo text default '',
+  pros text default '',
+  cons text default '',
+  contact text default '',
+  rating integer default 0 check (rating >= 0 and rating <= 5),
+  is_selected boolean default false,
+  details jsonb default '{}',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- ============================================================
 -- 15. 설정 - 사용자 설정
 -- ============================================================
 create table if not exists user_settings (
@@ -263,6 +300,20 @@ create table if not exists owned_properties (
 );
 
 -- ============================================================
+-- 18. 블로그 좋아요
+-- ============================================================
+create table if not exists post_likes (
+  id uuid primary key default gen_random_uuid(),
+  post_id text not null,
+  visitor_id text not null,
+  created_at timestamptz default now(),
+  unique(post_id, visitor_id)
+);
+
+create index if not exists idx_post_likes_post_id on post_likes(post_id);
+create index if not exists idx_post_likes_visitor on post_likes(post_id, visitor_id);
+
+-- ============================================================
 -- Row Level Security (RLS) - 모든 테이블에 적용
 -- ============================================================
 alter table posts enable row level security;
@@ -279,9 +330,12 @@ alter table ddays enable row level security;
 alter table wishes enable row level security;
 alter table albums enable row level security;
 alter table memos enable row level security;
+alter table wedding_items enable row level security;
+alter table wedding_vendors enable row level security;
 alter table user_settings enable row level security;
 alter table favorite_apartments enable row level security;
 alter table owned_properties enable row level security;
+alter table post_likes enable row level security;
 
 -- RLS Policies: 본인 데이터만 접근 가능
 -- (PIN 인증 방식이라 auth 없이 사용할 수도 있으므로,
@@ -301,9 +355,12 @@ create policy "Allow all access" on ddays for all using (true) with check (true)
 create policy "Allow all access" on wishes for all using (true) with check (true);
 create policy "Allow all access" on albums for all using (true) with check (true);
 create policy "Allow all access" on memos for all using (true) with check (true);
+create policy "Allow all access" on wedding_items for all using (true) with check (true);
+create policy "Allow all access" on wedding_vendors for all using (true) with check (true);
 create policy "Allow all access" on user_settings for all using (true) with check (true);
 create policy "Allow all access" on favorite_apartments for all using (true) with check (true);
 create policy "Allow all access" on owned_properties for all using (true) with check (true);
+create policy "Allow all access" on post_likes for all using (true) with check (true);
 
 -- 블로그 공개 글은 비인증 사용자도 읽기 가능
 create policy "Public posts readable" on posts for select using (is_public = true);
@@ -321,6 +378,8 @@ create index if not exists idx_finances_date on finances(date);
 create index if not exists idx_finances_type on finances(type);
 create index if not exists idx_trades_date on trades(date);
 create index if not exists idx_memos_pinned on memos(pinned);
+create index if not exists idx_wedding_items_category on wedding_items(category);
+create index if not exists idx_wedding_vendors_section on wedding_vendors(section);
 
 -- ============================================================
 -- Storage Buckets (Supabase Dashboard에서 생성)

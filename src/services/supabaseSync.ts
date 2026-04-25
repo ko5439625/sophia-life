@@ -398,6 +398,7 @@ export async function loadApiKeysFromSupabase(): Promise<void> {
         kisSecret: "sophia-api-kis-secret",
         openai: "sophia-api-openai",
         gemini: "sophia-api-gemini",
+        unsplash: "sophia-api-unsplash",
       };
       for (const [key, storageKey] of Object.entries(keyMap)) {
         if (keys[key]) {
@@ -667,6 +668,130 @@ export async function deleteMemoFromDB(id: string): Promise<void> {
     await supabase.from("memos").delete().eq("id", id);
   } catch (e) {
     console.error("[supabaseSync] deleteMemo error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Wedding Items (웨딩 준비 - 가계부/체크리스트)
+// ---------------------------------------------------------------------------
+
+export interface WeddingItemRow {
+  id: string;
+  category: string;
+  sub_category: string;
+  title: string;
+  is_done: boolean;
+  memo: string;
+  budget: number;
+  sort_order: number;
+}
+
+export async function loadWeddingItems(): Promise<WeddingItemRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase
+      .from("wedding_items")
+      .select("*")
+      .order("category")
+      .order("sub_category")
+      .order("sort_order")
+      .order("created_at");
+    return (data || []).map((r: Record<string, unknown>) => ({
+      id: r.id as string,
+      category: (r.category as string) || "기타",
+      sub_category: (r.sub_category as string) || "",
+      title: r.title as string,
+      is_done: (r.is_done as boolean) || false,
+      memo: (r.memo as string) || "",
+      budget: Number(r.budget) || 0,
+      sort_order: (r.sort_order as number) || 0,
+    }));
+  } catch (e) {
+    console.warn("[supabaseSync] loadWeddingItems error:", e);
+    return [];
+  }
+}
+
+export async function saveWeddingItem(item: WeddingItemRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("wedding_items").upsert(item);
+  } catch (e) {
+    console.error("[supabaseSync] saveWeddingItem error:", e);
+  }
+}
+
+export async function deleteWeddingItem(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("wedding_items").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteWeddingItem error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Wedding Vendors (웨딩 업체 비교)
+// ---------------------------------------------------------------------------
+
+export type WeddingVendorSection = "venue" | "sdm_studio" | "sdm_dress" | "sdm_makeup" | "honeymoon" | "reservation" | "misc";
+
+export interface WeddingVendorRow {
+  id: string;
+  section: WeddingVendorSection;
+  name: string;
+  price: number;
+  memo: string;
+  pros: string;
+  cons: string;
+  contact: string;
+  rating: number;
+  is_selected: boolean;
+  details: Record<string, unknown>;
+}
+
+export async function loadWeddingVendors(): Promise<WeddingVendorRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data } = await supabase
+      .from("wedding_vendors")
+      .select("*")
+      .order("section")
+      .order("created_at");
+    return (data || []).map((r: Record<string, unknown>) => ({
+      id: r.id as string,
+      section: r.section as WeddingVendorSection,
+      name: r.name as string,
+      price: Number(r.price) || 0,
+      memo: (r.memo as string) || "",
+      pros: (r.pros as string) || "",
+      cons: (r.cons as string) || "",
+      contact: (r.contact as string) || "",
+      rating: (r.rating as number) || 0,
+      is_selected: (r.is_selected as boolean) || false,
+      details: (r.details as Record<string, unknown>) || {},
+    }));
+  } catch (e) {
+    console.warn("[supabaseSync] loadWeddingVendors error:", e);
+    return [];
+  }
+}
+
+export async function saveWeddingVendor(vendor: WeddingVendorRow): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("wedding_vendors").upsert(vendor);
+  } catch (e) {
+    console.error("[supabaseSync] saveWeddingVendor error:", e);
+  }
+}
+
+export async function deleteWeddingVendor(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("wedding_vendors").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteWeddingVendor error:", e);
   }
 }
 
@@ -1014,5 +1139,108 @@ export async function deleteAuctionFilter(id: string): Promise<void> {
     await supabase.from("auction_filters").delete().eq("id", id);
   } catch (e) {
     console.error("[supabaseSync] deleteAuctionFilter error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Post Likes (좋아요)
+// ---------------------------------------------------------------------------
+
+const VISITOR_ID_KEY = "sophia-visitor-id";
+
+/** Get or create a persistent visitor ID for this browser */
+export function getVisitorId(): string {
+  let id = localStorage.getItem(VISITOR_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(VISITOR_ID_KEY, id);
+  }
+  return id;
+}
+
+/** Get the like count for a specific post */
+export async function getPostLikeCount(postId: string): Promise<number> {
+  if (!isReady() || !supabase) return 0;
+  try {
+    const { count } = await supabase
+      .from("post_likes")
+      .select("*", { count: "exact", head: true })
+      .eq("post_id", postId);
+    return count ?? 0;
+  } catch (e) {
+    console.warn("[supabaseSync] getPostLikeCount error:", e);
+    return 0;
+  }
+}
+
+/** Get like counts for multiple posts at once */
+export async function getPostLikeCounts(postIds: string[]): Promise<Record<string, number>> {
+  if (!isReady() || !supabase || postIds.length === 0) return {};
+  try {
+    const { data } = await supabase
+      .from("post_likes")
+      .select("post_id")
+      .in("post_id", postIds);
+
+    const counts: Record<string, number> = {};
+    for (const id of postIds) counts[id] = 0;
+    if (data) {
+      for (const row of data) {
+        counts[row.post_id] = (counts[row.post_id] || 0) + 1;
+      }
+    }
+    return counts;
+  } catch (e) {
+    console.warn("[supabaseSync] getPostLikeCounts error:", e);
+    return {};
+  }
+}
+
+/** Check if the current visitor has liked a post */
+export async function hasVisitorLiked(postId: string): Promise<boolean> {
+  if (!isReady() || !supabase) return false;
+  try {
+    const visitorId = getVisitorId();
+    const { data } = await supabase
+      .from("post_likes")
+      .select("id")
+      .eq("post_id", postId)
+      .eq("visitor_id", visitorId)
+      .maybeSingle();
+    return !!data;
+  } catch (e) {
+    console.warn("[supabaseSync] hasVisitorLiked error:", e);
+    return false;
+  }
+}
+
+/** Toggle like for a post. Returns { liked, count } */
+export async function togglePostLike(postId: string): Promise<{ liked: boolean; count: number }> {
+  if (!isReady() || !supabase) return { liked: false, count: 0 };
+  try {
+    const visitorId = getVisitorId();
+
+    // Check if already liked
+    const { data: existing } = await supabase
+      .from("post_likes")
+      .select("id")
+      .eq("post_id", postId)
+      .eq("visitor_id", visitorId)
+      .maybeSingle();
+
+    if (existing) {
+      // Unlike
+      await supabase.from("post_likes").delete().eq("id", existing.id);
+    } else {
+      // Like
+      await supabase.from("post_likes").insert({ post_id: postId, visitor_id: visitorId });
+    }
+
+    // Get updated count
+    const count = await getPostLikeCount(postId);
+    return { liked: !existing, count };
+  } catch (e) {
+    console.error("[supabaseSync] togglePostLike error:", e);
+    return { liked: false, count: 0 };
   }
 }

@@ -63,6 +63,13 @@ export function getPinnedMemos(): CoupleMemo[] {
   return memos.filter((m) => m.pinned);
 }
 
+export function getRecentMemos(limit = 3): CoupleMemo[] {
+  const memos = loadMemos();
+  return [...memos]
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, limit);
+}
+
 // Supabase CRUD
 export async function addMemoToDB(memo: CoupleMemo): Promise<void> {
   await saveMemoToDB(toRow(memo));

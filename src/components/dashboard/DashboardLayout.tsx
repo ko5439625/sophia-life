@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   Newspaper,
+  Heart,
 } from "lucide-react";
 import ThemeToggle from "../ThemeToggle";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +26,7 @@ import BlogManagement from "./blog/BlogManagement";
 import InvestmentHub from "./investment/InvestmentHub";
 import RealEstateHub from "./realestate/RealEstateHub";
 import NewsView from "./finance/NewsView";
+import WeddingView from "./wedding/WeddingView";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -37,6 +39,7 @@ const topNav: NavItem[] = [
   { icon: Calendar, label: "일정", id: "schedule" },
   { icon: Wallet, label: "자산", id: "finance" },
   { icon: BookHeart, label: "기록", id: "couple" },
+  { icon: Heart, label: "웨딩", id: "wedding" },
 ];
 
 const bottomNav: NavItem[] = [
@@ -90,6 +93,8 @@ const DashboardLayout = () => {
         return <InvestmentHub initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "news":
         return <div className="space-y-6"><h2 className="text-xl sm:text-2xl font-bold">뉴스</h2><NewsView /></div>;
+      case "wedding":
+        return <WeddingView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "realestate":
         return <RealEstateHub initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "settings":
