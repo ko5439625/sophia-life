@@ -604,7 +604,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
                   weather.description?.includes("눈") ? "🌨️" :
                   weather.description?.includes("안개") ? "🌫️" : "🌤️"
                 }</span>
-                <span className="font-mono">{weather.tempMin ?? Math.round(weather.temp - 3)}° / {weather.tempMax ?? Math.round(weather.temp + 3)}°</span>
+                <span className="font-mono">{weather.tempMin != null && weather.tempMax != null ? `${weather.tempMin}° / ${weather.tempMax}°` : `${weather.temp}°`}</span>
                 <span className="text-[10px] text-muted-foreground/50">체감 {weather.feelsLike}°</span>
               </div>
             ) : (

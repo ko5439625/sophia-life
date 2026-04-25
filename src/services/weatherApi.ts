@@ -92,7 +92,7 @@ export async function getWeather(city = "Seoul"): Promise<WeatherResult> {
           feelsLike: Math.round(data.main.feels_like),
         };
       }
-      console.warn("Weather API error:", res.status);
+      console.warn("Weather API error: response not ok");
     } catch (e) {
       console.warn("Weather fetch failed:", e);
     }

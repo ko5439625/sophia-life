@@ -163,10 +163,35 @@ serve(async (req) => {
       // ====== OpenWeatherMap ======
       case "weather": {
         const { city, apiKey } = params;
-        const res = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city || "Seoul")}&appid=${apiKey}&units=metric&lang=kr`
-        );
-        data = await res.json();
+        const cityEnc = encodeURIComponent(city || "Seoul");
+        const [currentRes, forecastRes] = await Promise.allSettled([
+          fetch(`https://api.openweathermap.org/data/2.5/weather?q=${cityEnc}&appid=${apiKey}&units=metric&lang=kr`),
+          fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${cityEnc}&appid=${apiKey}&units=metric&lang=kr&cnt=8`),
+        ]);
+        const currentData = currentRes.status === "fulfilled" && currentRes.value.ok ? await currentRes.value.json() : {};
+        // forecast에서 오늘 하루 최저/최고 계산
+        let todayMin: number | undefined;
+        let todayMax: number | undefined;
+        if (forecastRes.status === "fulfilled" && forecastRes.value.ok) {
+          const fc = await forecastRes.value.json();
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const todayTemps = (fc.list || [])
+            .filter((item: { dt_txt?: string }) => item.dt_txt?.startsWith(todayStr))
+            .map((item: { main?: { temp_min?: number; temp_max?: number } }) => ({
+              min: item.main?.temp_min ?? 999,
+              max: item.main?.temp_max ?? -999,
+            }));
+          if (todayTemps.length > 0) {
+            todayMin = Math.min(...todayTemps.map((t: { min: number }) => t.min));
+            todayMax = Math.max(...todayTemps.map((t: { max: number }) => t.max));
+          }
+        }
+        // main에 daily min/max 덮어쓰기
+        if (currentData.main) {
+          if (todayMin !== undefined) currentData.main.temp_min = todayMin;
+          if (todayMax !== undefined) currentData.main.temp_max = todayMax;
+        }
+        data = currentData;
         break;
       }
 

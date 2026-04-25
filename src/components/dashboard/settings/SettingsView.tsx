@@ -412,10 +412,12 @@ const SettingsView = () => {
   const [aiApiKeys, setAiApiKeys] = useState({
     openai: "",
     gemini: "",
+    unsplash: "",
   });
   const [aiApiKeyVisibility, setAiApiKeyVisibility] = useState({
     openai: false,
     gemini: false,
+    unsplash: false,
   });
   const [aiApiMessage, setAiApiMessage] = useState<string | null>(null);
 
@@ -436,6 +438,7 @@ const SettingsView = () => {
       const localAiKeys = {
         openai: localStorage.getItem("sophia-api-openai") || "",
         gemini: localStorage.getItem("sophia-api-gemini") || "",
+        unsplash: localStorage.getItem("sophia-api-unsplash") || "",
       };
       setApiKeys(localApiKeys);
       setAiApiKeys(localAiKeys);
@@ -464,6 +467,7 @@ const SettingsView = () => {
           const mergedAi = {
             openai: remote.openai || localAiKeys.openai,
             gemini: remote.gemini || localAiKeys.gemini,
+            unsplash: remote.unsplash || localAiKeys.unsplash,
           };
           setApiKeys(merged);
           setAiApiKeys(mergedAi);
@@ -677,6 +681,7 @@ const SettingsView = () => {
     try {
       localStorage.setItem("sophia-api-openai", aiApiKeys.openai);
       localStorage.setItem("sophia-api-gemini", aiApiKeys.gemini);
+      localStorage.setItem("sophia-api-unsplash", aiApiKeys.unsplash);
       // Sync to Supabase (merge with data keys)
       syncApiKeysToSupabase({ ...apiKeys, ...aiApiKeys });
       setAiApiMessage("AI API 키가 저장되었습니다. (클라우드 동기화 완료)");
@@ -691,7 +696,7 @@ const SettingsView = () => {
     setApiKeyVisibility((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const toggleAiApiKeyVisibility = (key: "openai" | "gemini") => {
+  const toggleAiApiKeyVisibility = (key: "openai" | "gemini" | "unsplash") => {
     setAiApiKeyVisibility((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -1474,6 +1479,37 @@ const SettingsView = () => {
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">
               경제 분석, 헷징 분석, 뉴스 번역
+            </p>
+          </div>
+
+          {/* Unsplash API */}
+          <div>
+            <label className="text-xs text-muted-foreground font-mono mb-1 block">
+              Unsplash Access Key
+            </label>
+            <div className="relative">
+              <input
+                type={aiApiKeyVisibility.unsplash ? "text" : "password"}
+                value={aiApiKeys.unsplash}
+                onChange={(e) =>
+                  setAiApiKeys({ ...aiApiKeys, unsplash: e.target.value })
+                }
+                placeholder="Access Key..."
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 pr-10"
+              />
+              <button
+                onClick={() => toggleAiApiKeyVisibility("unsplash")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {aiApiKeyVisibility.unsplash ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              블로그 AI 다듬기 시 자동 이미지 삽입 (unsplash.com/developers)
             </p>
           </div>
 

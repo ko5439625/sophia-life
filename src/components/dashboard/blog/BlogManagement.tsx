@@ -28,6 +28,14 @@ import {
   Heading2,
   Sparkles,
   Loader2,
+  Palette,
+  Type,
+  ALargeSmall,
+  ChevronsDownUp,
+  Minus,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -72,6 +80,34 @@ const FONT_OPTIONS = [
   { label: "싱글데이", value: "'Single Day', cursive" },
   { label: "서궁 (픽셀)", value: "'Suhgung12', monospace" },
   { label: "Inter", value: "Inter, sans-serif" },
+];
+
+const TEXT_COLORS = [
+  { label: "기본", value: "", color: "currentColor" },
+  { label: "빨강", value: "#ef4444", color: "#ef4444" },
+  { label: "주황", value: "#f97316", color: "#f97316" },
+  { label: "노랑", value: "#eab308", color: "#eab308" },
+  { label: "초록", value: "#22c55e", color: "#22c55e" },
+  { label: "파랑", value: "#3b82f6", color: "#3b82f6" },
+  { label: "남색", value: "#6366f1", color: "#6366f1" },
+  { label: "보라", value: "#a855f7", color: "#a855f7" },
+  { label: "분홍", value: "#ec4899", color: "#ec4899" },
+  { label: "회색", value: "#6b7280", color: "#6b7280" },
+  { label: "흰색", value: "#ffffff", color: "#ffffff" },
+  { label: "검정", value: "#000000", color: "#000000" },
+];
+
+const FONT_SIZE_PRESETS = [
+  { label: "12", value: 12 },
+  { label: "14", value: 14 },
+  { label: "16", value: 16 },
+  { label: "18", value: 18 },
+  { label: "20", value: 20 },
+  { label: "24", value: 24 },
+  { label: "28", value: 28 },
+  { label: "32", value: 32 },
+  { label: "36", value: 36 },
+  { label: "48", value: 48 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -297,12 +333,56 @@ const PostEditor = ({
   const [showMeta, setShowMeta] = useState(true);
   const [fontFamily, setFontFamily] = useState("'Pretendard Variable', sans-serif");
   const [fontSizeInput, setFontSizeInput] = useState("16");
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showFontSizePicker, setShowFontSizePicker] = useState(false);
+  const [showFontPicker, setShowFontPicker] = useState(false);
   const [pasteToast, setPasteToast] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiToast, setAiToast] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
+  const fontSizePickerRef = useRef<HTMLDivElement>(null);
+  const fontPickerRef = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
+
+  // Save current selection (call before opening any dropdown)
+  const saveSelection = useCallback(() => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  }, []);
+
+  // Restore saved selection
+  const restoreSelection = useCallback(() => {
+    const range = savedRangeRef.current;
+    if (!range) return false;
+    const sel = window.getSelection();
+    if (!sel) return false;
+    contentRef.current?.focus();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return true;
+  }, []);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
+        setShowColorPicker(false);
+      }
+      if (fontSizePickerRef.current && !fontSizePickerRef.current.contains(e.target as Node)) {
+        setShowFontSizePicker(false);
+      }
+      if (fontPickerRef.current && !fontPickerRef.current.contains(e.target as Node)) {
+        setShowFontPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Upload image to Supabase Storage → return public URL
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
@@ -337,8 +417,6 @@ const PostEditor = ({
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fontSize = parseInt(fontSizeInput) || 16;
 
   const getContentAsHtml = useCallback((): string => {
     if (!contentRef.current) return "";
@@ -409,32 +487,80 @@ const PostEditor = ({
     document.execCommand(command, false, value);
   }, []);
 
+  // Apply font size to selected text using span wrapping
+  const applyFontSize = useCallback((size: number) => {
+    if (!restoreSelection()) return;
+    // Use fontSize command (1-7) then replace with actual px
+    document.execCommand("fontSize", false, "7");
+    const container = contentRef.current;
+    if (!container) return;
+    const fonts = container.querySelectorAll('font[size="7"]');
+    fonts.forEach((font) => {
+      const span = document.createElement("span");
+      span.style.fontSize = `${size}px`;
+      span.innerHTML = font.innerHTML;
+      font.parentNode?.replaceChild(span, font);
+    });
+    setFontSizeInput(String(size));
+    setShowFontSizePicker(false);
+  }, [restoreSelection]);
+
+  // Apply font family to selected text
+  const applyFontFamily = useCallback((family: string) => {
+    if (!restoreSelection()) return;
+    document.execCommand("fontName", false, "__temp_font__");
+    const container = contentRef.current;
+    if (!container) return;
+    const fonts = container.querySelectorAll('font[face="__temp_font__"]');
+    fonts.forEach((font) => {
+      const span = document.createElement("span");
+      span.style.fontFamily = family;
+      span.innerHTML = font.innerHTML;
+      font.parentNode?.replaceChild(span, font);
+    });
+    setFontFamily(family);
+    setShowFontPicker(false);
+  }, [restoreSelection]);
+
+  // Apply text color to selected text
+  const applyTextColor = useCallback((color: string) => {
+    if (!restoreSelection()) return;
+    if (!color) {
+      document.execCommand("removeFormat", false);
+      setShowColorPicker(false);
+      return;
+    }
+    document.execCommand("foreColor", false, color);
+    setShowColorPicker(false);
+  }, [restoreSelection]);
+
+  // Insert toggle (collapse/expand) block using <details>/<summary>
+  const insertToggle = useCallback(() => {
+    contentRef.current?.focus();
+    const sel = window.getSelection();
+    const selectedText = sel && !sel.isCollapsed ? sel.toString() : "";
+    const title = selectedText || "제목을 입력하세요";
+    const html = `<br><details class="blog-toggle"><summary>${title}</summary><p>내용을 입력하세요...</p></details><br>`;
+    insertAtCursor(html);
+  }, [insertAtCursor]);
+
+  // Insert horizontal rule
+  const insertHR = useCallback(() => {
+    contentRef.current?.focus();
+    document.execCommand("insertHorizontalRule", false);
+  }, []);
+
   // AI content enhancement - uses OpenAI API (falls back to mock if no key)
   const handleAiEnhance = useCallback(async () => {
     if (!contentRef.current) return;
     setAiLoading(true);
 
-    const originalText = contentRef.current.innerText || "";
-
-    // Preserve images from current content
+    // Send full HTML to preserve images and existing formatting
     const currentHtml = contentRef.current.innerHTML;
-    const imgTags: string[] = [];
-    const imgRegex = /<img[^>]*>/g;
-    let match;
-    while ((match = imgRegex.exec(currentHtml)) !== null) {
-      imgTags.push(match[0]);
-    }
 
     try {
-      const enhanced = await enhanceBlogContent(originalText);
-
-      // Rebuild content preserving images
-      let newHtml = enhanced.replace(/\n/g, "<br>");
-      for (const img of imgTags) {
-        newHtml += `<br>${img}<br>`;
-      }
-
-      contentRef.current.innerHTML = newHtml;
+      const enhanced = await enhanceBlogContent(currentHtml);
+      contentRef.current.innerHTML = enhanced;
     } catch (err) {
       console.warn("AI enhance failed:", err);
     }
@@ -570,131 +696,255 @@ const PostEditor = ({
           <div className="h-px bg-border/50 my-4" />
 
           {/* Toolbar */}
-          <div className="flex items-center gap-0.5 mb-4 flex-wrap border-b border-border/50 pb-3 overflow-x-auto">
-            {/* Format buttons */}
-            {([
-              { icon: Bold, cmd: "bold", title: "굵게" },
-              { icon: Italic, cmd: "italic", title: "기울임" },
-              { icon: Underline, cmd: "underline", title: "밑줄" },
-              { icon: Strikethrough, cmd: "strikeThrough", title: "취소선" },
-            ] as const).map(({ icon: Icon, cmd, title }) => (
-              <button
-                key={cmd}
-                onClick={() => execFormat(cmd)}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                title={title}
-              >
-                <Icon className="h-4 w-4" />
-              </button>
-            ))}
-
-            <div className="w-px h-4 bg-border mx-1" />
-
-            {/* Heading buttons */}
-            <button
-              onClick={() => execFormat("formatBlock", "h2")}
-              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-              title="제목 (H2)"
-            >
-              <Heading1 className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => execFormat("formatBlock", "h3")}
-              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-              title="소제목 (H3)"
-            >
-              <Heading2 className="h-4 w-4" />
-            </button>
-
-            <div className="w-px h-4 bg-border mx-1" />
-
-            {/* List buttons */}
-            <button
-              onClick={() => execFormat("insertUnorderedList")}
-              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-              title="글머리 목록"
-            >
-              <List className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => execFormat("insertOrderedList")}
-              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-              title="번호 목록"
-            >
-              <ListOrdered className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => execFormat("formatBlock", "blockquote")}
-              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-              title="인용"
-            >
-              <Quote className="h-4 w-4" />
-            </button>
-
-            <div className="w-px h-4 bg-border mx-1" />
-
-            {/* Image */}
-            <button
-              onClick={handleImageClick}
-              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-              title="이미지 삽입 (Ctrl+V로도 가능)"
-            >
-              <ImagePlus className="h-4 w-4" />
-            </button>
-
-            {/* Category/Tags */}
-            <button
-              onClick={() => setShowMeta(!showMeta)}
-              className={`p-1.5 rounded transition-colors ${
-                showMeta ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-              title="카테고리 / 태그"
-            >
-              <Tag className="h-4 w-4" />
-            </button>
-
-            <div className="w-px h-4 bg-border mx-1" />
-
-            {/* Font selector */}
-            <select
-              value={fontFamily}
-              onChange={(e) => setFontFamily(e.target.value)}
-              className="bg-background border border-border rounded px-1.5 py-1 text-[11px] text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer max-w-[100px]"
-            >
-              {FONT_OPTIONS.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
+          <div className="mb-4 border-b border-border/50 pb-3 space-y-2">
+            {/* Row 1: Format & structure buttons */}
+            <div className="flex items-center gap-0.5 flex-wrap">
+              {/* Format buttons */}
+              {([
+                { icon: Bold, cmd: "bold", title: "굵게" },
+                { icon: Italic, cmd: "italic", title: "기울임" },
+                { icon: Underline, cmd: "underline", title: "밑줄" },
+                { icon: Strikethrough, cmd: "strikeThrough", title: "취소선" },
+              ] as const).map(({ icon: Icon, cmd, title }) => (
+                <button
+                  key={cmd}
+                  onClick={() => execFormat(cmd)}
+                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                  title={title}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
               ))}
-            </select>
 
-            {/* Font size */}
-            <input
-              type="number"
-              min={10}
-              max={72}
-              value={fontSizeInput}
-              onChange={(e) => setFontSizeInput(e.target.value)}
-              className="w-12 bg-background border border-border rounded px-1.5 py-1 text-[11px] text-center font-mono tabular-nums focus:outline-none"
-              title="글자 크기 (px)"
-            />
+              <div className="w-px h-4 bg-border mx-1" />
 
-            <div className="w-px h-4 bg-border mx-1" />
+              {/* Heading buttons */}
+              <button
+                onClick={() => execFormat("formatBlock", "h2")}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="제목 (H2)"
+              >
+                <Heading1 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => execFormat("formatBlock", "h3")}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="소제목 (H3)"
+              >
+                <Heading2 className="h-4 w-4" />
+              </button>
 
-            {/* AI Enhance button */}
-            <button
-              onClick={handleAiEnhance}
-              disabled={aiLoading}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-gradient-to-r from-violet-500/20 to-blue-500/20 text-violet-400 hover:from-violet-500/30 hover:to-blue-500/30 rounded-lg transition-all disabled:opacity-50"
-              title="AI로 글 다듬기 (이미지 유지)"
-            >
-              {aiLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
-              <span>{aiLoading ? "작성 중..." : "AI 다듬기"}</span>
-            </button>
+              <div className="w-px h-4 bg-border mx-1" />
+
+              {/* List buttons */}
+              <button
+                onClick={() => execFormat("insertUnorderedList")}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="글머리 목록"
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => execFormat("insertOrderedList")}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="번호 목록"
+              >
+                <ListOrdered className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => execFormat("formatBlock", "blockquote")}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="인용"
+              >
+                <Quote className="h-4 w-4" />
+              </button>
+              <button
+                onClick={insertToggle}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="접힘 (토글)"
+              >
+                <ChevronsDownUp className="h-4 w-4" />
+              </button>
+              <button
+                onClick={insertHR}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="구분선"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+
+              <div className="w-px h-4 bg-border mx-1" />
+
+              {/* Alignment buttons */}
+              <button
+                onClick={() => execFormat("justifyLeft")}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="왼쪽 정렬"
+              >
+                <AlignLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => execFormat("justifyCenter")}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="가운데 정렬"
+              >
+                <AlignCenter className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => execFormat("justifyRight")}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="오른쪽 정렬"
+              >
+                <AlignRight className="h-4 w-4" />
+              </button>
+
+              <div className="w-px h-4 bg-border mx-1" />
+
+              {/* Image */}
+              <button
+                onClick={handleImageClick}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                title="이미지 삽입 (Ctrl+V로도 가능)"
+              >
+                <ImagePlus className="h-4 w-4" />
+              </button>
+
+              {/* Category/Tags */}
+              <button
+                onClick={() => setShowMeta(!showMeta)}
+                className={`p-1.5 rounded transition-colors ${
+                  showMeta ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+                title="카테고리 / 태그"
+              >
+                <Tag className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Row 2: Font, size, color, AI */}
+            <div className="flex items-center gap-1 flex-wrap">
+              {/* Font selector (per-selection) */}
+              <div className="relative" ref={fontPickerRef}>
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowFontPicker(!showFontPicker); setShowFontSizePicker(false); setShowColorPicker(false); }}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors border border-border/50"
+                  title="글꼴 (텍스트 선택 후 적용)"
+                >
+                  <Type className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline text-[11px]">글꼴</span>
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+                {showFontPicker && (
+                  <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-xl py-1 max-h-64 overflow-y-auto w-48">
+                    {FONT_OPTIONS.map((f) => (
+                      <button
+                        key={f.value}
+                        onMouseDown={(e) => { e.preventDefault(); applyFontFamily(f.value); }}
+                        className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors ${
+                          fontFamily === f.value ? "text-primary font-medium bg-primary/5" : "text-foreground"
+                        }`}
+                        style={{ fontFamily: f.value }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Font size (per-selection) */}
+              <div className="relative" ref={fontSizePickerRef}>
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowFontSizePicker(!showFontSizePicker); setShowFontPicker(false); setShowColorPicker(false); }}
+                  className="flex items-center gap-0.5 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors border border-border/50"
+                  title="글자 크기 (텍스트 선택 후 적용)"
+                >
+                  <ALargeSmall className="h-3.5 w-3.5" />
+                  <span className="text-[11px] font-mono tabular-nums">{fontSizeInput}px</span>
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+                {showFontSizePicker && (
+                  <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-xl py-1 w-20">
+                    {FONT_SIZE_PRESETS.map((s) => (
+                      <button
+                        key={s.value}
+                        onMouseDown={(e) => { e.preventDefault(); applyFontSize(s.value); }}
+                        className={`w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-muted transition-colors ${
+                          fontSizeInput === s.label ? "text-primary font-medium bg-primary/5" : "text-foreground"
+                        }`}
+                      >
+                        {s.label}px
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Text color (per-selection) */}
+              <div className="relative" ref={colorPickerRef}>
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowColorPicker(!showColorPicker); setShowFontPicker(false); setShowFontSizePicker(false); }}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors border border-border/50"
+                  title="텍스트 색상 (텍스트 선택 후 적용)"
+                >
+                  <Palette className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline text-[11px]">색상</span>
+                </button>
+                {showColorPicker && (
+                  <div className="fixed z-[9999] bg-popover border border-border rounded-lg shadow-xl p-2.5" style={{ width: "170px" }}
+                    ref={(el) => {
+                      if (!el) return;
+                      const btn = el.parentElement?.querySelector("button");
+                      if (!btn) return;
+                      const rect = btn.getBoundingClientRect();
+                      el.style.top = `${rect.bottom + 4}px`;
+                      el.style.left = `${rect.left}px`;
+                    }}
+                  >
+                    <div className="grid grid-cols-6 gap-1.5">
+                      {TEXT_COLORS.map((c) => (
+                        <button
+                          key={c.label}
+                          onMouseDown={(e) => { e.preventDefault(); applyTextColor(c.value); }}
+                          className="w-6 h-6 rounded border border-border/50 hover:scale-110 transition-transform flex items-center justify-center"
+                          style={{ backgroundColor: c.value || "transparent" }}
+                          title={c.label}
+                        >
+                          {!c.value && <X className="h-3 w-3 text-muted-foreground" />}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-border/50">
+                      <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer" onMouseDown={(e) => e.preventDefault()}>
+                        <span>직접 선택:</span>
+                        <input
+                          type="color"
+                          className="w-6 h-5 cursor-pointer border-0 p-0 bg-transparent"
+                          onChange={(e) => applyTextColor(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="w-px h-4 bg-border mx-1" />
+
+              {/* AI Enhance button */}
+              <button
+                onClick={handleAiEnhance}
+                disabled={aiLoading}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-gradient-to-r from-violet-500/20 to-blue-500/20 text-violet-400 hover:from-violet-500/30 hover:to-blue-500/30 rounded-lg transition-all disabled:opacity-50"
+                title="AI로 글 다듬기 (이미지 유지)"
+              >
+                {aiLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                <span>{aiLoading ? "작성 중..." : "AI 다듬기"}</span>
+              </button>
+            </div>
 
             <input
               ref={fileInputRef}
@@ -762,12 +1012,11 @@ const PostEditor = ({
             contentEditable
             suppressContentEditableWarning
             onPaste={handlePaste}
-            data-placeholder="여기에 글을 작성하세요..."
+            data-placeholder="여기에 글을 작성하세요... (텍스트 선택 후 글꼴/크기/색상 적용)"
             className="w-full bg-transparent leading-relaxed focus:outline-none border-none min-h-[500px] whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/30"
             style={{
               lineHeight: "1.8",
-              fontFamily: fontFamily,
-              fontSize: `${fontSize}px`,
+              fontSize: "16px",
             }}
           />
         </div>

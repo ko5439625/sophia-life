@@ -63,6 +63,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
   // New row state
   const [newCat, setNewCat] = useState(Object.keys(DEFAULT_CATEGORIES)[0]);
   const [newSub, setNewSub] = useState("");
+  const [newCustomSub, setNewCustomSub] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newBudget, setNewBudget] = useState("");
   const [newMemo, setNewMemo] = useState("");
@@ -153,10 +154,12 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
 
   const addRow = async () => {
     if (!newTitle.trim()) return;
+    const resolvedSub = newSub === "__custom__" ? newCustomSub.trim() : (newSub || (DEFAULT_CATEGORIES[newCat]?.[0] ?? ""));
+    if (newSub === "__custom__" && !resolvedSub) return;
     const item: WeddingItemRow = {
       id: crypto.randomUUID(),
       category: newCat,
-      sub_category: newSub || (DEFAULT_CATEGORIES[newCat]?.[0] ?? ""),
+      sub_category: resolvedSub,
       title: newTitle.trim(),
       is_done: false,
       memo: newMemo.trim(),
@@ -168,7 +171,8 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
     setNewTitle("");
     setNewBudget("");
     setNewMemo("");
-    // Keep category & sub for batch adding
+    // Keep category & sub for batch adding (reset custom if used)
+    if (newSub === "__custom__") { setNewSub(""); setNewCustomSub(""); }
     setTimeout(() => titleInputRef.current?.focus(), 50);
   };
 
@@ -471,13 +475,23 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                 <label className="text-[10px] text-muted-foreground/60 block mb-0.5">소분류</label>
                 <select
                   value={newSub}
-                  onChange={(e) => setNewSub(e.target.value)}
+                  onChange={(e) => { setNewSub(e.target.value); if (e.target.value !== "__custom__") setNewCustomSub(""); }}
                   className="w-full bg-background border border-border rounded-md px-2 py-1.5 text-xs"
                 >
                   {getSubCategories(newCat).map((sub) => (
                     <option key={sub} value={sub}>{sub}</option>
                   ))}
+                  <option value="__custom__">+ 직접 입력</option>
                 </select>
+                {newSub === "__custom__" && (
+                  <input
+                    value={newCustomSub}
+                    onChange={(e) => setNewCustomSub(e.target.value)}
+                    placeholder="새 소분류명"
+                    autoFocus
+                    className="w-full bg-background border border-border rounded-md px-2 py-1.5 text-xs mt-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  />
+                )}
               </div>
               <div>
                 <label className="text-[10px] text-muted-foreground/60 block mb-0.5">항목명</label>

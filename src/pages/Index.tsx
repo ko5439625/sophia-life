@@ -7,7 +7,7 @@ import CategoryTabs from "@/components/blog/CategoryTabs";
 import ArticleCard from "@/components/blog/ArticleCard";
 import BlogFooter from "@/components/blog/BlogFooter";
 import { BlogPost } from "@/lib/mockData";
-import { loadPosts, loadBlogSettings, saveBlogSettings } from "@/services/supabaseSync";
+import { loadPosts, loadBlogSettings, saveBlogSettings, getPostLikeCounts } from "@/services/supabaseSync";
 
 function stripHtml(html: string): string {
   const tmp = document.createElement("div");
@@ -40,6 +40,7 @@ const Index = () => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [unlockedCategories, setUnlockedCategories] = useState<Set<string>>(new Set());
   const [allPosts, setAllPosts] = useState<BlogPost[]>([]);
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [lockedCategories, setLockedCategories] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem("sophia-locked-categories");
@@ -67,6 +68,9 @@ const Index = () => {
           isPublic: r.is_public,
         }));
         setAllPosts(dbPosts);
+        // Fetch like counts for all posts
+        const ids = dbPosts.map((p) => p.id);
+        getPostLikeCounts(ids).then(setLikeCounts);
       }
     });
     // Sync blog settings: DB → local (pull), or local → DB (push if DB empty)
@@ -203,7 +207,7 @@ const Index = () => {
           <section className="container mx-auto px-4 md:px-8 py-4 pb-12">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
               {filteredPosts.map((post, i) => (
-                <ArticleCard key={post.id} post={post} index={i} onTagClick={handleTagClick} activeTag={activeTag} />
+                <ArticleCard key={post.id} post={post} index={i} onTagClick={handleTagClick} activeTag={activeTag} likeCount={likeCounts[post.id] ?? 0} />
               ))}
             </div>
             {filteredPosts.length === 0 && (

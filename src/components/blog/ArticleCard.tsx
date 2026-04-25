@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Heart } from "lucide-react";
 import { BlogPost } from "@/lib/mockData";
 import { useNavigate } from "react-router-dom";
 import defaultBlogImg from "@/assets/default-blog.png";
@@ -9,9 +10,10 @@ interface ArticleCardProps {
   index: number;
   onTagClick?: (tag: string) => void;
   activeTag?: string | null;
+  likeCount?: number;
 }
 
-const ArticleCard = ({ post, index, onTagClick, activeTag }: ArticleCardProps) => {
+const ArticleCard = ({ post, index, onTagClick, activeTag, likeCount }: ArticleCardProps) => {
   const navigate = useNavigate();
   const [imgIndex, setImgIndex] = useState(0);
   const hasMultiple = post.images.length > 1;
@@ -66,6 +68,12 @@ const ArticleCard = ({ post, index, onTagClick, activeTag }: ArticleCardProps) =
           <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
             {post.date}
           </span>
+          {(likeCount ?? 0) > 0 && (
+            <span className="text-[10px] text-muted-foreground font-mono tabular-nums flex items-center gap-0.5 ml-auto">
+              <Heart className="h-2.5 w-2.5 fill-red-400 text-red-400" />
+              {likeCount}
+            </span>
+          )}
         </div>
         <h3 className="text-sm font-sans font-semibold leading-snug mb-1.5 group-hover:translate-x-0.5 transition-transform duration-300 line-clamp-2">
           {post.title}
