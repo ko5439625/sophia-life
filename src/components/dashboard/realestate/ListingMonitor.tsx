@@ -131,7 +131,7 @@ const ListingMonitor = () => {
   const [showSort, setShowSort] = useState(false);
   const [expandedComplex, setExpandedComplex] = useState<Set<string>>(new Set());
 
-  const [expandedGroup, setExpandedGroup] = useState<Set<string>>(new Set());
+  const [expandedGroup, setExpandedGroup] = useState<Set<string>>(new Set(["서울", "경기"]));
   const [editingFilterId, setEditingFilterId] = useState<string | null>(null);
 
   // Filter form
@@ -368,7 +368,7 @@ const ListingMonitor = () => {
                       ))}
                     </div>
                   )}
-                  <div className="bg-background border border-border rounded-lg max-h-48 overflow-y-auto">
+                  <div className="bg-background border border-border rounded-lg max-h-72 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
                     {Object.entries(regionGroups).map(([group, items]) => {
                       const isOpen = expandedGroup.has(group);
                       const selectedCount = items.filter(r => form.regionCodes.includes(r.cortar_no)).length;
@@ -378,9 +378,9 @@ const ListingMonitor = () => {
                             const next = new Set(prev);
                             if (next.has(group)) next.delete(group); else next.add(group);
                             return next;
-                          })} className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors border-b border-border/50">
+                          })} className="w-full flex items-center justify-between px-3 py-3 min-h-[44px] text-xs font-bold text-muted-foreground hover:bg-muted/30 active:bg-muted/50 transition-colors border-b border-border/50 cursor-pointer select-none">
                             <span>{group} {selectedCount > 0 && <span className="text-primary font-medium">({selectedCount})</span>}</span>
-                            {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                            {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                           </button>
                           {isOpen && (
                             <div className="py-1">
@@ -389,9 +389,9 @@ const ListingMonitor = () => {
                                 return (
                                   <button key={r.cortar_no} type="button"
                                     onClick={() => toggleRegion(r.cortar_no, r.display_name || "")}
-                                    className={`w-full flex items-center gap-2 px-4 py-1.5 text-xs hover:bg-muted/30 transition-colors ${checked ? "text-primary font-medium" : "text-foreground"}`}>
-                                    <div className={`h-3.5 w-3.5 rounded border flex items-center justify-center flex-shrink-0 ${checked ? "bg-primary border-primary" : "border-border"}`}>
-                                      {checked && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                                    className={`w-full flex items-center gap-2 px-4 py-2.5 min-h-[40px] text-xs hover:bg-muted/30 active:bg-muted/50 transition-colors cursor-pointer select-none ${checked ? "text-primary font-medium" : "text-foreground"}`}>
+                                    <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${checked ? "bg-primary border-primary" : "border-border"}`}>
+                                      {checked && <Check className="h-3 w-3 text-primary-foreground" />}
                                     </div>
                                     {r.display_name}
                                   </button>
