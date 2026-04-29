@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingCart, TrendingUp, TrendingDown, X, ChevronDown, ChevronUp, Loader2, AlertTriangle, Target, DollarSign, Gauge } from "lucide-react";
 import { getSectorFearGreed } from "../../../services/marketApi";
+import { proxyFetch } from "../../../services/proxyFetch";
 import { formatKRW } from "./budgetData";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 
@@ -98,8 +99,8 @@ const TradingView = () => {
 
     const fetchStockNews = async (query: string) => {
       try {
-        const res = await fetch(`/api/market?service=stock-news&q=${encodeURIComponent(query)}`);
-        if (res.ok) { const d = await res.json(); return (d.articles || []) as string[]; }
+        const d = await proxyFetch<{ articles?: string[] }>("stock-news", { q: query });
+        if (d) { return (d.articles || []) as string[]; }
       } catch {} return [];
     };
 
@@ -185,16 +186,15 @@ const TradingView = () => {
       let newsCtx = "";
       try {
         const nq = stock.currency === "KRW" ? stock.name : stock.symbol;
-        const nRes = await fetch(`/api/market?service=stock-news&q=${encodeURIComponent(nq)}`);
-        if (nRes.ok) { const nd = await nRes.json(); newsCtx = (nd.articles || []).slice(0, 3).join("\n"); }
+        const nd = await proxyFetch<{ articles?: string[] }>("stock-news", { q: nq });
+        if (nd) { newsCtx = (nd.articles || []).slice(0, 3).join("\n"); }
       } catch {}
 
       // 차트 데이터
       let chartCtx = "";
       try {
-        const hRes = await fetch(`/api/market?service=historical&symbol=${encodeURIComponent(stock.symbol)}&range=3mo`);
-        if (hRes.ok) {
-          const hd = await hRes.json();
+        const hd = await proxyFetch<{ chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: number[]; volume?: number[] }> } }> } }>("yahoo-historical", { symbol: stock.symbol, range: "3mo" });
+        if (hd) {
           const closes = (hd?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []).filter((v: number | null) => v != null) as number[];
           if (closes.length >= 20) {
             const high = Math.max(...closes);

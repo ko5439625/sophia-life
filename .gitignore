@@ -30,3 +30,6 @@ crawler/venv/
 crawler/__pycache__/
 __pycache__/
 *.pyc
+
+# Local Netlify folder
+.netlify

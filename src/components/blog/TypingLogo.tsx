@@ -27,7 +27,7 @@ const TypingLogo = ({ onLogoClick }: TypingLogoProps) => {
 
   return (
     <span
-      className="font-mono text-3xl md:text-4xl font-extrabold tracking-tight text-navy dark:text-foreground cursor-pointer select-none"
+      className="font-mono text-3xl md:text-4xl font-extrabold tracking-tight text-foreground cursor-pointer select-none"
       onClick={onLogoClick}
     >
       {displayed.split("").map((char, i) => (

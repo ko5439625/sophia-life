@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import BlogHeader from "@/components/blog/BlogHeader";
 import CategoryTabs from "@/components/blog/CategoryTabs";
 import ArticleCard from "@/components/blog/ArticleCard";
@@ -27,14 +27,16 @@ const DEFAULT_LOCKED_CATEGORIES = ["감성"];
 
 const Index = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  // 이전에 PIN 인증한 기기면 바로 대시보드로
+  // 이전에 PIN 인증한 기기면 바로 대시보드로 (blog 모드가 아닐 때만)
   useEffect(() => {
-    if (localStorage.getItem("sophia-device-auth") === "true") {
+    const blogMode = searchParams.get("blog") === "true";
+    if (!blogMode && localStorage.getItem("sophia-device-auth") === "true") {
       sessionStorage.setItem("sophia-auth", "true");
       navigate("/dashboard", { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, searchParams]);
   const [activeCategory, setActiveCategory] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -49,7 +51,7 @@ const Index = () => {
     return DEFAULT_LOCKED_CATEGORIES;
   });
   const [subtitle, setSubtitle] = useState(
-    () => localStorage.getItem("sophia-blog-subtitle") || "일상의 작은 순간들을 기록합니다"
+    () => localStorage.getItem("sophia-blog-subtitle") || "소피아코의 일상"
   );
 
   // Load posts from Supabase, merge with mock
@@ -144,7 +146,7 @@ const Index = () => {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, delay: 1.5 }}
       >
-        <p className="text-center text-xs md:text-sm text-muted-foreground/70 font-light tracking-[0.2em] uppercase">
+        <p className="text-center text-xs md:text-sm text-muted-foreground font-light tracking-[0.2em] uppercase">
           {subtitle}
         </p>
       </motion.section>

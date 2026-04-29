@@ -1,4 +1,6 @@
-// Yahoo Finance via Vercel Serverless Function (/api/market)
+// Yahoo Finance via Supabase Edge Function (api-proxy)
+
+import { proxyFetch } from "./proxyFetch";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,10 +51,8 @@ const YAHOO_SYMBOL_NAMES: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// API base
+// (API_BASE removed — using proxyFetch via Supabase Edge Function)
 // ---------------------------------------------------------------------------
-
-const API_BASE = import.meta.env.DEV ? "http://localhost:3000" : "";
 
 // ---------------------------------------------------------------------------
 // Parse helpers
@@ -121,10 +121,10 @@ function parseHistoricalFromChart(
 // ---------------------------------------------------------------------------
 
 export async function getQuote(symbol: string): Promise<YahooQuote> {
-  const params = new URLSearchParams({ service: "quote", symbol });
-  const res = await fetch(`${API_BASE}/api/market?${params}`);
-  if (!res.ok) throw new Error(`Quote API ${res.status}`);
-  const json = await res.json();
+  const json = await proxyFetch<{ chart?: { result?: Array<{ meta: Record<string, unknown> }> } }>(
+    "yahoo-quote", { symbol }
+  );
+  if (!json) throw new Error(`Quote API failed for ${symbol}`);
   return parseQuoteFromChart(symbol, json);
 }
 
@@ -136,10 +136,10 @@ export async function getHistorical(
   symbol: string,
   range: string = "1y",
 ): Promise<YahooHistoricalData[]> {
-  const params = new URLSearchParams({ service: "historical", symbol, range });
-  const res = await fetch(`${API_BASE}/api/market?${params}`);
-  if (!res.ok) throw new Error(`Historical API ${res.status}`);
-  const json = await res.json();
+  const json = await proxyFetch<{
+    chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<{ close?: number[]; volume?: number[] }> } }> };
+  }>("yahoo-historical", { symbol, range });
+  if (!json) throw new Error(`Historical API failed for ${symbol}`);
   return parseHistoricalFromChart(symbol, json);
 }
 

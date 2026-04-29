@@ -165,13 +165,7 @@ const InvestmentView = () => {
         symbol = KR_SYMBOL_MAP[cleanName];
         // 찾으면 Vercel 프록시로 Yahoo Search 시도
         if (!symbol) {
-          try {
-            const res = await fetch(`/api/market?service=quote&symbol=${encodeURIComponent(cleanName)}`);
-            if (!res.ok) {
-              // 직접 이름으로 못 찾으면 .KS 붙여서 시도
-              // Skip - will be handled by search below
-            }
-          } catch { /* ignore */ }
+          // proxyFetch를 통해 심볼 검색 시도 (별도 처리 불필요)
         }
         if (symbol) {
           updateHolding(h.id, { name: `${cleanName} (${symbol})` });

@@ -700,10 +700,11 @@ const SettingsView = () => {
     setAiApiKeyVisibility((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Sync blog categories to localStorage
+  // Sync blog categories to localStorage + Supabase
   useEffect(() => {
     try {
       localStorage.setItem("sophia-blog-categories", JSON.stringify(blogCategories));
+      saveBlogSettings({ blog_categories: blogCategories });
     } catch (e) {
       console.warn("Failed to save blog categories:", e);
     }

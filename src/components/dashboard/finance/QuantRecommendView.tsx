@@ -4,6 +4,7 @@ import { Sparkles, Loader2, TrendingUp, Shield, Zap, RefreshCw, Lock, X, Chevron
 import { useGuestMode } from "../../../hooks/useGuestMode";
 import { formatKRW } from "./budgetData";
 import { isKisConfigured } from "../../../services/kisApi";
+import { proxyFetch } from "../../../services/proxyFetch";
 
 // ---------------------------------------------------------------------------
 // Stock Universe
@@ -95,9 +96,12 @@ function classifyStock(s: { pe: number | null; pb: number | null; roe: number | 
     else if (s.beta < 0.7) conScore += 3;
     else conScore += 1;
   }
-  if (s.change > 2) aggScore += 2;
+  // 등락률 기반 (데이터 없어도 항상 작동) - 가중치 강화
+  if (s.change > 3) aggScore += 3;
+  else if (s.change > 1.5) aggScore += 2;
   else if (s.change > 0) aggScore += 1;
-  else if (s.change < -2) conScore += 2;
+  else if (s.change < -3) conScore += 3;
+  else if (s.change < -1.5) conScore += 2;
   else conScore += 1;
   if (s.revenueGrowth != null) {
     if (s.revenueGrowth > 0.2) aggScore += 2;
@@ -106,6 +110,7 @@ function classifyStock(s: { pe: number | null; pb: number | null; roe: number | 
   }
   if (s.dividendYield != null && s.dividendYield > 0.02) conScore += 2;
   if (s.roe != null && s.roe > 0.2) aggScore += 1;
+  if (s.roe != null && s.roe < 0.05 && s.roe >= 0) conScore += 1;
 
   let valuation = "적정";
   if (s.pe != null) {
@@ -227,9 +232,10 @@ async function fetchYahooStocks(market: "us" | "kr"): Promise<StockData[]> {
   for (let i = 0; i < symbols.length; i += 5) {
     const batch = symbols.slice(i, i + 5);
     try {
-      const res = await fetch(`/api/market?service=batch-fundamentals&symbols=${batch.join(",")}`);
-      if (!res.ok) continue;
-      const data = await res.json();
+      const data = await proxyFetch<Record<string, Record<string, unknown>>>(
+        "batch-fundamentals", { symbols: batch.join(",") }
+      );
+      if (!data) continue;
       for (const sym of batch) {
         const q = data[sym];
         if (!q || !q.price) continue;
@@ -266,42 +272,74 @@ async function fetchKisMarketCapStocks(): Promise<StockData[]> {
   if (!appkey || !appsecret) return [];
 
   try {
-    const res = await fetch(`/api/market?service=kis-market-cap&appkey=${encodeURIComponent(appkey)}&appsecret=${encodeURIComponent(appsecret)}`);
-    if (!res.ok) return [];
-    const data = await res.json();
+    const data = await proxyFetch<{ output?: Array<Record<string, string>> }>(
+      "kis-market-cap", { appkey, appsecret }
+    );
+    if (!data) return [];
     const output = (data.output || []) as Array<Record<string, string>>;
     if (output.length === 0) return [];
 
     const results: StockData[] = [];
-    // 시총 상위 전체 → 병렬 처리 (10개씩)
     const items = output as Array<Record<string, string>>;
 
-    for (let i = 0; i < items.length; i += 10) {
-      const batch = items.slice(i, i + 10);
-      const promises = batch.map(async (item) => {
-        const code = item.mksc_shrn_iscd || item.stck_shrn_iscd;
-        if (!code) return null;
-        const name = item.hts_kor_isnm || code;
+    // KIS 데이터로 먼저 기본 종목 목록 구성
+    const kisStocks: Array<{ code: string; name: string; price: number; change: number }> = [];
+    for (const item of items) {
+      const code = item.mksc_shrn_iscd || item.stck_shrn_iscd;
+      if (!code) continue;
+      const name = item.hts_kor_isnm || code;
+      const kisPrice = parseInt(item.stck_prpr) || 0;
+      const kisChange = parseFloat(item.prdy_ctrt) || 0;
+      if (kisPrice > 0) kisStocks.push({ code, name, price: kisPrice, change: kisChange });
+    }
 
-        for (const suffix of [".KS", ".KQ"]) {
-          try {
-            const fRes = await fetch(`/api/market?service=fundamentals&symbol=${code}${suffix}`);
-            if (fRes.ok) {
-              const q = await fRes.json();
-              if (q.price) return makeStockData(`${code}${suffix}`, name, q, "KRW");
-            }
-          } catch { /* next */ }
-        }
+    // Yahoo batch-fundamentals로 보조 지표를 한 번에 가져오기 (개별 호출 대신)
+    const allSymbols = kisStocks.flatMap(s => [`${s.code}.KS`, `${s.code}.KQ`]);
+    const yahooData: Record<string, Record<string, unknown>> = {};
 
-        const price = parseInt(item.stck_prpr) || 0;
-        const change = parseFloat(item.prdy_ctrt) || 0;
-        if (price <= 0) return null;
-        const classified = classifyStock({ pe: null, pb: null, roe: null, beta: null, change, revenueGrowth: null, dividendYield: null });
-        return { symbol: `${code}.KS`, name, price, change: Math.round(change * 100) / 100, currency: "KRW", pe: null, pb: null, roe: null, beta: null, dividendYield: null, revenueGrowth: null, debtToEquity: null, ...classified } as StockData;
+    for (let i = 0; i < allSymbols.length; i += 10) {
+      const batch = allSymbols.slice(i, i + 10);
+      try {
+        const data = await proxyFetch<Record<string, Record<string, unknown>>>(
+          "batch-fundamentals", { symbols: batch.join(",") }
+        );
+        if (data) Object.assign(yahooData, data);
+      } catch { /* skip batch */ }
+    }
+
+    for (const s of kisStocks) {
+      // Yahoo 보조 지표 매칭 (.KS 우선, .KQ 폴백)
+      const yKS = yahooData[`${s.code}.KS`];
+      const yKQ = yahooData[`${s.code}.KQ`];
+      const y = (yKS && yKS.symbol) ? yKS : (yKQ && yKQ.symbol) ? yKQ : null;
+
+      const pe = y?.pe as number | null ?? null;
+      const pb = y?.pb as number | null ?? null;
+      const roe = y?.roe as number | null ?? null;
+      const beta = y?.beta as number | null ?? null;
+      const dividendYield = y?.dividendYield as number | null ?? null;
+      const revenueGrowth = y?.revenueGrowth as number | null ?? null;
+      const debtToEquity = y?.debtToEquity as number | null ?? null;
+
+      const classified = classifyStock({
+        pe, pb, roe, beta,
+        change: s.change,
+        revenueGrowth, dividendYield, debtToEquity,
       });
-
-      const settled = await Promise.allSettled(promises);
-      settled.forEach((r) => { if (r.status === "fulfilled" && r.value) results.push(r.value); });
+      results.push({
+        symbol: `${s.code}.KS`, name: s.name,
+        price: s.price,
+        change: Math.round(s.change * 100) / 100,
+        currency: "KRW",
+        pe: pe ? Math.round(pe * 10) / 10 : null,
+        pb: pb ? Math.round(pb * 100) / 100 : null,
+        roe: roe ? Math.round(roe * 1000) / 10 : null,
+        beta: beta ? Math.round(beta * 100) / 100 : null,
+        dividendYield: dividendYield ? Math.round(dividendYield * 1000) / 10 : null,
+        revenueGrowth: revenueGrowth ? Math.round(revenueGrowth * 1000) / 10 : null,
+        debtToEquity: debtToEquity ? Math.round(debtToEquity * 10) / 10 : null,
+        ...classified,
+      } as StockData);
     }
     return results;
   } catch { return []; }
@@ -340,22 +378,21 @@ async function analyzeStock(stock: StockData, market: string): Promise<AIAnalysi
   try {
     const newsQ = stock.currency === "KRW" ? stock.name : stock.symbol;
     const [newsRes, histRes] = await Promise.allSettled([
-      fetch(`/api/market?service=stock-news&q=${encodeURIComponent(newsQ)}`),
-      fetch(`/api/market?service=historical&symbol=${encodeURIComponent(stock.symbol)}&range=3mo`),
+      proxyFetch<{ articles?: string[] }>("stock-news", { q: newsQ }),
+      proxyFetch<{ chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: number[]; volume?: number[] }> }; timestamp?: number[] }> } }>("yahoo-historical", { symbol: stock.symbol, range: "3mo" }),
     ]);
 
     // 뉴스
-    if (newsRes.status === "fulfilled" && newsRes.value.ok) {
-      const newsData = await newsRes.value.json();
-      const articles = (newsData.articles || []) as string[];
+    if (newsRes.status === "fulfilled" && newsRes.value) {
+      const articles = (newsRes.value.articles || []) as string[];
       if (articles.length > 0) {
         newsContext = `\n\nRECENT NEWS:\n${articles.slice(0, 6).map((a, i) => `${i + 1}. ${a}`).join("\n")}`;
       }
     }
 
     // 가격 히스토리 → 기술적 분석용 요약
-    if (histRes.status === "fulfilled" && histRes.value.ok) {
-      const histData = await histRes.value.json();
+    if (histRes.status === "fulfilled" && histRes.value) {
+      const histData = histRes.value;
       const result = histData?.chart?.result?.[0];
       if (result) {
         const closes = result.indicators?.quote?.[0]?.close?.filter((v: number | null) => v != null) as number[] || [];
@@ -422,18 +459,29 @@ Respond ONLY with valid JSON. ABSOLUTELY NO HTML tags (no br, b, p tags). No mar
 
   const prompt2 = prompt;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt2 }] }],
-        generationConfig: { temperature: 0.5, maxOutputTokens: 8192 },
-      }),
+  // Gemini API 호출 (503 시 최대 2회 재시도)
+  let res: Response | null = null;
+  const MAX_RETRIES = 2;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt2 }] }],
+          generationConfig: { temperature: 0.5, maxOutputTokens: 8192 },
+        }),
+      }
+    );
+    if (res.ok) break;
+    if ((res.status === 503 || res.status === 429) && attempt < MAX_RETRIES) {
+      await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+      continue;
     }
-  );
-  if (!res.ok) throw new Error(`API 오류 (${res.status})`);
+    throw new Error(`API 오류 (${res.status})${res.status === 503 ? " - 서버 과부하, 잠시 후 다시 시도해주세요" : ""}`);
+  }
+  if (!res || !res.ok) throw new Error("API 호출 실패");
   const json = await res.json();
   const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   const cleaned = rawText
@@ -489,32 +537,102 @@ Respond ONLY with valid JSON. ABSOLUTELY NO HTML tags (no br, b, p tags). No mar
 // UI Helpers
 // ---------------------------------------------------------------------------
 
-// 한글 → 종목코드 매핑 (Yahoo는 한글 검색 불가)
-const KR_SEARCH_MAP: Record<string, string> = {
-  "삼성전자": "005930", "SK하이닉스": "000660", "LG에너지솔루션": "373220",
-  "삼성바이오": "207940", "현대차": "005380", "기아": "000270",
-  "셀트리온": "068270", "네이버": "035420", "카카오": "035720",
-  "POSCO홀딩스": "005490", "삼성SDI": "006400", "LG화학": "051910",
-  "한화에어로": "012450", "한화오션": "042660", "LG전자": "066570",
-  "두산에너빌": "034020", "HD현대중공업": "329180", "크래프톤": "259960",
-  "엔씨소프트": "036570", "펄어비스": "263750", "넷마블": "251270",
-  "신한지주": "055550", "KB금융": "105560", "하이브": "352820",
-  "쿠팡": "CPNG", "에코프로": "086520", "에코프로비엠": "247540",
-  "한미반도체": "042700", "카카오뱅크": "323410", "포스코퓨처엠": "003670",
-  "HD현대일렉트릭": "267260", "HD현대중공업": "329180", "HD현대": "267250",
-  "현대글로비스": "086280", "삼성전기": "009150", "삼성생명": "032830",
-  "LG이노텍": "011070", "SK텔레콤": "017670", "KT": "030200",
-  "두산퓨얼셀": "336260", "한화솔루션": "009830", "CJ제일제당": "097950",
-  "고려아연": "010130", "SK스퀘어": "402340", "카카오게임즈": "293490",
+// 한글 → Yahoo 종목코드 매핑 (Yahoo는 한글 검색 불가, .KS/.KQ 포함)
+const KR_SEARCH_MAP: Record<string, { symbol: string; name: string }> = {
+  "삼성전자": { symbol: "005930.KS", name: "삼성전자" },
+  "SK하이닉스": { symbol: "000660.KS", name: "SK하이닉스" },
+  "LG에너지솔루션": { symbol: "373220.KS", name: "LG에너지솔루션" },
+  "삼성바이오": { symbol: "207940.KS", name: "삼성바이오로직스" },
+  "현대차": { symbol: "005380.KS", name: "현대자동차" },
+  "기아": { symbol: "000270.KS", name: "기아" },
+  "셀트리온": { symbol: "068270.KS", name: "셀트리온" },
+  "네이버": { symbol: "035420.KS", name: "NAVER" },
+  "카카오": { symbol: "035720.KS", name: "카카오" },
+  "POSCO홀딩스": { symbol: "005490.KS", name: "POSCO홀딩스" },
+  "포스코홀딩스": { symbol: "005490.KS", name: "POSCO홀딩스" },
+  "삼성SDI": { symbol: "006400.KS", name: "삼성SDI" },
+  "LG화학": { symbol: "051910.KS", name: "LG화학" },
+  "한화에어로": { symbol: "012450.KS", name: "한화에어로스페이스" },
+  "한화에어로스페이스": { symbol: "012450.KS", name: "한화에어로스페이스" },
+  "한화오션": { symbol: "042660.KS", name: "한화오션" },
+  "LG전자": { symbol: "066570.KS", name: "LG전자" },
+  "두산에너빌": { symbol: "034020.KS", name: "두산에너빌리티" },
+  "HD현대중공업": { symbol: "329180.KS", name: "HD현대중공업" },
+  "크래프톤": { symbol: "259960.KS", name: "크래프톤" },
+  "엔씨소프트": { symbol: "036570.KQ", name: "엔씨소프트" },
+  "펄어비스": { symbol: "263750.KS", name: "펄어비스" },
+  "넷마블": { symbol: "251270.KS", name: "넷마블" },
+  "신한지주": { symbol: "055550.KS", name: "신한지주" },
+  "KB금융": { symbol: "105560.KS", name: "KB금융" },
+  "하이브": { symbol: "352820.KS", name: "하이브" },
+  "쿠팡": { symbol: "CPNG", name: "쿠팡" },
+  "에코프로": { symbol: "086520.KQ", name: "에코프로" },
+  "에코프로비엠": { symbol: "247540.KQ", name: "에코프로비엠" },
+  "한미반도체": { symbol: "042700.KQ", name: "한미반도체" },
+  "카카오뱅크": { symbol: "323410.KS", name: "카카오뱅크" },
+  "포스코퓨처엠": { symbol: "003670.KS", name: "포스코퓨처엠" },
+  "HD현대일렉트릭": { symbol: "267260.KS", name: "HD현대일렉트릭" },
+  "HD현대": { symbol: "267250.KS", name: "HD현대" },
+  "현대글로비스": { symbol: "086280.KS", name: "현대글로비스" },
+  "삼성전기": { symbol: "009150.KS", name: "삼성전기" },
+  "삼성생명": { symbol: "032830.KS", name: "삼성생명" },
+  "LG이노텍": { symbol: "011070.KS", name: "LG이노텍" },
+  "SK텔레콤": { symbol: "017670.KS", name: "SK텔레콤" },
+  "KT": { symbol: "030200.KS", name: "KT" },
+  "두산퓨얼셀": { symbol: "336260.KS", name: "두산퓨얼셀" },
+  "한화솔루션": { symbol: "009830.KS", name: "한화솔루션" },
+  "CJ제일제당": { symbol: "097950.KS", name: "CJ제일제당" },
+  "고려아연": { symbol: "010130.KS", name: "고려아연" },
+  "SK스퀘어": { symbol: "402340.KS", name: "SK스퀘어" },
+  "카카오게임즈": { symbol: "293490.KQ", name: "카카오게임즈" },
+  "현대모비스": { symbol: "012330.KS", name: "현대모비스" },
+  "SK이노베이션": { symbol: "096770.KS", name: "SK이노베이션" },
+  "삼성물산": { symbol: "028260.KS", name: "삼성물산" },
+  "LG": { symbol: "003550.KS", name: "LG" },
+  "SK": { symbol: "034730.KS", name: "SK" },
+  "한국전력": { symbol: "015760.KS", name: "한국전력" },
+  "한전": { symbol: "015760.KS", name: "한국전력" },
+  "삼성화재": { symbol: "000810.KS", name: "삼성화재" },
+  "현대건설": { symbol: "000720.KS", name: "현대건설" },
+  "삼성중공업": { symbol: "010140.KS", name: "삼성중공업" },
+  "대한항공": { symbol: "003490.KS", name: "대한항공" },
+  "SK바이오팜": { symbol: "326030.KS", name: "SK바이오팜" },
+  "두산밥캣": { symbol: "241560.KS", name: "두산밥캣" },
 };
 
-function resolveSearchQuery(query: string): string {
+/**
+ * 한글 → { symbol, name } 매핑.
+ * 정확히 매핑되면 바로 symbol 반환, 부분 매칭이면 복수 결과,
+ * 영문이면 그대로 반환.
+ */
+function resolveSearchQuery(query: string): { directSymbols: { symbol: string; name: string }[] } | { yahooQuery: string } {
   const q = query.trim();
-  const mapped = KR_SEARCH_MAP[q];
-  if (mapped) return mapped;
-  const partial = Object.entries(KR_SEARCH_MAP).find(([k]) => k.includes(q));
-  if (partial) return partial[1];
-  return q; // 영문이면 그대로
+
+  // 정확 매핑
+  const exact = KR_SEARCH_MAP[q];
+  if (exact) return { directSymbols: [exact] };
+
+  // 부분 매핑: 입력에 포함되거나, 이름에 입력이 포함
+  const partials = Object.entries(KR_SEARCH_MAP)
+    .filter(([k]) => k.includes(q) || q.includes(k))
+    .map(([, v]) => v);
+  // 중복 제거 (symbol 기준)
+  const unique = [...new Map(partials.map(p => [p.symbol, p])).values()];
+  if (unique.length > 0) return { directSymbols: unique.slice(0, 5) };
+
+  // 숫자 종목코드 입력 (예: 036570, 005930) → .KS, .KQ 모두 시도
+  if (/^\d{6}$/.test(q)) {
+    // KR_NAMES에서 이름 찾기
+    const nameKS = KR_NAMES[`${q}.KS`] || KR_UNIVERSE_NAMES[`${q}.KS`];
+    const nameKQ = KR_NAMES[`${q}.KQ`] || KR_UNIVERSE_NAMES[`${q}.KQ`];
+    const candidates: { symbol: string; name: string }[] = [];
+    candidates.push({ symbol: `${q}.KS`, name: nameKS || q });
+    candidates.push({ symbol: `${q}.KQ`, name: nameKQ || q });
+    return { directSymbols: candidates };
+  }
+
+  // 영문이면 Yahoo Search에 전달
+  return { yahooQuery: q };
 }
 
 const perspectives = [
@@ -720,9 +838,10 @@ async function runSimulation(allStocks: StockData[], period: string): Promise<Si
         pastDate.setDate(pastDate.getDate() - (simDays * 2)); // 넉넉하게
         const start = `${pastDate.getFullYear()}${String(pastDate.getMonth() + 1).padStart(2, "0")}${String(pastDate.getDate()).padStart(2, "0")}`;
 
-        const res = await fetch(`/api/market?service=kis-daily-price&appkey=${encodeURIComponent(kisAppkey)}&appsecret=${encodeURIComponent(kisSecret)}&code=${code}&start=${start}&end=${end}`);
-        if (res.ok) {
-          const data = await res.json();
+        const data = await proxyFetch<{ output2?: Array<Record<string, string>> }>(
+          "kis-daily-price", { appkey: kisAppkey, appsecret: kisSecret, code, start, end }
+        );
+        if (data) {
           const output = (data.output2 || []) as Array<Record<string, string>>;
           if (output.length > 10) {
             // KIS는 최신→과거 순이라 reverse
@@ -739,9 +858,10 @@ async function runSimulation(allStocks: StockData[], period: string): Promise<Si
 
     // Yahoo fallback
     try {
-      const res = await fetch(`/api/market?service=historical&symbol=${encodeURIComponent(symbol)}&range=${range}`);
-      if (!res.ok) { histCache[symbol] = null; return null; }
-      const data = await res.json();
+      const data = await proxyFetch<{
+        chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: number[]; volume?: number[] }> } }> };
+      }>("yahoo-historical", { symbol, range });
+      if (!data) { histCache[symbol] = null; return null; }
       const result = data?.chart?.result?.[0];
       if (!result) { histCache[symbol] = null; return null; }
       const closes = (result.indicators?.quote?.[0]?.close || []).filter((v: number | null) => v != null) as number[];
@@ -872,11 +992,11 @@ const QuantRecommendView = () => {
   // 스크리닝 필터
   const [showFilter, setShowFilter] = useState(false);
   const [filters, setFilters] = useState({
-    perMax: "30",
-    roeMin: "5",
+    perMax: "50",
+    roeMin: "",
     betaMax: "",
     revenueGrowthMin: "",
-    debtMax: "200",
+    debtMax: "",
   });
 
   // 시뮬레이션
@@ -940,7 +1060,7 @@ const QuantRecommendView = () => {
 
   // 수동 로드: 미장/국장 버튼 클릭 시에만 fetch
 
-  // 종목 검색: Yahoo Search → fundamentals fetch → classify
+  // 종목 검색: 한글→직접 매핑 or Yahoo Search → fundamentals fetch → classify
   const handleSearch = useCallback(async (query: string) => {
     setSearchQuery(query);
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -949,44 +1069,53 @@ const QuantRecommendView = () => {
     searchTimer.current = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        // 1. 한글→종목코드 변환 후 Vercel 프록시 경유 Yahoo Search
         const resolved = resolveSearchQuery(query);
-        const searchResp = await fetch(`/api/market?service=yahoo-search&q=${encodeURIComponent(resolved)}`);
-        const searchRes = searchResp.ok ? await searchResp.json() : { quotes: [] };
+        let symbolsToFetch: { symbol: string; name: string }[] = [];
 
-        const symbols = (searchRes?.quotes || [])
-          .filter((q: Record<string, string>) => q.symbol && (q.quoteType === "EQUITY" || q.quoteType === "ETF"))
-          .slice(0, 5);
+        if ("directSymbols" in resolved) {
+          // 한글 매핑 성공 → 바로 fundamentals (Yahoo Search 스킵)
+          symbolsToFetch = resolved.directSymbols;
+        } else {
+          // 영문 → Yahoo Search
+          const searchRes = await proxyFetch<{ quotes?: Array<Record<string, string>> }>(
+            "yahoo-search", { q: resolved.yahooQuery }
+          ) || { quotes: [] };
 
-        if (symbols.length === 0) { setSearchResults([]); setSearchLoading(false); return; }
+          symbolsToFetch = (searchRes?.quotes || [])
+            .filter((q: Record<string, string>) => q.symbol && (q.quoteType === "EQUITY" || q.quoteType === "ETF"))
+            .slice(0, 5)
+            .map(q => ({ symbol: q.symbol!, name: q.shortname || q.longname || q.symbol! }));
+        }
 
-        // 2. Fundamentals fetch
+        if (symbolsToFetch.length === 0) { setSearchResults([]); setSearchLoading(false); return; }
+
+        // Fundamentals fetch
         const results: StockData[] = [];
-        for (const sym of symbols) {
+        for (const sym of symbolsToFetch) {
           try {
-            const res = await fetch(`/api/market?service=fundamentals&symbol=${sym.symbol}`);
-            if (!res.ok) continue;
-            const q = await res.json();
-            if (!q.price) continue;
+            const q = await proxyFetch<Record<string, unknown>>(
+              "fundamentals", { symbol: sym.symbol }
+            );
+            if (!q || !q.price) continue;
             const change = q.changePercent != null
-              ? Math.round(q.changePercent * 100) / 100
-              : (() => { const prev = q.previousClose || q.price; return prev > 0 ? Math.round(((q.price - prev) / prev) * 1000) / 10 : 0; })();
+              ? Math.round((q.changePercent as number) * 100) / 100
+              : (() => { const prev = (q.previousClose as number) || (q.price as number); return prev > 0 ? Math.round((((q.price as number) - prev) / prev) * 1000) / 10 : 0; })();
             const classified = classifyStock({
-              pe: q.pe, pb: q.pb, roe: q.roe, beta: q.beta,
-              change, revenueGrowth: q.revenueGrowth, dividendYield: q.dividendYield,
-              debtToEquity: q.debtToEquity,
+              pe: q.pe as number | null, pb: q.pb as number | null, roe: q.roe as number | null, beta: q.beta as number | null,
+              change, revenueGrowth: q.revenueGrowth as number | null, dividendYield: q.dividendYield as number | null,
+              debtToEquity: q.debtToEquity as number | null,
             });
             results.push({
-              symbol: sym.symbol!, name: sym.shortname || sym.longname || sym.symbol!,
-              price: q.price, change,
-              currency: q.currency || "USD",
-              pe: q.pe ? Math.round(q.pe * 10) / 10 : null,
-              pb: q.pb ? Math.round(q.pb * 100) / 100 : null,
-              roe: q.roe ? Math.round(q.roe * 1000) / 10 : null,
-              beta: q.beta ? Math.round(q.beta * 100) / 100 : null,
-              dividendYield: q.dividendYield ? Math.round(q.dividendYield * 1000) / 10 : null,
-              revenueGrowth: q.revenueGrowth ? Math.round(q.revenueGrowth * 1000) / 10 : null,
-              debtToEquity: q.debtToEquity ? Math.round(q.debtToEquity * 10) / 10 : null,
+              symbol: sym.symbol, name: sym.name,
+              price: q.price as number, change,
+              currency: (q.currency as string) || "USD",
+              pe: q.pe ? Math.round((q.pe as number) * 10) / 10 : null,
+              pb: q.pb ? Math.round((q.pb as number) * 100) / 100 : null,
+              roe: q.roe ? Math.round((q.roe as number) * 1000) / 10 : null,
+              beta: q.beta ? Math.round((q.beta as number) * 100) / 100 : null,
+              dividendYield: q.dividendYield ? Math.round((q.dividendYield as number) * 1000) / 10 : null,
+              revenueGrowth: q.revenueGrowth ? Math.round((q.revenueGrowth as number) * 1000) / 10 : null,
+              debtToEquity: q.debtToEquity ? Math.round((q.debtToEquity as number) * 10) / 10 : null,
               ...classified,
             });
           } catch { /* skip */ }

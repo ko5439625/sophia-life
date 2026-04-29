@@ -134,7 +134,7 @@ const DashboardLayout = () => {
     <div className="flex flex-col h-full">
       <div className="p-5">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/?blog=true")}
           className="cursor-pointer hover:opacity-70 transition-opacity text-left"
         >
           <div className="flex items-center gap-2">

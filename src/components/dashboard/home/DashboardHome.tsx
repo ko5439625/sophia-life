@@ -368,16 +368,25 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
     const fetchMarket = async () => {
       setMarketLoading(true);
       try {
-        const [fg, sp500, nasdaq, kospi, rate] = await Promise.all([
+        const [fgR, sp500R, nasdaqR, kospiR, rateR] = await Promise.allSettled([
           getFearGreedIndex(),
           getStockQuote("^GSPC"),
           getStockQuote("^IXIC"),
           getStockQuote("^KS11"),
           getExchangeRate("USD", "KRW"),
         ]);
-        setFearGreed(fg);
-        setStockQuotes({ "^GSPC": sp500, "^IXIC": nasdaq, "^KS11": kospi });
-        setExchangeRate(rate);
+        if (fgR.status === "fulfilled") setFearGreed(fgR.value);
+        const sp500 = sp500R.status === "fulfilled" ? sp500R.value : null;
+        const nasdaq = nasdaqR.status === "fulfilled" ? nasdaqR.value : null;
+        const kospi = kospiR.status === "fulfilled" ? kospiR.value : null;
+        if (sp500 || nasdaq || kospi) {
+          setStockQuotes({
+            ...(sp500 ? { "^GSPC": sp500 } : {}),
+            ...(nasdaq ? { "^IXIC": nasdaq } : {}),
+            ...(kospi ? { "^KS11": kospi } : {}),
+          });
+        }
+        if (rateR.status === "fulfilled") setExchangeRate(rateR.value);
         setMarketTimestamp(new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }));
         // Sector Fear & Greed (parallel, non-blocking)
         getSectorFearGreed().then(setSectorFG).catch(() => {});

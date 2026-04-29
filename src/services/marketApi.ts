@@ -1,10 +1,11 @@
-// Market data via Vercel Serverless Function (/api/market)
+// Market data via Supabase Edge Function (proxyFetch)
 
 import {
   getQuote as yahooGetQuote,
   getHistorical as yahooGetHistorical,
   getYahooExchangeRate,
 } from "./yahooFinanceApi";
+import { proxyFetch } from "./proxyFetch";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -55,18 +56,17 @@ const SYMBOL_NAMES: Record<string, string> = {
   TLT: "20+ Year Treasury Bond ETF",
 };
 
-const API_BASE = import.meta.env.DEV ? "http://localhost:3000" : "";
-
 // ---------------------------------------------------------------------------
-// Fear & Greed Index — Vercel API proxy
+// Fear & Greed Index — Supabase Edge Function proxy
 // ---------------------------------------------------------------------------
 
 // Crypto Fear & Greed (alternative.me)
 export async function getFearGreedIndex(): Promise<FearGreedResult> {
-  const res = await fetch(`${API_BASE}/api/market?service=fear-greed`);
-  if (!res.ok) throw new Error(`Fear & Greed API ${res.status}`);
+  const data = await proxyFetch<{ data?: Array<{ value: string; value_classification: string }> }>(
+    "fear-greed", {}
+  );
+  if (!data) throw new Error("Fear & Greed API failed");
 
-  const data = await res.json();
   const entry = data.data?.[0];
   if (!entry) throw new Error("No Fear & Greed data");
 
@@ -85,9 +85,10 @@ export interface SectorFearGreed {
 // CNN Fear & Greed (US/NASDAQ)
 async function getCNNFearGreed(): Promise<FearGreedResult | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/market?service=fear-greed-cnn`);
-    if (!res.ok) return null;
-    const data = await res.json();
+    const data = await proxyFetch<{ fear_and_greed?: { score?: number; rating?: string } }>(
+      "fear-greed-cnn", {}
+    );
+    if (!data) return null;
     const score = data?.fear_and_greed?.score;
     const rating = data?.fear_and_greed?.rating;
     if (score == null) return null;
@@ -196,11 +197,12 @@ export async function getExchangeRate(
     console.warn(`Yahoo exchange rate failed for ${from}→${to}:`, e);
   }
 
-  // 2. Try open.er-api via Vercel proxy
-  const res = await fetch(`${API_BASE}/api/market?service=exchange-rate&from=${encodeURIComponent(from)}`);
-  if (!res.ok) throw new Error(`Exchange rate API ${res.status}`);
+  // 2. Try open.er-api via Supabase Edge Function proxy
+  const json = await proxyFetch<{ rates?: Record<string, number> }>(
+    "exchange-rate", { from }
+  );
+  if (!json) throw new Error("Exchange rate API failed");
 
-  const json = await res.json();
   const rate = json.rates?.[to];
   if (rate == null) throw new Error(`No rate for ${to}`);
 

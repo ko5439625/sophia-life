@@ -362,6 +362,7 @@ export async function loadBlogSettings(): Promise<BlogSettings> {
 export async function saveBlogSettings(settings: Partial<{
   locked_categories: string[];
   blog_subtitle: string;
+  blog_categories: string[];
   dismissed_alerts: string[];
 }>): Promise<void> {
   if (!isReady() || !supabase) return;

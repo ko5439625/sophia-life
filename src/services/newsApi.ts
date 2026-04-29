@@ -1,4 +1,6 @@
-// Google News RSS via Vercel Serverless Function (/api/news)
+// Google News RSS via Supabase Edge Function (proxyFetch)
+
+import { proxyFetch } from "./proxyFetch";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,8 +21,6 @@ export interface NewsArticle {
 // API
 // ---------------------------------------------------------------------------
 
-const API_BASE = import.meta.env.DEV ? "http://localhost:3000" : "";
-
 export async function getNews(
   category?: string,
   country?: string,
@@ -30,24 +30,23 @@ export async function getNews(
   const isEnglish = resolvedCountry === "us";
 
   try {
-    const params = new URLSearchParams({ category: cat, country: resolvedCountry });
-    const res = await fetch(`${API_BASE}/api/news?${params.toString()}`);
-
-    if (!res.ok) {
-      console.warn(`[getNews] API returned ${res.status}`);
-      return [];
-    }
-
-    const data = await res.json();
-
-    return (data.articles || []).map(
-      (article: {
+    const data = await proxyFetch<{
+      articles?: Array<{
         title?: string;
         description?: string;
         source?: string;
         url?: string;
         publishedAt?: string;
-      }) => ({
+      }>;
+    }>("google-news", { category: cat, country: resolvedCountry });
+
+    if (!data) {
+      console.warn("[getNews] proxyFetch returned null");
+      return [];
+    }
+
+    return (data.articles || []).map(
+      (article) => ({
         title: article.title || "",
         description: article.description || "",
         source: article.source || "Google News",
