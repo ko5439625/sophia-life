@@ -96,15 +96,22 @@ function ChatLogin({ onLogin }: { onLogin: (s: ChatSender) => void }) {
           코드 하나로 로그인 + 사용자 판별
         </p>
 
-        <div className="mt-5 pt-4 border-t border-border">
-          <a
-            href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.1.0/QA.JJ-0.1.0-arm64.dmg"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-medium bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition"
-          >
-            <Monitor size={14} />
-            데스크탑 앱 다운로드
-            <span className="text-[10px] opacity-60">(macOS)</span>
-          </a>
+        <div className="mt-5 pt-4 border-t border-border space-y-2">
+          <p className="text-center text-[10px] text-muted-foreground/60 mb-2">데스크탑 앱 다운로드</p>
+          <div className="flex gap-2">
+            <a
+              href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.1.0/QA.JJ.Setup.0.1.0.exe"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition"
+            >
+              <Monitor size={13} /> Windows
+            </a>
+            <a
+              href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.1.0/QA.JJ-0.1.0-arm64.dmg"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition"
+            >
+              <Monitor size={13} /> macOS
+            </a>
+          </div>
         </div>
       </form>
 
