@@ -13,6 +13,7 @@ import {
   Menu,
   Newspaper,
   Heart,
+  MessageCircle,
 } from "lucide-react";
 import ThemeToggle from "../ThemeToggle";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +28,7 @@ import InvestmentHub from "./investment/InvestmentHub";
 import RealEstateHub from "./realestate/RealEstateHub";
 import NewsView from "./finance/NewsView";
 import WeddingView from "./wedding/WeddingView";
+import ChatView from "./chat/ChatView";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -47,6 +49,7 @@ const bottomNav: NavItem[] = [
   { icon: TrendingUp, label: "투자", id: "investment" },
   { icon: Newspaper, label: "뉴스", id: "news" },
   { icon: Building2, label: "부동산", id: "realestate" },
+  { icon: MessageCircle, label: "채팅", id: "chat" },
   { icon: Settings, label: "설정", id: "settings" },
 ];
 
@@ -97,6 +100,8 @@ const DashboardLayout = () => {
         return <WeddingView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "realestate":
         return <RealEstateHub initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
+      case "chat":
+        return <ChatView />;
       case "settings":
         return <SettingsView />;
       default:
