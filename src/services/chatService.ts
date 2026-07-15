@@ -35,6 +35,28 @@ export function clearChatSession() {
 // Messages — CRUD
 // ---------------------------------------------------------------------------
 
+/** 전날 이전 메시지 실제 삭제 (KST 자정 기준) */
+export async function purgeOldMessages(): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    const now = new Date();
+    const kstOffset = 9 * 60;
+    const kstNow = new Date(now.getTime() + kstOffset * 60 * 1000);
+    const kstToday = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate());
+    const utcTodayStart = new Date(kstToday.getTime() - kstOffset * 60 * 1000);
+
+    // 오늘 자정(KST) 이전 메시지 삭제
+    const { error } = await supabase
+      .from("chat_messages")
+      .delete()
+      .lt("created_at", utcTodayStart.toISOString());
+
+    if (error) console.error("[chatService] purgeOldMessages error:", error);
+  } catch (err) {
+    console.error("[chatService] purgeOldMessages error:", err);
+  }
+}
+
 /** 오늘 메시지 로드 (KST 기준) */
 export async function loadTodayMessages(): Promise<ChatMessage[]> {
   if (!isReady() || !supabase) return [];
@@ -235,6 +257,49 @@ export async function saveNotice(text: string, updatedBy: ChatSender): Promise<v
 }
 
 // ---------------------------------------------------------------------------
+// Midnight Purge Scheduler — KST 00:00 자동 삭제
+// ---------------------------------------------------------------------------
+
+let midnightTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** KST 자정까지 남은 시간(ms) 계산 */
+function msUntilKSTMidnight(): number {
+  const now = new Date();
+  const kstOffset = 9 * 60 * 60 * 1000; // UTC+9
+  const kstNow = new Date(now.getTime() + kstOffset);
+  const kstTomorrow = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate() + 1);
+  // KST 내일 00:00을 UTC로 변환
+  const utcMidnight = new Date(kstTomorrow.getTime() - kstOffset);
+  return utcMidnight.getTime() - now.getTime();
+}
+
+/**
+ * KST 자정 자동 삭제 스케줄러 시작.
+ * 자정이 되면 purgeOldMessages 실행 후 onPurged 콜백 호출,
+ * 이후 다음 자정까지 다시 스케줄링.
+ */
+export function startMidnightPurgeScheduler(onPurged?: () => void): () => void {
+  const schedule = () => {
+    const ms = msUntilKSTMidnight();
+    midnightTimer = setTimeout(async () => {
+      await purgeOldMessages();
+      onPurged?.();
+      // 다음 자정 스케줄
+      schedule();
+    }, ms);
+  };
+  schedule();
+
+  // cleanup 함수 반환
+  return () => {
+    if (midnightTimer) {
+      clearTimeout(midnightTimer);
+      midnightTimer = null;
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Realtime — 구독
 // ---------------------------------------------------------------------------
 
@@ -244,11 +309,14 @@ export function subscribeChatRealtime(callbacks: {
   onInsert?: (msg: ChatMessage) => void;
   onUpdate?: (msg: ChatMessage) => void;
   onDelete?: (old: { id: string }) => void;
+  onReconnect?: () => void;
 }): RealtimeChannel | null {
   if (!isReady() || !supabase) return null;
 
   // 기존 채널 정리
   unsubscribeChatRealtime();
+
+  let wasConnected = false;
 
   realtimeChannel = supabase
     .channel("chat-messages-realtime")
@@ -273,7 +341,15 @@ export function subscribeChatRealtime(callbacks: {
         callbacks.onDelete?.(payload.old as { id: string });
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        // 재연결 시 누락된 메시지 보정
+        if (wasConnected) {
+          callbacks.onReconnect?.();
+        }
+        wasConnected = true;
+      }
+    });
 
   return realtimeChannel;
 }

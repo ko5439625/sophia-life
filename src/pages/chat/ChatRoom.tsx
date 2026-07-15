@@ -26,6 +26,8 @@ import {
   broadcastTyping,
   unsubscribePresence,
   clearChatSession,
+  purgeOldMessages,
+  startMidnightPurgeScheduler,
 } from "@/services/chatService";
 
 interface ChatRoomProps {
@@ -59,15 +61,45 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
     });
   }, []);
 
-  // 초기 메시지 로드
+  // 초기 메시지 로드 (전날 메시지 삭제 후 오늘 메시지 로드)
   useEffect(() => {
-    loadTodayMessages().then((msgs) => {
-      setMessages(msgs);
-      scrollToBottom();
-      // 읽음 처리
-      markAsRead(sender);
-    });
+    purgeOldMessages().then(() =>
+      loadTodayMessages().then((msgs) => {
+        setMessages(msgs);
+        scrollToBottom();
+        markAsRead(sender);
+      })
+    );
   }, [sender, scrollToBottom]);
+
+  // 탭 복귀 시 메시지 재로드 (웹-데스크탑 동기화 보완)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        purgeOldMessages().then(() =>
+          loadTodayMessages().then((msgs) => {
+            setMessages(msgs);
+            scrollToBottom();
+            markAsRead(sender);
+          })
+        );
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [sender, scrollToBottom]);
+
+  // KST 자정 자동 삭제 스케줄러
+  useEffect(() => {
+    const cleanup = startMidnightPurgeScheduler(() => {
+      // 자정이 되면 메시지 목록 비우고 오늘 메시지 새로 로드
+      loadTodayMessages().then((msgs) => {
+        setMessages(msgs);
+        scrollToBottom();
+      });
+    });
+    return cleanup;
+  }, [scrollToBottom]);
 
   // 이미지 URL 해석
   useEffect(() => {
@@ -109,6 +141,14 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
       },
       onDelete: (old) => {
         setMessages((prev) => prev.filter((m) => m.id !== old.id));
+      },
+      onReconnect: () => {
+        // 재연결 시 누락 메시지 보정
+        loadTodayMessages().then((msgs) => {
+          setMessages(msgs);
+          scrollToBottom();
+          markAsRead(sender);
+        });
       },
     });
 

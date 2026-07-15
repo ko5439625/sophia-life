@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   Download,
   Monitor,
+  RefreshCw,
 } from "lucide-react";
 import type { ChatMessage, ChatSender } from "@/types/chat";
 import { SENDER_LABELS, SENDER_EMOJI, AUTH_CODES } from "@/types/chat";
@@ -31,6 +32,8 @@ import {
   getChatSender,
   setChatSender,
   clearChatSession,
+  purgeOldMessages,
+  startMidnightPurgeScheduler,
 } from "@/services/chatService";
 
 // ---------------------------------------------------------------------------
@@ -60,10 +63,10 @@ function ChatLogin({ onLogin }: { onLogin: (s: ChatSender) => void }) {
   };
 
   return (
-    <div className="flex items-center justify-center py-20">
+    <div className="flex items-center justify-center py-10 sm:py-20 px-4">
       <form
         onSubmit={handleSubmit}
-        className={`w-full max-w-xs bg-card border border-border rounded-2xl p-8 shadow-lg transition-transform ${shake ? "animate-shake" : ""}`}
+        className={`w-full max-w-xs bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-lg transition-transform ${shake ? "animate-shake" : ""}`}
       >
         <div className="text-center text-4xl mb-4"><Lock className="w-10 h-10 mx-auto text-muted-foreground/40" /></div>
         <h2 className="text-center text-lg font-bold mb-1">QA JJ</h2>
@@ -112,6 +115,7 @@ function ChatLogin({ onLogin }: { onLogin: (s: ChatSender) => void }) {
               <Monitor size={13} /> macOS
             </a>
           </div>
+          <p className="text-center text-[9px] text-muted-foreground/40 mt-1">v0.1.0</p>
         </div>
       </form>
 
@@ -142,6 +146,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
   const [menuId, setMenuId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -149,19 +154,54 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scrollToBottom = useCallback(() => {
+    // 이중 rAF로 DOM 렌더 후 스크롤 보장
     requestAnimationFrame(() => {
-      if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+      requestAnimationFrame(() => {
+        if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+      });
     });
   }, []);
 
-  // 초기 로드
+  // 메시지 변경 시 항상 맨 아래로 스크롤
   useEffect(() => {
-    loadTodayMessages().then((msgs) => {
-      setMessages(msgs);
-      scrollToBottom();
-      markAsRead(sender);
+    scrollToBottom();
+  }, [messages.length, scrollToBottom]);
+
+  // 초기 로드 (전날 메시지 삭제 후 오늘 메시지 로드)
+  useEffect(() => {
+    purgeOldMessages().then(() =>
+      loadTodayMessages().then((msgs) => {
+        setMessages(msgs);
+        markAsRead(sender);
+      })
+    );
+  }, [sender]);
+
+  // 탭 복귀 시 메시지 재로드 (웹-데스크탑 동기화 보완)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        purgeOldMessages().then(() =>
+          loadTodayMessages().then((msgs) => {
+            setMessages(msgs);
+            markAsRead(sender);
+          })
+        );
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [sender]);
+
+  // KST 자정 자동 삭제 스케줄러
+  useEffect(() => {
+    const cleanup = startMidnightPurgeScheduler(() => {
+      loadTodayMessages().then((msgs) => {
+        setMessages(msgs);
+      });
     });
-  }, [sender, scrollToBottom]);
+    return cleanup;
+  }, []);
 
   // 이미지 URL 해석
   useEffect(() => {
@@ -186,7 +226,6 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
     subscribeChatRealtime({
       onInsert: (msg) => {
         setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
-        scrollToBottom();
         if (msg.sender !== sender) markAsRead(sender);
       },
       onUpdate: (msg) => {
@@ -195,9 +234,16 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
       onDelete: (old) => {
         setMessages((prev) => prev.filter((m) => m.id !== old.id));
       },
+      onReconnect: () => {
+        // 재연결 시 누락 메시지 보정
+        loadTodayMessages().then((msgs) => {
+          setMessages(msgs);
+          markAsRead(sender);
+        });
+      },
     });
     return () => unsubscribeChatRealtime();
-  }, [sender, scrollToBottom]);
+  }, [sender]);
 
   // Presence
   useEffect(() => {
@@ -210,6 +256,17 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
     });
     return () => unsubscribePresence();
   }, [sender, peer, scrollToBottom]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const msgs = await loadTodayMessages();
+      setMessages(msgs);
+      markAsRead(sender);
+    } finally {
+      setTimeout(() => setRefreshing(false), 400);
+    }
+  };
 
   const handleSend = async () => {
     const text = input.trim();
@@ -263,39 +320,49 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-bold">채팅</h2>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-1">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg sm:text-2xl font-bold">채팅</h2>
+          <span className="flex items-center gap-1 text-muted-foreground text-xs sm:text-sm">
             {SENDER_EMOJI[sender]} {SENDER_LABELS[sender]}
-            <span className="text-xs text-muted-foreground/50">로 접속 중</span>
+            <span className="text-muted-foreground/50 hidden sm:inline">로 접속 중</span>
           </span>
-          <span className="flex items-center gap-1.5">
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <span className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${peerOnline ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,.5)]" : "bg-muted-foreground/30"}`} />
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground text-[11px] sm:text-xs">
               {SENDER_LABELS[peer]} {peerTyping ? "입력 중..." : peerOnline ? "온라인" : "오프라인"}
             </span>
           </span>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition disabled:opacity-40"
+            title="메시지 새로고침"
+          >
+            <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
+          </button>
           <a
             href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.1.0/QA.JJ-0.1.0-arm64.dmg"
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition"
+            className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition hidden sm:flex"
             title="데스크탑 앱 다운로드"
           >
-            <Download size={16} />
+            <Download size={15} />
           </a>
-          <button onClick={onLogout} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition" title="채팅 로그아웃">
-            <LogOut size={16} />
+          <button onClick={onLogout} className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition" title="채팅 로그아웃">
+            <LogOut size={15} />
           </button>
         </div>
       </div>
 
       {/* 채팅 영역 */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden flex flex-col" style={{ height: "calc(100vh - 200px)", minHeight: "400px" }}>
+      <div className="bg-card border-0 sm:border border-border rounded-none sm:rounded-xl overflow-hidden flex flex-col -mx-3 sm:mx-0" style={{ height: "calc(100dvh - 140px)", minHeight: "320px" }}>
         {/* 메시지 로그 */}
-        <div ref={logRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 scroll-smooth" onClick={() => setMenuId(null)}>
-          <div className="text-center text-[10px] text-muted-foreground/50 py-2">── 오늘 ──</div>
+        <div ref={logRef} className="flex-1 overflow-y-auto px-2.5 sm:px-4 py-2 sm:py-3 space-y-1 sm:space-y-1.5 scroll-smooth" onClick={() => setMenuId(null)}>
+          <div className="text-center text-[10px] text-muted-foreground/50 py-1 sm:py-2">── 오늘 ──</div>
 
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground/40">
@@ -318,7 +385,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
             }
 
             return (
-              <div key={msg.id} className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : ""} max-w-[80%] ${isMe ? "ml-auto" : "mr-auto"}`}>
+              <div key={msg.id} className={`flex items-end gap-1 sm:gap-1.5 ${isMe ? "flex-row-reverse" : ""} max-w-[88%] sm:max-w-[80%] ${isMe ? "ml-auto" : "mr-auto"}`}>
                 <div className="relative group">
                   {isEditing ? (
                     <div className="flex items-center gap-1 bg-muted border border-primary rounded-xl px-3 py-2">
@@ -333,21 +400,21 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
                       <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
                     </div>
                   ) : (
-                    <div className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${
+                    <div className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl text-[13px] sm:text-[13px] leading-relaxed ${
                       isMe
                         ? "bg-primary text-primary-foreground rounded-br-md"
                         : "bg-muted text-foreground rounded-bl-md"
                     }`}>
                       {msg.kind === "image" ? (
                         msg.image_url ? (
-                          <img src={msg.image_url} alt="사진" className="max-w-[200px] rounded-lg cursor-pointer" onClick={() => setImagePreview(msg.image_url!)} />
+                          <img src={msg.image_url} alt="사진" className="max-w-[180px] sm:max-w-[200px] rounded-lg cursor-pointer" onClick={() => setImagePreview(msg.image_url!)} />
                         ) : (
                           <span className="text-xs opacity-60 border border-dashed border-current/30 rounded px-2 py-1">📷 [사진]</span>
                         )
                       ) : (
                         <span className="whitespace-pre-wrap break-words">{msg.text}</span>
                       )}
-                      <span className={`block text-[9.5px] mt-1 text-right ${isMe ? "opacity-50" : "text-muted-foreground"}`}>
+                      <span className={`block text-[9px] sm:text-[9.5px] mt-0.5 sm:mt-1 text-right ${isMe ? "opacity-50" : "text-muted-foreground"}`}>
                         {msg.edited && "(수정됨) "}
                         {formatTime(msg.created_at)}
                         {isMe && (
@@ -399,11 +466,11 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
         </div>
 
         {/* 입력창 */}
-        <div className="flex-shrink-0 flex items-center gap-2 px-3 py-3 border-t border-border bg-card">
+        <div className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-3 border-t border-border bg-card safe-area-bottom">
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="p-1.5 text-muted-foreground hover:text-foreground transition disabled:opacity-40"
+            className="p-1 sm:p-1.5 text-muted-foreground hover:text-foreground transition disabled:opacity-40 flex-shrink-0"
             title="이미지 첨부"
           >
             {uploading ? (
@@ -419,17 +486,17 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
             value={input}
             onChange={(e) => handleInputChange(e.target.value)}
             onPaste={handlePaste}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            placeholder="메시지 입력... (Ctrl+V 이미지)"
-            className="flex-1 bg-muted border border-border rounded-full text-foreground text-sm py-2.5 px-4 outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/40"
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); handleSend(); } }}
+            placeholder="메시지 입력..."
+            className="flex-1 min-w-0 bg-muted border border-border rounded-full text-foreground text-base sm:text-sm py-2 sm:py-2.5 px-3 sm:px-4 outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/40"
           />
 
           <button
             onClick={handleSend}
             disabled={!input.trim()}
-            className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
-            <Send size={16} />
+            <Send size={15} />
           </button>
         </div>
       </div>
