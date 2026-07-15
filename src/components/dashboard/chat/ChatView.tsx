@@ -103,19 +103,19 @@ function ChatLogin({ onLogin }: { onLogin: (s: ChatSender) => void }) {
           <p className="text-center text-[10px] text-muted-foreground/60 mb-2">데스크탑 앱 다운로드</p>
           <div className="flex gap-2">
             <a
-              href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.1.0/QA.JJ.Setup.0.1.0.exe"
+              href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.2.0/QA.JJ.Setup.0.2.0.exe"
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition"
             >
               <Monitor size={13} /> Windows
             </a>
             <a
-              href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.1.0/QA.JJ-0.1.0-arm64.dmg"
+              href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.2.0/QA.JJ-0.2.0-arm64.dmg"
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition"
             >
               <Monitor size={13} /> macOS
             </a>
           </div>
-          <p className="text-center text-[9px] text-muted-foreground/40 mt-1">v0.1.0</p>
+          <p className="text-center text-[9px] text-muted-foreground/40 mt-1">v0.2.0</p>
         </div>
       </form>
 
@@ -346,7 +346,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
             <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
           </button>
           <a
-            href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.1.0/QA.JJ-0.1.0-arm64.dmg"
+            href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.2.0/QA.JJ-0.2.0-arm64.dmg"
             className="p-1 sm:p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition hidden sm:flex"
             title="데스크탑 앱 다운로드"
           >
