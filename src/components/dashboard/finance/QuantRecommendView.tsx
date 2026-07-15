@@ -202,12 +202,12 @@ const KR_UNIVERSE = [
   "017670.KS", "030200.KS", "032830.KS", "009150.KS", "086280.KS",
   "003670.KS", "010130.KS", "009830.KS", "267260.KS", "267250.KS",
   "003550.KS", "009540.KS", "034730.KS", "011170.KS", "000810.KS",
-  "036570.KS", "018260.KS", "033780.KS", "011200.KS", "097950.KS",
+  "018260.KS", "033780.KS", "011200.KS", "097950.KS",
   "010950.KS", "326030.KS", "316140.KS", "003490.KS", "402340.KS",
-  "138040.KS", "004020.KS", "021240.KS", "051900.KS", "161390.KS",
+  "138040.KS", "004020.KS", "021240.KS", "051900.KS", "161390.KS", "251270.KS",
   // KOSDAQ 시총 상위 20
   "247540.KQ", "086520.KQ", "263750.KQ", "293490.KQ", "035760.KQ",
-  "022100.KQ", "042700.KQ", "036570.KQ", "251270.KQ", "259960.KQ",
+  "022100.KQ", "042700.KQ", "036570.KQ",
   "328130.KQ", "241560.KQ", "145020.KQ", "196170.KQ", "091990.KQ",
   "112040.KQ", "357780.KQ", "068760.KQ", "041510.KQ", "035420.KQ",
   // 과거 대형주 (3년전 상위였으나 현재 하락한 종목 포함)
@@ -221,8 +221,8 @@ const KR_UNIVERSE_NAMES: Record<string, string> = {
   "010130.KS": "고려아연", "009830.KS": "한화솔루션", "267260.KS": "HD현대일렉트릭",
   "267250.KS": "HD현대", "247540.KQ": "에코프로비엠", "086520.KQ": "에코프로",
   "293490.KQ": "카카오게임즈", "035760.KQ": "CJ ENM", "022100.KQ": "포스코DX",
-  "042700.KQ": "한미반도체", "036570.KQ": "엔씨소프트", "251270.KQ": "넷마블",
-  "259960.KQ": "크래프톤", "263750.KQ": "펄어비스",
+  "042700.KQ": "한미반도체", "036570.KQ": "엔씨소프트",
+  "263750.KQ": "펄어비스", "251270.KS": "넷마블",
 };
 
 async function fetchYahooStocks(market: "us" | "kr"): Promise<StockData[]> {
@@ -560,7 +560,7 @@ const KR_SEARCH_MAP: Record<string, { symbol: string; name: string }> = {
   "HD현대중공업": { symbol: "329180.KS", name: "HD현대중공업" },
   "크래프톤": { symbol: "259960.KS", name: "크래프톤" },
   "엔씨소프트": { symbol: "036570.KQ", name: "엔씨소프트" },
-  "펄어비스": { symbol: "263750.KS", name: "펄어비스" },
+  "펄어비스": { symbol: "263750.KQ", name: "펄어비스" },
   "넷마블": { symbol: "251270.KS", name: "넷마블" },
   "신한지주": { symbol: "055550.KS", name: "신한지주" },
   "KB금융": { symbol: "105560.KS", name: "KB금융" },
@@ -598,6 +598,37 @@ const KR_SEARCH_MAP: Record<string, { symbol: string; name: string }> = {
   "대한항공": { symbol: "003490.KS", name: "대한항공" },
   "SK바이오팜": { symbol: "326030.KS", name: "SK바이오팜" },
   "두산밥캣": { symbol: "241560.KS", name: "두산밥캣" },
+  // English aliases
+  "samsung": { symbol: "005930.KS", name: "삼성전자" },
+  "sk hynix": { symbol: "000660.KS", name: "SK하이닉스" },
+  "hynix": { symbol: "000660.KS", name: "SK하이닉스" },
+  "hyundai": { symbol: "005380.KS", name: "현대자동차" },
+  "kia": { symbol: "000270.KS", name: "기아" },
+  "celltrion": { symbol: "068270.KS", name: "셀트리온" },
+  "naver": { symbol: "035420.KS", name: "NAVER" },
+  "kakao": { symbol: "035720.KS", name: "카카오" },
+  "posco": { symbol: "005490.KS", name: "POSCO홀딩스" },
+  "nc": { symbol: "036570.KQ", name: "엔씨소프트" },
+  "ncsoft": { symbol: "036570.KQ", name: "엔씨소프트" },
+  "nc소프트": { symbol: "036570.KQ", name: "엔씨소프트" },
+  "netmarble": { symbol: "251270.KS", name: "넷마블" },
+  "krafton": { symbol: "259960.KS", name: "크래프톤" },
+  "pearl abyss": { symbol: "263750.KQ", name: "펄어비스" },
+  "hive": { symbol: "352820.KS", name: "하이브" },
+  "coupang": { symbol: "CPNG", name: "쿠팡" },
+  "ecopro": { symbol: "086520.KQ", name: "에코프로" },
+  "kepco": { symbol: "015760.KS", name: "한국전력" },
+  "hanwha": { symbol: "012450.KS", name: "한화에어로스페이스" },
+  "korean air": { symbol: "003490.KS", name: "대한항공" },
+  "kb": { symbol: "105560.KS", name: "KB금융" },
+  "shinhan": { symbol: "055550.KS", name: "신한지주" },
+  "lg전자": { symbol: "066570.KS", name: "LG전자" },
+  "lg화학": { symbol: "051910.KS", name: "LG화학" },
+  "lg": { symbol: "003550.KS", name: "LG" },
+  "sk": { symbol: "034730.KS", name: "SK" },
+  "kt": { symbol: "030200.KS", name: "KT" },
+  "cj": { symbol: "097950.KS", name: "CJ제일제당" },
+  "hd현대": { symbol: "267250.KS", name: "HD현대" },
 };
 
 /**
@@ -607,14 +638,15 @@ const KR_SEARCH_MAP: Record<string, { symbol: string; name: string }> = {
  */
 function resolveSearchQuery(query: string): { directSymbols: { symbol: string; name: string }[] } | { yahooQuery: string } {
   const q = query.trim();
+  const qLower = q.toLowerCase();
 
-  // 정확 매핑
-  const exact = KR_SEARCH_MAP[q];
+  // 정확 매핑 (대소문자 무시)
+  const exact = KR_SEARCH_MAP[q] || KR_SEARCH_MAP[qLower] || KR_SEARCH_MAP[q.toUpperCase()];
   if (exact) return { directSymbols: [exact] };
 
-  // 부분 매핑: 입력에 포함되거나, 이름에 입력이 포함
+  // 부분 매핑: 입력에 포함되거나, 이름에 입력이 포함 (대소문자 무시)
   const partials = Object.entries(KR_SEARCH_MAP)
-    .filter(([k]) => k.includes(q) || q.includes(k))
+    .filter(([k]) => k.toLowerCase().includes(qLower) || qLower.includes(k.toLowerCase()))
     .map(([, v]) => v);
   // 중복 제거 (symbol 기준)
   const unique = [...new Map(partials.map(p => [p.symbol, p])).values()];

@@ -432,7 +432,7 @@ const PlannerTab = () => {
                 className="flex-1 text-left min-w-0"
               >
                 <h4 className="font-semibold text-base sm:text-lg truncate">{plan.title}</h4>
-                <p className="text-[10px] sm:text-xs text-muted-foreground font-mono mt-1 break-all">
+                <p className="text-[11px] sm:text-xs text-muted-foreground font-mono mt-1 break-all">
                   {plan.startDate} ~ {plan.endDate} ({dayCount}일) ·{" "}
                   {formatCost(plan.estimatedCost)}
                 </p>
@@ -596,7 +596,7 @@ const PlannerTab = () => {
                               >
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
-                                    <label className="text-[10px] text-muted-foreground mb-0.5 block">시간</label>
+                                    <label className="text-[11px] text-muted-foreground mb-0.5 block">시간</label>
                                     <input
                                       type="time"
                                       value={newScheduleItem.time}
@@ -607,7 +607,7 @@ const PlannerTab = () => {
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] text-muted-foreground mb-0.5 block">카테고리</label>
+                                    <label className="text-[11px] text-muted-foreground mb-0.5 block">카테고리</label>
                                     <select
                                       value={newScheduleItem.category}
                                       onChange={(e) =>
@@ -624,7 +624,7 @@ const PlannerTab = () => {
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="text-[10px] text-muted-foreground mb-0.5 block">일정 제목</label>
+                                  <label className="text-[11px] text-muted-foreground mb-0.5 block">일정 제목</label>
                                   <input
                                     type="text"
                                     value={newScheduleItem.title}
@@ -636,7 +636,7 @@ const PlannerTab = () => {
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-[10px] text-muted-foreground mb-0.5 block">장소</label>
+                                  <label className="text-[11px] text-muted-foreground mb-0.5 block">장소</label>
                                   <input
                                     type="text"
                                     value={newScheduleItem.place}
@@ -648,7 +648,7 @@ const PlannerTab = () => {
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-[10px] text-muted-foreground mb-0.5 block">메모</label>
+                                  <label className="text-[11px] text-muted-foreground mb-0.5 block">메모</label>
                                   <input
                                     type="text"
                                     value={newScheduleItem.memo}

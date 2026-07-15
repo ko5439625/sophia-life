@@ -62,7 +62,7 @@ const CollapsibleSection = ({
           {icon}
           <h3 className="text-sm font-mono text-muted-foreground">{title}</h3>
           {badge && (
-            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
               {badge}
             </span>
           )}
@@ -316,7 +316,7 @@ const ApiConnectionStatus = () => {
                 <div className={`w-2 h-2 rounded-full ${indicator.dot}`} />
                 <span className="text-xs">{api.name}</span>
               </div>
-              <span className={`text-[10px] font-mono ${indicator.color}`}>
+              <span className={`text-[11px] font-mono ${indicator.color}`}>
                 {indicator.label}
               </span>
             </motion.div>
@@ -324,11 +324,11 @@ const ApiConnectionStatus = () => {
         })}
       </div>
       {lastTested && (
-        <p className="text-[10px] text-muted-foreground mt-1">
+        <p className="text-[11px] text-muted-foreground mt-1">
           마지막 테스트: {lastTested}
         </p>
       )}
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-[11px] text-muted-foreground">
         "연결 테스트" 버튼으로 실제 API 연결을 확인합니다. 미설정 항목은 위 섹션에서 키를 입력하세요.
       </p>
     </div>
@@ -892,7 +892,7 @@ const SettingsView = () => {
                 );
               })}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2">
+            <p className="text-[11px] text-muted-foreground mt-2">
               잠긴 카테고리는 블로그에서 자물쇠 아이콘으로 표시되며, PIN 입력 후 열람 가능합니다.
             </p>
           </div>
@@ -1185,7 +1185,7 @@ const SettingsView = () => {
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               Places 검색용
             </p>
           </div>
@@ -1223,7 +1223,7 @@ const SettingsView = () => {
             <p className="text-xs font-mono text-primary font-medium mb-0.5">
               Yahoo Finance: 키 불필요 (자동 연동)
             </p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               주식/지수/환율 데이터는 Yahoo Finance에서 자동으로 가져옵니다. 별도 API 키가 필요하지 않습니다.
             </p>
           </div>
@@ -1254,7 +1254,7 @@ const SettingsView = () => {
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               Yahoo Finance 실패 시 백업용 (선택사항)
             </p>
           </div>
@@ -1285,7 +1285,7 @@ const SettingsView = () => {
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               부동산 실거래가 조회용
             </p>
           </div>
@@ -1319,7 +1319,7 @@ const SettingsView = () => {
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               홈 대시보드 날씨 표시용
             </p>
           </div>
@@ -1350,7 +1350,7 @@ const SettingsView = () => {
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               {"소비자물가지수(CPI) 조회용 · 미입력 시 연 3% 고정 · ecos.bok.or.kr에서 발급"}
             </p>
           </div>
@@ -1360,7 +1360,7 @@ const SettingsView = () => {
             <p className="text-xs font-mono text-amber-500 font-medium">
               {"한국투자증권 Open API (퀀트 스크리닝)"}
             </p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               {"퀀트 종목 조건검색에 필요 · apiportal.koreainvestment.com에서 발급 · 한투 계좌 필요"}
             </p>
             <div>
@@ -1447,7 +1447,7 @@ const SettingsView = () => {
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               블로그 AI 작성 보조
             </p>
           </div>
@@ -1478,7 +1478,7 @@ const SettingsView = () => {
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               경제 분석, 헷징 분석, 뉴스 번역
             </p>
           </div>
@@ -1509,7 +1509,7 @@ const SettingsView = () => {
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               블로그 AI 다듬기 시 자동 이미지 삽입 (unsplash.com/developers)
             </p>
           </div>

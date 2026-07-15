@@ -1144,6 +1144,166 @@ export async function deleteAuctionFilter(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Wedding Settlement (웨딩 정산 - vendors, items, receipts)
+// ---------------------------------------------------------------------------
+
+export interface SettlementVendorRow {
+  id: string;
+  name: string;
+  category: string;
+  emoji: string | null;
+  contract_date: string | null;
+  final_payment_date: string | null;
+  comment: string | null;
+  vat_applied: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface SettlementItemRow {
+  id: string;
+  vendor_id: string;
+  name: string;
+  description: string | null;
+  unit_price: number | null;
+  quantity: number | null;
+  amount: number;
+  payer: string;
+  payment_method: string;
+  payment_status: string;
+  paid_date: string | null;
+  paid_amount: number | null;
+  is_prepayment: boolean;
+  sort_order: number;
+}
+
+export interface SettlementReceiptRow {
+  id: string;
+  vendor_id: string;
+  filename: string;
+  data_url: string | null;
+  file_size: number;
+  mime_type: string;
+  badge_type: string | null;
+  uploaded_at: number;
+  ai_extracted: unknown | null;
+}
+
+/** Check if settlement tables exist (quick probe) */
+export async function checkSettlementTablesExist(): Promise<boolean> {
+  if (!isReady() || !supabase) return false;
+  try {
+    const { error } = await supabase.from("settlement_vendors").select("id").limit(1);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function loadSettlementVendors(): Promise<SettlementVendorRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data, error } = await supabase.from("settlement_vendors").select("*").order("created_at");
+    if (error) { console.warn("[supabaseSync] loadSettlementVendors:", error.message); return []; }
+    return (data || []) as SettlementVendorRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadSettlementVendors error:", e);
+    return [];
+  }
+}
+
+export async function saveSettlementVendor(vendor: SettlementVendorRow): Promise<boolean> {
+  if (!isReady() || !supabase) return false;
+  try {
+    const { error } = await supabase.from("settlement_vendors").upsert(vendor);
+    if (error) { console.error("[supabaseSync] saveSettlementVendor:", error.message); return false; }
+    return true;
+  } catch (e) {
+    console.error("[supabaseSync] saveSettlementVendor error:", e);
+    return false;
+  }
+}
+
+export async function deleteSettlementVendor(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("settlement_vendors").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteSettlementVendor error:", e);
+  }
+}
+
+export async function loadSettlementItems(): Promise<SettlementItemRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data, error } = await supabase.from("settlement_items").select("*").order("sort_order");
+    if (error) { console.warn("[supabaseSync] loadSettlementItems:", error.message); return []; }
+    return (data || []) as SettlementItemRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadSettlementItems error:", e);
+    return [];
+  }
+}
+
+export async function saveSettlementItem(item: SettlementItemRow): Promise<boolean> {
+  if (!isReady() || !supabase) return false;
+  try {
+    const { error } = await supabase.from("settlement_items").upsert(item);
+    if (error) { console.error("[supabaseSync] saveSettlementItem:", error.message); return false; }
+    return true;
+  } catch (e) {
+    console.error("[supabaseSync] saveSettlementItem error:", e);
+    return false;
+  }
+}
+
+export async function deleteSettlementItem(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("settlement_items").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteSettlementItem error:", e);
+  }
+}
+
+export async function loadSettlementReceipts(): Promise<SettlementReceiptRow[]> {
+  if (!isReady() || !supabase) return [];
+  try {
+    const { data, error } = await supabase.from("settlement_receipts").select("*").order("uploaded_at", { ascending: false });
+    if (error) { console.warn("[supabaseSync] loadSettlementReceipts:", error.message); return []; }
+    return (data || []) as SettlementReceiptRow[];
+  } catch (e) {
+    console.warn("[supabaseSync] loadSettlementReceipts error:", e);
+    return [];
+  }
+}
+
+export async function saveSettlementReceipt(receipt: SettlementReceiptRow): Promise<boolean> {
+  if (!isReady() || !supabase) return false;
+  try {
+    // Exclude data_url from DB save — base64 images are too large for PostgREST.
+    // data_url is preserved in localStorage only.
+    const { data_url, ...rest } = receipt;
+    const row = { ...rest, data_url: null };
+    const { error } = await supabase.from("settlement_receipts").upsert(row);
+    if (error) { console.error("[supabaseSync] saveSettlementReceipt:", error.message); return false; }
+    return true;
+  } catch (e) {
+    console.error("[supabaseSync] saveSettlementReceipt error:", e);
+    return false;
+  }
+}
+
+export async function deleteSettlementReceipt(id: string): Promise<void> {
+  if (!isReady() || !supabase) return;
+  try {
+    await supabase.from("settlement_receipts").delete().eq("id", id);
+  } catch (e) {
+    console.error("[supabaseSync] deleteSettlementReceipt error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Post Likes (좋아요)
 // ---------------------------------------------------------------------------
 

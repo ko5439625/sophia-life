@@ -238,7 +238,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 relative px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[60px] flex-shrink-0 ${
+            className={`flex-1 relative px-2 sm:px-4 py-2.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[60px] min-h-[40px] flex-shrink-0 ${
               activeTab === tab.id
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -486,7 +486,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                             <User className="h-3 w-3 text-blue-400" />
                           )}
                           <span
-                            className={`text-[10px] font-medium ${
+                            className={`text-[11px] font-medium ${
                               isSophia ? "text-pink-400" : "text-blue-400"
                             }`}
                           >
@@ -498,7 +498,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => toggleMemoPin(memo.id)}
-                              className={`flex items-center gap-1 text-[10px] font-medium transition-colors rounded-full px-1.5 py-0.5 ${
+                              className={`flex items-center gap-1 text-[11px] font-medium transition-colors rounded-full px-1.5 py-0.5 ${
                                 memo.pinned
                                   ? "text-amber-500 bg-amber-500/10"
                                   : "text-muted-foreground/50 hover:text-muted-foreground"
@@ -510,13 +510,13 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                             </button>
                             <button
                               onClick={() => handleDeleteMemo(memo.id)}
-                              className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground/50 hover:text-destructive transition-colors rounded-full px-1.5 py-0.5"
+                              className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/50 hover:text-destructive transition-colors rounded-full px-1.5 py-0.5"
                               title="삭제"
                             >
                               <Trash2 className="h-2.5 w-2.5" />
                             </button>
                           </div>
-                          <p className="text-[10px] text-muted-foreground/60 font-mono">
+                          <p className="text-[11px] text-muted-foreground/60 font-mono">
                             {(() => {
                               try {
                                 const d = new Date(memo.timestamp);
@@ -611,7 +611,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                                 <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                                 <div className="min-w-0">
                                   <p className="truncate">{place.placeName}</p>
-                                  <p className="text-[10px] text-muted-foreground truncate">{place.address}</p>
+                                  <p className="text-[11px] text-muted-foreground truncate">{place.address}</p>
                                 </div>
                               </button>
                             ))
@@ -621,7 +621,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                             </div>
                           ) : null}
                           <div className="px-3 py-2 border-t border-border">
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-[11px] text-muted-foreground">
                               카카오 Places API 연동
                             </p>
                           </div>

@@ -58,13 +58,13 @@
     --secondary-foreground: 0 0% 96%;
     --muted: 220 14% 92%;
     --muted-foreground: 220 9% 46%;
-    --accent: 217 91% 53%;
+    --accent: 213 94% 68%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 220 13% 88%;
     --input: 220 13% 88%;
-    --ring: 212 52% 25%;
+    --ring: 213 94% 68%;
     --radius: 0.75rem;
     --navy: 212 52% 25%;
     --navy-foreground: 0 0% 100%;
@@ -91,7 +91,7 @@
     --secondary-foreground: 0 0% 92%;
     --muted: 0 0% 12%;
     --muted-foreground: 0 0% 55%;
-    --accent: 217 91% 53%;
+    --accent: 213 94% 68%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 40%;
     --destructive-foreground: 0 0% 92%;
@@ -131,6 +131,13 @@
 
   .font-serif-heading {
     font-family: 'Pretendard Variable', 'Inter', sans-serif;
+  }
+
+  /* iOS zoom 방지: 모바일에서 input/textarea/select는 최소 16px */
+  @media screen and (max-width: 767px) {
+    input, textarea, select {
+      font-size: 16px !important;
+    }
   }
 }
 
@@ -226,5 +233,10 @@
   }
   .typing-cursor {
     animation: blink-cursor 0.8s step-end infinite;
+  }
+
+  /* Safe area for notched phones (iPhone X+) */
+  .safe-area-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 }

@@ -205,7 +205,7 @@ const CalendarTab = () => {
         </div>
         {/* Emoji selector */}
         <div>
-          <span className="text-[10px] text-muted-foreground mb-1 block">이모지</span>
+          <span className="text-[11px] text-muted-foreground mb-1 block">이모지</span>
           <div className="flex flex-wrap gap-1">
             {EMOJI_OPTIONS.map((em) => (
               <button
@@ -339,10 +339,10 @@ const CalendarTab = () => {
                     <span className="text-sm">{e.emoji}</span>
                     <span className="text-sm flex-1">{e.title}</span>
                     {e.time && (
-                      <span className="text-[10px] text-muted-foreground font-mono">{e.time}</span>
+                      <span className="text-[11px] text-muted-foreground font-mono">{e.time}</span>
                     )}
                     {e.isShared && (
-                      <span className="text-[10px] text-primary font-mono">공유</span>
+                      <span className="text-[11px] text-primary font-mono">공유</span>
                     )}
                     <button
                       onClick={() => handleDeleteEvent(e.id)}
@@ -384,7 +384,7 @@ const CalendarTab = () => {
                       {parseInt(ds.split("-")[1])}월 {dayNum}일 ({dayOfWeek})
                     </span>
                     {ds === todayStr && (
-                      <span className="text-[9px] bg-primary/15 text-primary px-1.5 py-0.5 rounded font-mono">
+                      <span className="text-[11px] bg-primary/15 text-primary px-1.5 py-0.5 rounded font-mono">
                         오늘
                       </span>
                     )}
@@ -394,7 +394,7 @@ const CalendarTab = () => {
                       setSelectedDate(ds);
                       startAdding(ds);
                     }}
-                    className="text-[10px] text-primary hover:underline font-medium flex items-center gap-0.5"
+                    className="text-[11px] text-primary hover:underline font-medium flex items-center gap-0.5"
                   >
                     <Plus className="h-3 w-3" />
                     추가
@@ -405,10 +405,10 @@ const CalendarTab = () => {
                     <span className="text-sm">{e.emoji}</span>
                     <span className="text-sm flex-1">{e.title}</span>
                     {e.time && (
-                      <span className="text-[10px] text-muted-foreground font-mono">{e.time}</span>
+                      <span className="text-[11px] text-muted-foreground font-mono">{e.time}</span>
                     )}
                     {e.isShared && (
-                      <span className="text-[10px] text-primary font-mono">공유</span>
+                      <span className="text-[11px] text-primary font-mono">공유</span>
                     )}
                     <button
                       onClick={() => handleDeleteEvent(e.id)}
@@ -427,7 +427,7 @@ const CalendarTab = () => {
 
         {/* Add event for a new date (not in the list yet) */}
         {sortedEventDates.length > 0 && (
-          <p className="text-[10px] text-muted-foreground/60 text-center pt-2">
+          <p className="text-[11px] text-muted-foreground/60 text-center pt-2">
             달력에서 날짜를 클릭하여 새 일정을 추가할 수 있습니다
           </p>
         )}

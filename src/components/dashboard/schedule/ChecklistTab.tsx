@@ -176,7 +176,7 @@ const ChecklistTab = () => {
                 setWeekOffset(0);
                 setSelectedDay(todayKey);
               }}
-              className="ml-2 text-[10px] text-primary hover:underline font-mono"
+              className="ml-2 text-[11px] text-primary hover:underline font-mono"
             >
               오늘
             </button>
@@ -247,7 +247,7 @@ const ChecklistTab = () => {
               </span>
               {dayTodos.length > 0 && (
                 <span
-                  className={`text-[9px] font-mono mt-0.5 ${
+                  className={`text-[11px] font-mono mt-0.5 ${
                     isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
                   }`}
                 >
@@ -279,7 +279,7 @@ const ChecklistTab = () => {
                 {selectedDayInfo?.label} ({selectedDayInfo?.month}/{selectedDayInfo?.day})
               </h3>
               {selectedDayInfo?.isToday && (
-                <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-mono font-medium">
+                <span className="text-[11px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-mono font-medium">
                   오늘
                 </span>
               )}

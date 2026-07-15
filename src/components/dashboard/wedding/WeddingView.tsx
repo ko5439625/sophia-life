@@ -9,13 +9,21 @@ import {
   ChevronDown,
   ChevronRight,
   Filter,
+  Receipt,
+  ClipboardList,
+  Banknote,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import {
   loadWeddingItems,
   saveWeddingItem,
   deleteWeddingItem,
 } from "../../../services/supabaseSync";
 import type { WeddingItemRow } from "../../../services/supabaseSync";
+import WeddingSettlement from "./WeddingSettlement";
+import { useWeddingSettlement } from "./useWeddingSettlement";
+import { CATEGORY_EMOJIS } from "./weddingTypes";
+import type { VendorCategory } from "./weddingTypes";
 
 // ---------------------------------------------------------------------------
 // Default categories (대분류 > 소분류)
@@ -44,7 +52,7 @@ function formatAmount(n: number) {
 }
 
 // ---------------------------------------------------------------------------
-// Main Component
+// Main Component (Tabbed)
 // ---------------------------------------------------------------------------
 
 interface WeddingViewProps {
@@ -52,13 +60,89 @@ interface WeddingViewProps {
   onTabUsed?: () => void;
 }
 
+const TABS = [
+  { id: "settlement" as const, label: "정산", icon: Receipt },
+  { id: "checklist" as const, label: "체크리스트", icon: ClipboardList },
+];
+
 export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps) {
+  const [activeTab, setActiveTab] = useState<"settlement" | "checklist">(
+    (initialTab === "checklist" || initialTab === "settlement") ? initialTab : "settlement"
+  );
+
+  // Single settlement hook instance shared between tabs
+  const settlementStore = useWeddingSettlement();
+
+  useEffect(() => {
+    if (initialTab) {
+      if (initialTab === "checklist" || initialTab === "settlement") {
+        setActiveTab(initialTab);
+      }
+      onTabUsed?.();
+    }
+  }, [initialTab]);
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Heart className="h-5 w-5 text-pink-400" />
+        <h2 className="text-xl sm:text-2xl font-bold">웨딩 준비</h2>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 bg-muted rounded-lg p-1">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`relative flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-md transition-colors ${
+              activeTab === tab.id
+                ? "text-foreground"
+                : "text-muted-foreground/60 hover:text-muted-foreground"
+            }`}
+          >
+            {activeTab === tab.id && (
+              <motion.div
+                layoutId="wedding-tab"
+                className="absolute inset-0 bg-background rounded-md shadow-sm"
+                transition={{ type: "spring", duration: 0.3, bounce: 0.15 }}
+              />
+            )}
+            <tab.icon className="h-3.5 w-3.5 relative z-10" />
+            <span className="relative z-10">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        {activeTab === "settlement" && <WeddingSettlement />}
+        {activeTab === "checklist" && <WeddingChecklist settlementStore={settlementStore} />}
+      </motion.div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Checklist Sub-component (existing code preserved)
+// ---------------------------------------------------------------------------
+
+function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typeof useWeddingSettlement> }) {
   const [items, setItems] = useState<WeddingItemRow[]>([]);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterDone, setFilterDone] = useState<"all" | "done" | "todo">("all");
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [commentOpenId, setCommentOpenId] = useState<string | null>(null);
   const [showAddRow, setShowAddRow] = useState(false);
+
+  // ---- Settlement data from parent (shared hook instance) ----
+  const { vendors: sVendors, vendorStats: sVendorStats, globalStats: sStats } = settlementStore;
 
   // New row state
   const [newCat, setNewCat] = useState(Object.keys(DEFAULT_CATEGORIES)[0]);
@@ -69,16 +153,11 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
   const [newMemo, setNewMemo] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (initialTab) onTabUsed?.();
-  }, [initialTab]);
-
   // Load
   useEffect(() => {
     loadWeddingItems().then((rows) => {
       if (rows.length > 0) setItems(rows);
       else {
-        // Load from localStorage fallback
         try {
           const stored = localStorage.getItem("sophia-wedding-ledger");
           if (stored) setItems(JSON.parse(stored));
@@ -92,18 +171,20 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
     localStorage.setItem("sophia-wedding-ledger", JSON.stringify(items));
   }, [items]);
 
-  // -------------------------------------------------------------------------
   // Derived data
-  // -------------------------------------------------------------------------
-
-  // All categories used (merge default + custom)
   const allCategories = useMemo(() => {
-    const cats = new Set(Object.keys(DEFAULT_CATEGORIES));
+    const cats = new Set<string>();
+    // Add "정산" if settlement vendors exist
+    if (sVendors.length > 0) cats.add("정산");
+    // Add default categories that have items
+    for (const cat of Object.keys(DEFAULT_CATEGORIES)) {
+      if (items.some((i) => i.category === cat)) cats.add(cat);
+    }
+    // Add any custom categories from items
     items.forEach((i) => cats.add(i.category));
     return Array.from(cats);
-  }, [items]);
+  }, [items, sVendors]);
 
-  // Sub-categories for a given category
   const getSubCategories = (cat: string) => {
     const defaults = DEFAULT_CATEGORIES[cat] || [];
     const custom = items.filter((i) => i.category === cat).map((i) => i.sub_category);
@@ -111,7 +192,6 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
     return Array.from(all).filter(Boolean);
   };
 
-  // Filtered & grouped items
   const filteredItems = useMemo(() => {
     let result = items;
     if (filterCategory) result = result.filter((i) => i.category === filterCategory);
@@ -137,7 +217,6 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
   const doneCount = items.filter((i) => i.is_done).length;
   const progressPct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
-  // Budget by category for dashboard
   const budgetByCategory = useMemo(() => {
     const map = new Map<string, number>();
     items.forEach((i) => {
@@ -148,10 +227,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
       .sort((a, b) => b[1] - a[1]);
   }, [items]);
 
-  // -------------------------------------------------------------------------
   // CRUD
-  // -------------------------------------------------------------------------
-
   const addRow = async () => {
     if (!newTitle.trim()) return;
     const resolvedSub = newSub === "__custom__" ? newCustomSub.trim() : (newSub || (DEFAULT_CATEGORIES[newCat]?.[0] ?? ""));
@@ -171,7 +247,6 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
     setNewTitle("");
     setNewBudget("");
     setNewMemo("");
-    // Keep category & sub for batch adding (reset custom if used)
     if (newSub === "__custom__") { setNewSub(""); setNewCustomSub(""); }
     setTimeout(() => titleInputRef.current?.focus(), 50);
   };
@@ -211,39 +286,38 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
     });
   };
 
-  // -------------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------------
+  // Combined stats: checklist + settlement
+  const cTotal = totalBudget + sStats.totalAmount;
+  const cPaid = doneBudget + sStats.paidAmount;
+  const cRemaining = cTotal - cPaid;
+  const cPct = cTotal > 0 ? Math.round((cPaid / cTotal) * 100) : progressPct;
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Heart className="h-5 w-5 text-pink-400" />
-        <h2 className="text-xl sm:text-2xl font-bold">웨딩 준비</h2>
-      </div>
-
       {/* Dashboard summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-card rounded-xl border border-border p-3">
-          <p className="text-[10px] text-muted-foreground/60 font-mono">진행률</p>
-          <p className="text-lg font-bold font-mono mt-1">{progressPct}%</p>
+          <p className="text-[11px] text-muted-foreground/60 font-mono">진행률</p>
+          <p className="text-lg font-bold font-mono mt-1">{cTotal > 0 ? cPct : progressPct}%</p>
           <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mt-1.5">
-            <div className="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
+            <div className="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-500" style={{ width: `${cTotal > 0 ? cPct : progressPct}%` }} />
           </div>
-          <p className="text-[10px] text-muted-foreground/50 font-mono mt-1">{doneCount}/{totalCount}</p>
+          <p className="text-[11px] text-muted-foreground/50 font-mono mt-1">{doneCount}/{totalCount} 체크</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-3">
-          <p className="text-[10px] text-muted-foreground/60 font-mono">총 예산</p>
-          <p className="text-lg font-bold font-mono mt-1">{totalBudget > 0 ? `${formatAmount(totalBudget)}원` : "-"}</p>
+          <p className="text-[11px] text-muted-foreground/60 font-mono">총 금액</p>
+          <p className="text-lg font-bold font-mono mt-1">{cTotal > 0 ? `${formatAmount(cTotal)}원` : "-"}</p>
+          {sStats.totalAmount > 0 && totalBudget > 0 && (
+            <p className="text-[11px] text-muted-foreground/40 font-mono mt-0.5">정산 {formatAmount(sStats.totalAmount)} + 체크 {formatAmount(totalBudget)}</p>
+          )}
         </div>
         <div className="bg-card rounded-xl border border-border p-3">
-          <p className="text-[10px] text-muted-foreground/60 font-mono">완료 금액</p>
-          <p className="text-lg font-bold font-mono mt-1 text-emerald-400">{doneBudget > 0 ? `${formatAmount(doneBudget)}원` : "-"}</p>
+          <p className="text-[11px] text-muted-foreground/60 font-mono">결제 완료</p>
+          <p className="text-lg font-bold font-mono mt-1 text-emerald-400">{cPaid > 0 ? `${formatAmount(cPaid)}원` : "-"}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-3">
-          <p className="text-[10px] text-muted-foreground/60 font-mono">남은 금액</p>
-          <p className="text-lg font-bold font-mono mt-1 text-amber-400">{totalBudget - doneBudget > 0 ? `${formatAmount(totalBudget - doneBudget)}원` : "-"}</p>
+          <p className="text-[11px] text-muted-foreground/60 font-mono">잔여</p>
+          <p className="text-lg font-bold font-mono mt-1 text-amber-400">{cRemaining > 0 ? `${formatAmount(cRemaining)}원` : "-"}</p>
         </div>
       </div>
 
@@ -260,7 +334,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                   <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-primary/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="text-[10px] font-mono text-muted-foreground w-16 text-right">{formatAmount(amount)}원</span>
+                  <span className="text-[11px] font-mono text-muted-foreground w-16 text-right">{formatAmount(amount)}원</span>
                 </div>
               );
             })}
@@ -293,7 +367,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
             <button
               key={f}
               onClick={() => setFilterDone(f)}
-              className={`text-[10px] px-2 py-0.5 rounded transition-colors ${filterDone === f ? "bg-foreground/10 text-foreground" : "text-muted-foreground/50 hover:text-muted-foreground"}`}
+              className={`text-[11px] px-2 py-0.5 rounded transition-colors ${filterDone === f ? "bg-foreground/10 text-foreground" : "text-muted-foreground/50 hover:text-muted-foreground"}`}
             >
               {f === "all" ? "전체" : f === "todo" ? "미완료" : "완료"}
             </button>
@@ -304,7 +378,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
       {/* Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-[28px_1fr_80px_80px_36px_36px] sm:grid-cols-[28px_100px_100px_1fr_100px_36px_36px] gap-0 border-b border-border bg-muted/50 text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider">
+        <div className="grid grid-cols-[28px_1fr_80px_80px_36px_36px] sm:grid-cols-[28px_100px_100px_1fr_100px_36px_36px] gap-0 border-b border-border bg-muted/50 text-[11px] font-mono text-muted-foreground/60 uppercase tracking-wider">
           <div className="p-2 flex items-center justify-center">
             <Check className="h-3 w-3" />
           </div>
@@ -316,6 +390,97 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
           <div className="p-2" />
         </div>
 
+        {/* Settlement auto-generated rows */}
+        {sVendors.length > 0 && (!filterCategory || filterCategory === "정산") && (
+          <div>
+            <button
+              onClick={() => toggleCollapse("__settlement__")}
+              className="w-full grid grid-cols-[28px_1fr_80px_80px_36px_36px] sm:grid-cols-[28px_100px_100px_1fr_100px_36px_36px] gap-0 bg-pink-50/50 dark:bg-pink-950/20 hover:bg-pink-50 dark:hover:bg-pink-950/30 border-b border-border/50 transition-colors"
+            >
+              <div className="p-2 flex items-center justify-center">
+                {collapsedCats.has("__settlement__") ? <ChevronRight className="h-3 w-3 text-pink-400/60" /> : <ChevronDown className="h-3 w-3 text-pink-400/60" />}
+              </div>
+              <div className="p-2 col-span-3 sm:col-span-4 text-left flex items-center gap-1.5">
+                <Banknote className="h-3.5 w-3.5 text-pink-400" />
+                <span className="text-xs font-medium text-pink-600 dark:text-pink-300">정산 연동</span>
+                <span className="text-[11px] text-muted-foreground/50 font-mono">{sVendors.length}개 업체</span>
+              </div>
+              <div className="p-2 text-right text-[11px] font-mono text-pink-600/70 dark:text-pink-300/70">
+                {formatAmount(sStats.totalAmount)}원
+              </div>
+              <div className="p-2" />
+            </button>
+
+            {!collapsedCats.has("__settlement__") && sVendors.map((v) => {
+              const stats = sVendorStats.get(v.id);
+              if (!stats) return null;
+              const isPaid = stats.total > 0 && stats.paid >= stats.total;
+              const remaining = stats.total - stats.paid;
+              const daysLeft = v.finalPaymentDate
+                ? Math.ceil((new Date(v.finalPaymentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                : null;
+
+              return (
+                <div
+                  key={`settlement-${v.id}`}
+                  className={`grid grid-cols-[28px_1fr_80px_80px_36px_36px] sm:grid-cols-[28px_100px_100px_1fr_100px_36px_36px] gap-0 border-b border-border/30 hover:bg-muted/20 transition-colors ${isPaid ? "opacity-50" : ""}`}
+                >
+                  {/* Check indicator */}
+                  <div className="p-2 flex items-center justify-center">
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isPaid ? "bg-emerald-500 border-emerald-500" : "border-pink-300 dark:border-pink-700"}`}>
+                      {isPaid && <Check className="h-4 w-4 text-white" />}
+                    </div>
+                  </div>
+                  {/* Category (desktop) */}
+                  <div className="p-2 hidden sm:flex items-center">
+                    <span className="text-[11px] text-pink-400/60 truncate">정산</span>
+                  </div>
+                  {/* Sub-category (desktop) */}
+                  <div className="p-2 hidden sm:flex items-center">
+                    <span className="text-[11px] text-muted-foreground/60 truncate">
+                      {v.emoji || CATEGORY_EMOJIS[v.category as VendorCategory] || ""} {v.category}
+                    </span>
+                  </div>
+                  {/* Title + status line */}
+                  <div className="p-2 flex items-center min-w-0">
+                    <div className="min-w-0">
+                      <p className={`text-sm truncate ${isPaid ? "line-through" : ""}`}>
+                        {v.emoji || ""} {v.name}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground/50 truncate">
+                        {isPaid ? (
+                          <span className="text-emerald-500">결제 완료</span>
+                        ) : (
+                          <>
+                            <span className="text-emerald-500">{formatAmount(stats.paid)}원 완료</span>
+                            <span className="mx-1">·</span>
+                            <span className="text-amber-500">{formatAmount(remaining)}원 잔여</span>
+                            {daysLeft !== null && daysLeft >= 0 && (
+                              <>
+                                <span className="mx-1">·</span>
+                                <span className={daysLeft <= 7 ? "text-red-500 font-medium" : ""}>
+                                  {daysLeft === 0 ? "오늘!" : `D-${daysLeft}`}
+                                </span>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Amount */}
+                  <div className="p-2 flex items-center justify-end">
+                    <span className="text-[11px] font-mono">{formatAmount(stats.total)}원</span>
+                  </div>
+                  {/* Spacers */}
+                  <div className="p-2" />
+                  <div className="p-2" />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Grouped rows */}
         {Array.from(groupedByCategory.entries()).map(([cat, catItems]) => {
           const isCollapsed = collapsedCats.has(cat);
@@ -324,7 +489,6 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
 
           return (
             <div key={cat}>
-              {/* Category group header */}
               <button
                 onClick={() => toggleCollapse(cat)}
                 className="w-full grid grid-cols-[28px_1fr_80px_80px_36px_36px] sm:grid-cols-[28px_100px_100px_1fr_100px_36px_36px] gap-0 bg-muted/30 hover:bg-muted/50 border-b border-border/50 transition-colors"
@@ -334,7 +498,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                 </div>
                 <div className="p-2 col-span-3 sm:col-span-4 text-left">
                   <span className="text-xs font-medium">{cat}</span>
-                  <span className="text-[10px] text-muted-foreground/50 ml-2 font-mono">{catDone}/{catItems.length}</span>
+                  <span className="text-[11px] text-muted-foreground/50 ml-2 font-mono">{catDone}/{catItems.length}</span>
                 </div>
                 <div className="p-2 text-right text-[11px] font-mono text-muted-foreground">
                   {catBudget > 0 ? `${formatAmount(catBudget)}원` : ""}
@@ -342,11 +506,9 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                 <div className="p-2" />
               </button>
 
-              {/* Items */}
               {!isCollapsed && catItems.map((item) => (
                 <div key={item.id}>
                   <div className={`grid grid-cols-[28px_1fr_80px_80px_36px_36px] sm:grid-cols-[28px_100px_100px_1fr_100px_36px_36px] gap-0 border-b border-border/30 hover:bg-muted/20 transition-colors group ${item.is_done ? "opacity-50" : ""}`}>
-                    {/* Checkbox */}
                     <div className="p-2 flex items-center justify-center">
                       <button
                         onClick={() => toggleDone(item.id)}
@@ -355,31 +517,21 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                         {item.is_done && <Check className="h-4 w-4 text-primary-foreground" />}
                       </button>
                     </div>
-
-                    {/* Category (desktop) */}
                     <div className="p-2 hidden sm:flex items-center">
                       <span className="text-[11px] text-muted-foreground/60 truncate">{item.category}</span>
                     </div>
-
-                    {/* Sub-category (desktop) */}
                     <div className="p-2 hidden sm:flex items-center">
                       <span className="text-[11px] text-muted-foreground/60 truncate">{item.sub_category}</span>
                     </div>
-
-                    {/* Title */}
                     <div className="p-2 flex items-center min-w-0">
                       <div className="min-w-0">
                         <p className={`text-sm truncate ${item.is_done ? "line-through" : ""}`}>{item.title}</p>
-                        {/* Mobile: show sub_category */}
-                        <p className="text-[10px] text-muted-foreground/40 sm:hidden">{item.sub_category}</p>
-                        {/* Memo preview */}
+                        <p className="text-[11px] text-muted-foreground/40 sm:hidden">{item.sub_category}</p>
                         {item.memo && commentOpenId !== item.id && (
-                          <p className="text-[10px] text-muted-foreground/40 truncate max-w-[200px]">{item.memo}</p>
+                          <p className="text-[11px] text-muted-foreground/40 truncate max-w-[200px]">{item.memo}</p>
                         )}
                       </div>
                     </div>
-
-                    {/* Budget */}
                     <div className="p-2 flex items-center justify-end">
                       <input
                         type="number"
@@ -393,8 +545,6 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                         className="w-full text-right text-[11px] font-mono bg-transparent border-0 outline-none focus:bg-muted/50 rounded px-1 py-0.5"
                       />
                     </div>
-
-                    {/* Comment toggle */}
                     <div className="p-2 flex items-center justify-center">
                       <button
                         onClick={() => setCommentOpenId(commentOpenId === item.id ? null : item.id)}
@@ -403,8 +553,6 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                         <MessageSquare className="h-3.5 w-3.5" />
                       </button>
                     </div>
-
-                    {/* Delete */}
                     <div className="p-2 flex items-center justify-center">
                       <button
                         onClick={() => removeRow(item.id)}
@@ -415,7 +563,6 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                     </div>
                   </div>
 
-                  {/* Comment row */}
                   {commentOpenId === item.id && (
                     <div className="border-b border-border/30 bg-muted/10 px-4 py-2">
                       <div className="flex items-start gap-2">
@@ -443,7 +590,6 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
           );
         })}
 
-        {/* Empty state */}
         {filteredItems.length === 0 && (
           <div className="text-center py-8">
             <p className="text-sm text-muted-foreground/50">
@@ -452,12 +598,11 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
           </div>
         )}
 
-        {/* Add row */}
         {showAddRow ? (
           <div className="border-t border-border bg-primary/5 p-3 space-y-2">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div>
-                <label className="text-[10px] text-muted-foreground/60 block mb-0.5">대분류</label>
+                <label className="text-[11px] text-muted-foreground/60 block mb-0.5">대분류</label>
                 <select
                   value={newCat}
                   onChange={(e) => {
@@ -472,7 +617,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                 </select>
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground/60 block mb-0.5">소분류</label>
+                <label className="text-[11px] text-muted-foreground/60 block mb-0.5">소분류</label>
                 <select
                   value={newSub}
                   onChange={(e) => { setNewSub(e.target.value); if (e.target.value !== "__custom__") setNewCustomSub(""); }}
@@ -494,7 +639,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                 )}
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground/60 block mb-0.5">항목명</label>
+                <label className="text-[11px] text-muted-foreground/60 block mb-0.5">항목명</label>
                 <input
                   ref={titleInputRef}
                   value={newTitle}
@@ -506,7 +651,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
                 />
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground/60 block mb-0.5">금액 (만원)</label>
+                <label className="text-[11px] text-muted-foreground/60 block mb-0.5">금액 (만원)</label>
                 <input
                   type="number"
                   value={newBudget}
@@ -518,7 +663,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
               </div>
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground/60 block mb-0.5">코멘트 (선택)</label>
+              <label className="text-[11px] text-muted-foreground/60 block mb-0.5">코멘트 (선택)</label>
               <input
                 value={newMemo}
                 onChange={(e) => setNewMemo(e.target.value)}

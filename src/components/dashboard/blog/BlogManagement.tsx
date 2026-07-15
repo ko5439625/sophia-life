@@ -673,7 +673,7 @@ const PostEditor = ({
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-gradient-to-r from-violet-500 to-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg"
+              className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg"
             >
               <Sparkles className="h-3.5 w-3.5" />
               AI가 글을 다듬었습니다
@@ -688,7 +688,8 @@ const PostEditor = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="제목을 입력하세요..."
-            className="w-full bg-transparent text-2xl md:text-3xl font-bold placeholder:text-muted-foreground/30 focus:outline-none border-none leading-tight mb-1"
+            className="w-full bg-transparent text-xl sm:text-2xl md:text-3xl font-bold placeholder:text-muted-foreground/30 focus:outline-none border-none leading-tight mb-1"
+            style={{ fontSize: "max(20px, 1.5rem)" }}
             autoFocus
           />
 
@@ -698,7 +699,7 @@ const PostEditor = ({
           {/* Toolbar */}
           <div className="mb-4 border-b border-border/50 pb-3 space-y-2">
             {/* Row 1: Format & structure buttons */}
-            <div className="flex items-center gap-0.5 flex-wrap">
+            <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-1">
               {/* Format buttons */}
               {([
                 { icon: Bold, cmd: "bold", title: "굵게" },
@@ -822,7 +823,7 @@ const PostEditor = ({
             </div>
 
             {/* Row 2: Font, size, color, AI */}
-            <div className="flex items-center gap-1 flex-wrap">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pb-1">
               {/* Font selector (per-selection) */}
               <div className="relative" ref={fontPickerRef}>
                 <button
@@ -934,7 +935,7 @@ const PostEditor = ({
               <button
                 onClick={handleAiEnhance}
                 disabled={aiLoading}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-gradient-to-r from-violet-500/20 to-blue-500/20 text-violet-400 hover:from-violet-500/30 hover:to-blue-500/30 rounded-lg transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-all disabled:opacity-50"
                 title="AI로 글 다듬기 (이미지 유지)"
               >
                 {aiLoading ? (
@@ -998,7 +999,7 @@ const PostEditor = ({
                       value={tagsInput}
                       onChange={(e) => setTagsInput(e.target.value)}
                       placeholder="태그1, 태그2, 태그3"
-                      className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40"
+                      className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40"
                     />
                   </div>
                 </div>
@@ -1013,7 +1014,7 @@ const PostEditor = ({
             suppressContentEditableWarning
             onPaste={handlePaste}
             data-placeholder="여기에 글을 작성하세요... (텍스트 선택 후 글꼴/크기/색상 적용)"
-            className="w-full bg-transparent leading-relaxed focus:outline-none border-none min-h-[500px] whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/30"
+            className="w-full bg-transparent leading-relaxed focus:outline-none border-none min-h-[300px] sm:min-h-[500px] whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/30"
             style={{
               lineHeight: "1.8",
               fontSize: "16px",

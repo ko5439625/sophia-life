@@ -43,20 +43,23 @@ alter table chat_notice enable row level security;
 create policy "Allow all access" on chat_notice for all using (true) with check (true);
 
 -- ============================================================
--- 3. pg_cron: KST 자정에 어제 메시지 자동 삭제
+-- 3. pg_cron: 매시간 KST 기준 전날 이전 메시지 자동 삭제
 -- ============================================================
--- 주의: Supabase timezone이 Asia/Seoul이어야 정확히 KST 자정에 동작
--- Supabase Dashboard > SQL Editor에서 실행:
+-- Supabase Dashboard > SQL Editor에서 아래 쿼리를 실행하세요:
 --
 -- select cron.schedule(
 --   'delete-old-chat-messages',
---   '0 15 * * *',  -- UTC 15:00 = KST 00:00
+--   '0 * * * *',  -- 매시간 정각 실행 (하루 24회)
 --   $$
 --   delete from chat_messages
---   where (created_at at time zone 'Asia/Seoul')::date
---         < (now() at time zone 'Asia/Seoul')::date;
+--   where created_at < (
+--     date_trunc('day', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul'
+--   );
 --   $$
 -- );
+--
+-- 확인: select * from cron.job;
+-- 삭제: select cron.unschedule('delete-old-chat-messages');
 --
 -- 이미지 Storage 정리는 Edge Function 또는 DB trigger로 별도 처리
 

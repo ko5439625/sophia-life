@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
@@ -14,10 +14,16 @@ import {
   Newspaper,
   Heart,
   MessageCircle,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
 import ThemeToggle from "../ThemeToggle";
 import { useNavigate } from "react-router-dom";
 import { useGuestMode } from "../../hooks/useGuestMode";
+import { useIsMobile } from "../../hooks/use-mobile";
+import { supabase } from "@/lib/supabase";
+import { getChatSender } from "@/services/chatService";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import DashboardHome from "./home/DashboardHome";
 import ScheduleView from "./schedule/ScheduleView";
 import FinanceView from "./finance/FinanceView";
@@ -53,13 +59,74 @@ const bottomNav: NavItem[] = [
   { icon: Settings, label: "설정", id: "settings" },
 ];
 
+// 모바일 하단 탭 (5개)
+const mobileBottomTabs: NavItem[] = [
+  { icon: Home, label: "홈", id: "home" },
+  { icon: Calendar, label: "일정", id: "schedule" },
+  { icon: MessageCircle, label: "채팅", id: "chat" },
+  { icon: BookHeart, label: "우리", id: "couple" },
+  { icon: MoreHorizontal, label: "더보기", id: "__more__" },
+];
+
+// 더보기 메뉴에 들어갈 항목들
+const moreMenuItems: NavItem[] = [
+  { icon: Wallet, label: "자산", id: "finance" },
+  { icon: Heart, label: "웨딩", id: "wedding" },
+  { icon: PenSquare, label: "블로그", id: "blog" },
+  { icon: TrendingUp, label: "투자", id: "investment" },
+  { icon: Newspaper, label: "뉴스", id: "news" },
+  { icon: Building2, label: "부동산", id: "realestate" },
+  { icon: Settings, label: "설정", id: "settings" },
+];
+
 const allNav = [...topNav, ...bottomNav];
 
 const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { isGuest } = useGuestMode();
+  const isMobile = useIsMobile();
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
+  // 채팅 탭 읽지 않은 메시지 감지 (Supabase realtime)
+  useEffect(() => {
+    if (!supabase) return;
+    const sender = getChatSender();
+    if (!sender) return;
+
+    const peer = sender === "degul" ? "muyo" : "degul";
+    let channel: RealtimeChannel | null = null;
+
+    channel = supabase
+      .channel("chat-unread-dot")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages" },
+        (payload) => {
+          const msg = payload.new as { sender: string };
+          // 상대방 메시지이고 현재 채팅 탭이 아닐 때만 레드닷
+          if (msg.sender === peer && activeTabRef.current !== "chat") {
+            setHasUnreadChat(true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // 채팅 탭 진입 시 레드닷 해제
+  useEffect(() => {
+    if (activeTab === "chat") {
+      setHasUnreadChat(false);
+    }
+  }, [activeTab]);
 
   // Allow child components to navigate to tabs (supports "tab:subtab" format)
   const [subTabTarget, setSubTabTarget] = useState<string | null>(null);
@@ -130,7 +197,12 @@ const DashboardLayout = () => {
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
         )}
-        <item.icon className="h-4 w-4 flex-shrink-0" />
+        <span className="relative">
+          <item.icon className="h-4 w-4 flex-shrink-0" />
+          {item.id === "chat" && hasUnreadChat && activeTab !== "chat" && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          )}
+        </span>
         <span>{item.label}</span>
       </button>
     ));
@@ -177,6 +249,10 @@ const DashboardLayout = () => {
 
   const currentLabel = allNav.find((n) => n.id === activeTab)?.label || "";
 
+  // 모바일 하단 탭에서 활성 상태 체크 (더보기에 속한 탭이면 더보기 활성)
+  const mobileTabIds = mobileBottomTabs.filter(t => t.id !== "__more__").map(t => t.id);
+  const isMoreActive = !mobileTabIds.includes(activeTab);
+
   return (
     <motion.div
       className="min-h-screen bg-background flex"
@@ -184,12 +260,14 @@ const DashboardLayout = () => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
+      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-56 flex-shrink-0 bg-sidebar border-r border-sidebar-border flex-col">
         <SidebarContent />
       </aside>
 
+      {/* Desktop mobile drawer (md 미만에서 더보기 메뉴로 대체) */}
       <AnimatePresence>
-        {sidebarOpen && (
+        {sidebarOpen && !isMobile && (
           <>
             <motion.div
               className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40 md:hidden"
@@ -212,20 +290,16 @@ const DashboardLayout = () => {
       </AnimatePresence>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-12 border-b border-border flex items-center justify-between px-4 md:px-6 bg-background/80 backdrop-blur-sm">
-          <button
-            className="md:hidden p-2 hover:bg-muted rounded-lg transition-colors"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+        {/* Desktop header */}
+        <header className="hidden md:flex h-12 border-b border-border items-center justify-between px-4 md:px-6 bg-background/80 backdrop-blur-sm">
           <h2 className="text-xs font-mono text-muted-foreground/60 tracking-wider uppercase">
             {currentLabel}
           </h2>
           <div className="w-10" />
         </header>
 
-        <main className="flex-1 p-3 sm:p-5 md:p-8 overflow-y-auto">
+        {/* Main content — 모바일에서는 하단 탭 높이만큼 padding-bottom */}
+        <main className="flex-1 p-3 sm:p-5 md:p-8 overflow-y-auto pb-20 md:pb-8">
           <div className="max-w-4xl mx-auto">
             <motion.div
               key={activeTab}
@@ -237,6 +311,111 @@ const DashboardLayout = () => {
             </motion.div>
           </div>
         </main>
+
+        {/* 모바일 하단 네비게이션 */}
+        {isMobile && (
+          <>
+            {/* 더보기 메뉴 오버레이 */}
+            <AnimatePresence>
+              {moreMenuOpen && (
+                <>
+                  <motion.div
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setMoreMenuOpen(false)}
+                  />
+                  <motion.div
+                    className="fixed bottom-16 left-0 right-0 z-50 px-3 pb-2"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                  >
+                    <div className="bg-card border border-border rounded-2xl shadow-lg p-2 mx-1">
+                      <div className="flex items-center justify-between px-3 py-2 mb-1">
+                        <span className="text-sm font-semibold text-foreground">더보기</span>
+                        <button
+                          onClick={() => setMoreMenuOpen(false)}
+                          className="p-1 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {moreMenuItems.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setActiveTab(item.id);
+                              setSubTabTarget(null);
+                              setMoreMenuOpen(false);
+                            }}
+                            className={`flex flex-col items-center gap-1 py-3 px-1 rounded-xl transition-colors ${
+                              activeTab === item.id
+                                ? "bg-accent/10 text-accent"
+                                : "text-muted-foreground hover:bg-muted"
+                            }`}
+                          >
+                            <item.icon className="h-5 w-5" />
+                            <span className="text-[11px] font-medium">{item.label}</span>
+                          </button>
+                        ))}
+                        {/* 로그아웃 버튼 */}
+                        <button
+                          onClick={handleLogout}
+                          className="flex flex-col items-center gap-1 py-3 px-1 rounded-xl text-muted-foreground hover:bg-muted transition-colors"
+                        >
+                          <LogOut className="h-5 w-5" />
+                          <span className="text-[11px] font-medium">로그아웃</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+
+            {/* 하단 탭 바 */}
+            <nav className="fixed bottom-0 left-0 right-0 z-30 bg-card/95 backdrop-blur-md border-t border-border safe-area-bottom">
+              <div className="flex items-center justify-around h-14">
+                {mobileBottomTabs.map((tab) => {
+                  const isActive = tab.id === "__more__" ? isMoreActive || moreMenuOpen : activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        if (tab.id === "__more__") {
+                          setMoreMenuOpen(!moreMenuOpen);
+                        } else {
+                          setActiveTab(tab.id);
+                          setSubTabTarget(null);
+                          setMoreMenuOpen(false);
+                        }
+                      }}
+                      className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
+                        isActive
+                          ? "text-accent"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      <span className="relative">
+                        <tab.icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
+                        {tab.id === "chat" && hasUnreadChat && !isActive && (
+                          <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-card animate-pulse" />
+                        )}
+                      </span>
+                      <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"}`}>
+                        {tab.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+          </>
+        )}
       </div>
     </motion.div>
   );

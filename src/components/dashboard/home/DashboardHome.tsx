@@ -868,7 +868,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
               Fear & Greed Index
             </h3>
             {marketTimestamp && (
-              <span className="text-[9px] text-muted-foreground/40 font-mono ml-auto">
+              <span className="text-[11px] text-muted-foreground/40 font-mono ml-auto">
                 {marketTimestamp}
               </span>
             )}
@@ -883,7 +883,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
             ) : (
             <>
             {/* 3-sector gauges */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {([
                 { label: "나스닥", data: sectorFG.nasdaq, fallback: null },
                 { label: "코스피", data: sectorFG.kosdaq, fallback: null },
@@ -973,7 +973,7 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
               환율 & 지수
             </h3>
             {marketTimestamp && (
-              <span className="text-[9px] text-muted-foreground/40 font-mono ml-auto">
+              <span className="text-[11px] text-muted-foreground/40 font-mono ml-auto">
                 기준: {marketTimestamp}
               </span>
             )}
@@ -998,9 +998,9 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
             )}
           </div>
           {/* Market indices */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {marketLoading ? (
-              <div className="col-span-3 flex items-center justify-center py-4">
+              <div className="col-span-2 sm:col-span-3 flex items-center justify-center py-4">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             ) : (
@@ -1009,14 +1009,14 @@ const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
                   key={idx.name}
                   className="bg-muted/50 rounded-lg p-2.5 text-center"
                 >
-                  <p className="text-[10px] text-muted-foreground font-mono mb-1">
+                  <p className="text-[11px] text-muted-foreground font-mono mb-1">
                     {idx.name}
                   </p>
                   <p className="text-xs font-mono font-bold tabular-nums">
                     {idx.value}
                   </p>
                   <p
-                    className={`text-[10px] font-mono tabular-nums mt-0.5 ${
+                    className={`text-[11px] font-mono tabular-nums mt-0.5 ${
                       idx.isUp ? "text-primary" : "text-destructive"
                     }`}
                   >
