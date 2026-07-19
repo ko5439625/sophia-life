@@ -102,12 +102,12 @@ function ChatLogin({ onLogin }: { onLogin: (s: ChatSender) => void }) {
         <div className="mt-5 pt-4 border-t border-border space-y-2">
           <p className="text-center text-[10px] text-muted-foreground/60 mb-2">데스크탑 앱 다운로드</p>
           <div className="flex gap-2">
-            <span
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium bg-muted text-muted-foreground/40 cursor-not-allowed"
-              title="Windows 버전 준비 중"
+            <a
+              href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.2.0/QA.JJ.Setup.0.2.0.exe"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition"
             >
-              <Monitor size={13} /> Windows <span className="text-[9px]">(준비중)</span>
-            </span>
+              <Monitor size={13} /> Windows
+            </a>
             <a
               href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.2.0/QA.JJ-0.2.0-arm64.dmg"
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition"
