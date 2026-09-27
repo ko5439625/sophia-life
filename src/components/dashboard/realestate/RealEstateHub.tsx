@@ -4,6 +4,7 @@ import {
   Plus, X, Star, Edit3, Trash2, Camera, BarChart3, Lock, Loader2,
 } from "lucide-react";
 import { useGuestMode } from "../../../hooks/useGuestMode";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
@@ -146,6 +147,7 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
   };
 
   const handleDelete = async (id: string) => {
+    if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
     await deleteInspection(id);
     setInspections((prev) => prev.filter((ins) => ins.id !== id));
   };
@@ -303,9 +305,9 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
                             <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
                             <span className="text-sm font-mono font-bold">{avg.toFixed(1)}</span>
                           </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleEdit(ins)} className="p-1 hover:text-primary"><Edit3 className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => handleDelete(ins.id)} className="p-1 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+                          <div className="flex gap-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleEdit(ins)} aria-label="수정" className="p-2.5 sm:p-1 hover:text-primary"><Edit3 className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => handleDelete(ins.id)} aria-label="삭제" className="p-2.5 sm:p-1 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
                         </div>
                       </div>

@@ -10,7 +10,7 @@ const tabs = [
   { id: "asset", label: "자산 현황" },
 ];
 
-const FinanceView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void }) => {
+const FinanceView = ({ initialTab, onTabUsed, embedded }: { initialTab?: string | null; onTabUsed?: () => void; embedded?: boolean }) => {
   const [activeTab, setActiveTab] = useState(initialTab || "budget");
 
   useEffect(() => {
@@ -19,7 +19,7 @@ const FinanceView = ({ initialTab, onTabUsed }: { initialTab?: string | null; on
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl sm:text-2xl font-bold">자산 & 경제</h2>
+      {!embedded && <h2 className="text-xl sm:text-2xl font-bold">자산 & 경제</h2>}
 
       <div className="flex gap-1 bg-muted rounded-lg p-1 overflow-x-auto">
         {tabs.map((tab) => (

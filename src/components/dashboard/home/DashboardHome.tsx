@@ -1,1200 +1,807 @@
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  CheckCircle2,
-  Circle,
-  Calendar,
-  TrendingDown,
-  DollarSign,
-  Heart,
-  Gauge,
-  Newspaper,
-  ChevronRight,
-  Loader2,
-  AlertTriangle,
-  Info,
-  ShieldCheck,
-  X,
-  Bell,
-  Cloud,
-} from "lucide-react";
-import { getFearGreedIndex, getStockQuote, getExchangeRate, getSectorFearGreed } from "../../../services/marketApi";
-import type { SectorFearGreed } from "../../../services/marketApi";
-import { getNews } from "../../../services/newsApi";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { motion, type Variants } from "framer-motion";
+import { AlertTriangle, Bell, Check, ChevronRight, Info, X } from "lucide-react";
+import { getExchangeRate, getSectorFearGreed, getStockQuote } from "../../../services/marketApi";
+import type { ExchangeRateResult, FearGreedResult, StockQuote } from "../../../services/marketApi";
 import { getWeather } from "../../../services/weatherApi";
 import type { WeatherResult } from "../../../services/weatherApi";
-import type { FearGreedResult, StockQuote, ExchangeRateResult } from "../../../services/marketApi";
-import type { NewsArticle } from "../../../services/newsApi";
-import { getRecentMemos } from "../../../lib/memoStore";
+import { getRecentMemos, loadMemosAsync } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useFinancial } from "../../../store/financialStore";
-import { useGuestMode } from "../../../hooks/useGuestMode";
-import { loadTodos, loadEvents, loadDdays, saveTodo, loadBlogSettings, saveBlogSettings } from "../../../services/supabaseSync";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  loadBlogSettings,
+  loadDdays,
+  loadEvents,
+  loadTodos,
+  saveBlogSettings,
+  saveTodo,
+} from "../../../services/supabaseSync";
+import type { DdayRow, EventRow, TodoRow } from "../../../services/supabaseSync";
+import { getChatSender, loadTodayMessages, parseReply } from "../../../services/chatService";
+import type { ChatMessage } from "../../../types/chat";
+import {
+  DAY_NAMES,
+  ddayLabel,
+  diffDays,
+  formatMan,
+  formatWon,
+  loadWeddingSummary,
+  parseDateKey,
+  relativeTime,
+  shortDate,
+  toDateKey,
+  toMonthKey,
+} from "./homeUtils";
+import type { WeddingSummary } from "./homeUtils";
 
 interface DashboardHomeProps {
   onNavigate?: (tabId: string) => void;
+  onQuickExpense?: () => void;
+  onSmartInbox?: () => void;
 }
 
-const mockChecklist: { id: string; title: string; isDone: boolean }[] = [];
-
-const initialEvents: { id: string; title: string; emoji: string; date: string; dateLabel?: string }[] = [];
-
-// Pinned memos are loaded from shared memo store
-
 // ---------------------------------------------------------------------------
-// Alert System
+// Motion — 절제된 등장 (stagger + 살짝 올라옴)
 // ---------------------------------------------------------------------------
 
-interface Alert {
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+
+const listVariants: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.05 } },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE_OUT } },
+};
+
+// ---------------------------------------------------------------------------
+// Alerts — 중복 없는 중요 알림만 (예산 초과 / 다음 달 예산 / 청약)
+// ---------------------------------------------------------------------------
+
+interface HomeAlert {
   id: string;
-  level: "critical" | "warning" | "info" | "stable";
-  title: string;
-  message: string;
-  timestamp: string;
-  actionLabel?: string;
+  level: "warning" | "info";
+  text: string;
   actionTab?: string;
 }
 
-const alertStyles: Record<Alert["level"], { bg: string; icon: typeof AlertTriangle; iconColor: string }> = {
-  critical: { bg: "bg-red-500/15 border border-red-500/30", icon: AlertTriangle, iconColor: "text-red-400" },
-  warning: { bg: "bg-yellow-500/15 border border-yellow-500/30", icon: Bell, iconColor: "text-yellow-400" },
-  info: { bg: "bg-green-500/10 border border-green-500/20", icon: Info, iconColor: "text-green-400" },
-  stable: { bg: "bg-primary/5 border border-primary/15", icon: ShieldCheck, iconColor: "text-primary" },
-};
-
-function generateAlerts(
-  fearGreedValue: number | null,
-  stockQuotes: Record<string, StockQuote>,
-  exchangeRate: ExchangeRateResult | null,
-  events: { id: string; title: string; emoji: string; date: string }[],
-  budgetUsed: number,
-  budgetTotal: number,
-  nextMonthBudgetExists?: boolean,
-): Alert[] {
-  const alerts: Alert[] = [];
+function buildAlerts(opts: {
+  monthKey: string;
+  spent: number;
+  budgetTotal: number;
+  nextMonthBudgetExists: boolean;
+}): HomeAlert[] {
+  const alerts: HomeAlert[] = [];
   const now = new Date();
 
-  // Subscription notification alerts
-  try {
-    const notifRaw = localStorage.getItem("sophia-subscription-notifications");
-    if (notifRaw) {
-      const notifIds: string[] = JSON.parse(notifRaw);
-      if (notifIds.length > 0) {
-        // Try to load cached subscription data from last fetch
-        // We read from the subscription items stored alongside notifications
-        const subsRaw = localStorage.getItem("sophia-subscription-items-cache");
-        const subsItems: {
-          id: string;
-          houseName: string;
-          applyStartDate: string;
-          applyEndDate: string;
-        }[] = subsRaw ? JSON.parse(subsRaw) : [];
-
-        const todayDate = new Date();
-        todayDate.setHours(0, 0, 0, 0);
-
-        for (const item of subsItems) {
-          if (!notifIds.includes(item.id)) continue;
-
-          const startDate = new Date(item.applyStartDate);
-          startDate.setHours(0, 0, 0, 0);
-          const endDate = new Date(item.applyEndDate);
-          endDate.setHours(23, 59, 59, 999);
-
-          const daysUntilStart = Math.ceil(
-            (startDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24),
-          );
-
-          if (daysUntilStart > 0 && daysUntilStart <= 7) {
-            // Upcoming within 7 days
-            alerts.push({
-              id: `sub-upcoming-${item.id}`,
-              level: "info",
-              title: `청약 알림: ${item.houseName}`,
-              message: `청약 시작일 D-${daysUntilStart}`,
-              timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-              actionLabel: "청약 정보 보기",
-              actionTab: "realestate:subscription",
-            });
-          } else if (todayDate >= startDate && todayDate <= endDate) {
-            // Currently ongoing
-            const endDateStr = `${endDate.getFullYear()}.${String(endDate.getMonth() + 1).padStart(2, "0")}.${String(endDate.getDate()).padStart(2, "0")}`;
-            alerts.push({
-              id: `sub-ongoing-${item.id}`,
-              level: "warning",
-              title: `청약 진행 중: ${item.houseName}`,
-              message: `마감일: ${endDateStr}`,
-              timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-              actionLabel: "청약 정보 보기",
-              actionTab: "realestate:subscription",
-            });
-          }
-        }
-      }
-    }
-  } catch {
-    /* ignore subscription notification errors */
-  }
-
-  // Fear & Greed alerts
-  if (fearGreedValue !== null) {
-    if (fearGreedValue <= 25) {
-      alerts.push({
-        id: "fg-critical",
-        level: "critical",
-        title: "극단적 공포 감지",
-        message: `공포탐욕지수 ${fearGreedValue} - 극단적 공포 구간. 헷징 전략 즉시 점검 필요`,
-        timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-        actionLabel: "헷징 분석 보기",
-        actionTab: "investment:hedging",
-      });
-    } else if (fearGreedValue <= 40) {
-      alerts.push({
-        id: "fg-warning",
-        level: "warning",
-        title: "시장 공포 주의",
-        message: `공포탐욕지수 ${fearGreedValue} - 공포 구간 진입. 포트폴리오 점검 권장`,
-        timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-        actionLabel: "헷징 분석",
-        actionTab: "investment:hedging",
-      });
-    }
-  }
-
-  // Stock change alerts
-  const stockEntries = Object.entries(stockQuotes);
-  for (const [symbol, quote] of stockEntries) {
-    if (quote.changePercent <= -3) {
-      alerts.push({
-        id: `stock-${symbol}`,
-        level: "warning",
-        title: `${symbol} 급락`,
-        message: `${symbol} 전일 대비 ${quote.changePercent}% 하락`,
-        timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-        actionLabel: "투자 현황",
-        actionTab: "investment:portfolio",
-      });
-    }
-  }
-
-  // Exchange rate alert
-  if (exchangeRate && exchangeRate.rate > 1400) {
+  if (opts.budgetTotal > 0 && opts.spent > opts.budgetTotal) {
     alerts.push({
-      id: "fx-warning",
+      id: `budget-over-${opts.monthKey}`,
       level: "warning",
-      title: "환율 1,400원 돌파",
-      message: `현재 USD/KRW ${exchangeRate.rate.toFixed(2)}원. 환율 리스크 주의`,
-      timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-      actionLabel: "헷징 분석",
-      actionTab: "investment:hedging",
+      text: `이번 달 생활비 예산 ${formatMan(opts.spent - opts.budgetTotal)}원 초과`,
+      actionTab: "finance:budget",
     });
   }
 
-  // Upcoming events within 7 days
-  for (const event of events) {
-    const target = new Date(event.date);
-    target.setHours(0, 0, 0, 0);
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    const diffDays = Math.ceil((target.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0 && diffDays <= 7) {
-      alerts.push({
-        id: `event-${event.id}`,
-        level: "info",
-        title: `이번 주 일정: ${event.title}`,
-        message: diffDays === 0 ? "오늘입니다!" : `${diffDays}일 후 (${event.date})`,
-        timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-      });
-    }
-  }
-
-  // Budget alert
-  const budgetPct = budgetTotal > 0 ? (budgetUsed / budgetTotal) * 100 : 0;
-  if (budgetPct > 70) {
-    alerts.push({
-      id: "budget-warning",
-      level: "info",
-      title: "예산 소진 주의",
-      message: `이번 달 예산 ${Math.round(budgetPct)}% 소진`,
-      timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-      actionLabel: "지출 현황",
-      actionTab: "finance:analysis",
-    });
-  }
-
-  // Next month budget reminder (25th~31st)
-  const dayOfMonth = now.getDate();
-  if (dayOfMonth >= 25 && nextMonthBudgetExists === false) {
-    // Check if dismissed today
-    const dismissKey = "sophia-budget-noti-dismissed";
-    const dismissedDate = localStorage.getItem(dismissKey);
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(dayOfMonth).padStart(2, "0")}`;
-    if (dismissedDate !== todayStr) {
+  if (now.getDate() >= 25 && !opts.nextMonthBudgetExists) {
+    let dismissedToday = false;
+    try {
+      dismissedToday = localStorage.getItem("sophia-budget-noti-dismissed") === toDateKey(now);
+    } catch { /* ignore */ }
+    if (!dismissedToday) {
       alerts.push({
         id: "budget-next-month",
-        level: "warning",
-        title: "다음 달 예산 미작성",
-        message: "다음 달 예산 계획을 아직 세우지 않았습니다. 예산 탭에서 작성해주세요.",
-        timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-        actionLabel: "예산 작성하기",
+        level: "info",
+        text: "다음 달 예산을 아직 세우지 않았어요",
         actionTab: "finance:budget",
       });
     }
   }
 
-  // If everything is normal
-  if (alerts.length === 0) {
-    alerts.push({
-      id: "stable",
-      level: "stable",
-      title: "시장 안정",
-      message: "현재 시장은 안정 상태입니다. 기존 포트폴리오 유지를 추천합니다.",
-      timestamp: now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-    });
-  }
+  // 청약 알림 (구독한 단지)
+  try {
+    const notifIds: string[] = JSON.parse(localStorage.getItem("sophia-subscription-notifications") || "[]");
+    if (notifIds.length > 0) {
+      const subs: { id: string; houseName: string; applyStartDate: string; applyEndDate: string }[] =
+        JSON.parse(localStorage.getItem("sophia-subscription-items-cache") || "[]");
+      for (const s of subs) {
+        if (!notifIds.includes(s.id)) continue;
+        const toStart = diffDays(s.applyStartDate);
+        const toEnd = diffDays(s.applyEndDate);
+        if (toStart > 0 && toStart <= 7) {
+          alerts.push({ id: `sub-upcoming-${s.id}`, level: "info", text: `청약 D-${toStart} · ${s.houseName}`, actionTab: "realestate:subscription" });
+        } else if (toStart <= 0 && toEnd >= 0) {
+          alerts.push({ id: `sub-ongoing-${s.id}`, level: "warning", text: `청약 진행 중 · ${s.houseName} (~${shortDate(s.applyEndDate)})`, actionTab: "realestate:subscription" });
+        }
+      }
+    }
+  } catch { /* ignore */ }
 
-  // Sort: critical > warning > info > stable
-  const levelOrder: Record<Alert["level"], number> = { critical: 0, warning: 1, info: 2, stable: 3 };
-  return alerts.sort((a, b) => levelOrder[a.level] - levelOrder[b.level]);
+  return alerts.sort((a, b) => (a.level === b.level ? 0 : a.level === "warning" ? -1 : 1));
 }
 
-const DashboardHome = ({ onNavigate }: DashboardHomeProps) => {
+// ---------------------------------------------------------------------------
+// Small UI pieces
+// ---------------------------------------------------------------------------
+
+const cardClass = "bg-card border border-border rounded-2xl p-4";
+
+function CardHeader({ title, linkLabel, onLink }: { title: ReactNode; linkLabel?: string; onLink?: () => void }) {
+  return (
+    <div className="-mt-2 mb-0.5 flex items-center justify-between">
+      <h3 className="text-[13px] font-semibold text-muted-foreground">{title}</h3>
+      {onLink && (
+        <button
+          onClick={onLink}
+          className="-mr-2 flex items-center gap-0.5 min-h-[40px] px-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {linkLabel}
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function weatherEmoji(desc: string): string {
+  if (desc.includes("맑")) return "☀️";
+  if (desc.includes("비")) return "🌧️";
+  if (desc.includes("눈")) return "🌨️";
+  if (desc.includes("흐")) return "☁️";
+  if (desc.includes("구름")) return "⛅";
+  if (desc.includes("안개") || desc.includes("박무")) return "🌫️";
+  return "🌤️";
+}
+
+function fearGreedKo(v: number): string {
+  if (v <= 25) return "극단공포";
+  if (v <= 45) return "공포";
+  if (v <= 55) return "중립";
+  if (v <= 75) return "탐욕";
+  return "극단탐욕";
+}
+
+const ALLOCATION_IDS = new Set(["savings", "emergency", "investment"]);
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+interface UpcomingEvent {
+  id: string;
+  title: string;
+  emoji: string;
+  date: string;
+  dateLabel?: string;
+}
+
+const DashboardHome = ({ onNavigate, onQuickExpense, onSmartInbox }: DashboardHomeProps) => {
   const { state, getMonthlyExpenseTotal } = useFinancial();
-  const { isGuest, maskAmount } = useGuestMode();
-  const [checklist, setChecklist] = useState(mockChecklist);
-  const [events, setEvents] = useState(initialEvents);
-  const [ddays, setDdays] = useState<{ id: string; title: string; emoji: string; date: string }[]>([]);
-  const [recentMemos, setRecentMemos] = useState<CoupleMemo[]>([]);
-  const [marketExpanded, setMarketExpanded] = useState(() => {
-    // Mobile: collapsed by default, Desktop: expanded
-    return window.innerWidth >= 768;
-  });
 
-  // Load checklist, events, pinned memos from Supabase
-  useEffect(() => {
-    setRecentMemos(getRecentMemos(3));
+  const today = new Date();
+  const todayKey = toDateKey(today);
+  const monthKey = toMonthKey(today);
 
-    // Load today's todos
-    loadTodos().then((rows) => {
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const todayTodos = rows
-        .filter((r) => r.date === todayStr)
-        .map((r) => ({ id: r.id, title: r.title, isDone: r.is_done }));
-      if (todayTodos.length > 0) setChecklist(todayTodos);
-    });
-
-    // Load upcoming events (group multi-day events)
-    loadEvents().then((rows) => {
-      if (rows.length === 0) return;
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-
-      // Group consecutive events by base title (remove " (1/4)" suffix)
-      const grouped = new Map<string, { emoji: string; dates: string[] }>();
-      for (const r of rows) {
-        const baseTitle = r.title.replace(/\s*\(\d+\/\d+\)$/, "");
-        const key = `${baseTitle}__${r.emoji}`;
-        if (!grouped.has(key)) {
-          grouped.set(key, { emoji: r.emoji, dates: [] });
-        }
-        grouped.get(key)!.dates.push(r.date);
-      }
-
-      const result: { id: string; title: string; emoji: string; date: string; dateLabel?: string }[] = [];
-      for (const [key, val] of grouped) {
-        const baseTitle = key.split("__")[0];
-        const sortedDates = val.dates.sort();
-        const startDate = sortedDates[0];
-        const endDate = sortedDates[sortedDates.length - 1];
-
-        // Skip past events
-        if (new Date(endDate) < now) continue;
-
-        if (sortedDates.length > 1 && startDate !== endDate) {
-          const s = new Date(startDate);
-          const e = new Date(endDate);
-          const dateLabel = `${s.getMonth()+1}/${s.getDate()}~${e.getMonth()+1}/${e.getDate()}`;
-          result.push({ id: key, title: baseTitle, emoji: val.emoji, date: startDate, dateLabel });
-        } else {
-          result.push({ id: key, title: baseTitle, emoji: val.emoji, date: startDate });
-        }
-      }
-
-      result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      setEvents(result.slice(0, 5));
-    });
-
-    // Load D-days
-    loadDdays().then((rows) => {
-      if (rows.length > 0) {
-        setDdays(rows.map((r) => ({ id: r.id, title: r.title, emoji: r.emoji, date: r.date })));
-      }
-    });
-
-    // Sync dismissed alerts from Supabase
-    loadBlogSettings().then((settings) => {
-      if (settings.dismissedAlerts && settings.dismissedAlerts.length > 0) {
-        setDismissedAlerts((prev) => {
-          const merged = new Set([...prev, ...settings.dismissedAlerts!]);
-          localStorage.setItem("sophia-dismissed-alerts", JSON.stringify([...merged]));
-          return merged;
-        });
-      }
-    });
-  }, []);
-
-  // Market data state
+  const [todos, setTodos] = useState<TodoRow[]>([]);
+  const [todayEvents, setTodayEvents] = useState<EventRow[]>([]);
+  const [upcoming, setUpcoming] = useState<UpcomingEvent[]>([]);
+  const [ddays, setDdays] = useState<DdayRow[]>([]);
+  const [memos, setMemos] = useState<CoupleMemo[]>(() => getRecentMemos(2));
+  const [lastChat, setLastChat] = useState<ChatMessage | null>(null);
+  const [wedding, setWedding] = useState<WeddingSummary | null>(null);
+  const [weather, setWeather] = useState<WeatherResult | null>(null);
+  const [fx, setFx] = useState<ExchangeRateResult | null>(null);
+  const [quotes, setQuotes] = useState<Record<string, StockQuote>>({});
   const [fearGreed, setFearGreed] = useState<FearGreedResult | null>(null);
-  const [stockQuotes, setStockQuotes] = useState<Record<string, StockQuote>>({});
-  const [exchangeRate, setExchangeRate] = useState<ExchangeRateResult | null>(null);
-  const [newsItems, setNewsItems] = useState<NewsArticle[]>([]);
-  const [marketLoading, setMarketLoading] = useState(true);
-  const [newsLoading, setNewsLoading] = useState(true);
-  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(() => {
+  const [newTodo, setNewTodo] = useState("");
+  const todoInputRef = useRef<HTMLInputElement>(null);
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem("sophia-dismissed-alerts");
       if (stored) return new Set(JSON.parse(stored) as string[]);
     } catch { /* ignore */ }
     return new Set();
   });
-  const [sectorFG, setSectorFG] = useState<SectorFearGreed>({ nasdaq: null, kosdaq: null, crypto: null });
-  const [marketTimestamp, setMarketTimestamp] = useState<string>("");
-  const [newsTimestamp, setNewsTimestamp] = useState<string>("");
-  const [weather, setWeather] = useState<WeatherResult | null>(null);
 
+  // ---- Load: 할 일 / 일정 / 기념일 / 메모 / 채팅 / 웨딩 ----
   useEffect(() => {
-    // Fetch market data
-    const fetchMarket = async () => {
-      setMarketLoading(true);
-      try {
-        const [fgR, sp500R, nasdaqR, kospiR, rateR] = await Promise.allSettled([
-          getFearGreedIndex(),
-          getStockQuote("^GSPC"),
-          getStockQuote("^IXIC"),
-          getStockQuote("^KS11"),
-          getExchangeRate("USD", "KRW"),
-        ]);
-        if (fgR.status === "fulfilled") setFearGreed(fgR.value);
-        const sp500 = sp500R.status === "fulfilled" ? sp500R.value : null;
-        const nasdaq = nasdaqR.status === "fulfilled" ? nasdaqR.value : null;
-        const kospi = kospiR.status === "fulfilled" ? kospiR.value : null;
-        if (sp500 || nasdaq || kospi) {
-          setStockQuotes({
-            ...(sp500 ? { "^GSPC": sp500 } : {}),
-            ...(nasdaq ? { "^IXIC": nasdaq } : {}),
-            ...(kospi ? { "^KS11": kospi } : {}),
-          });
-        }
-        if (rateR.status === "fulfilled") setExchangeRate(rateR.value);
-        setMarketTimestamp(new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }));
-        // Sector Fear & Greed (parallel, non-blocking)
-        getSectorFearGreed().then(setSectorFG).catch(() => {});
-      } catch (e) {
-        console.warn("Market data fetch error:", e);
-      }
-      setMarketLoading(false);
-    };
+    let cancelled = false;
+    const tKey = toDateKey(new Date());
 
-    // Fetch news
-    const fetchNews = async () => {
-      setNewsLoading(true);
-      try {
-        const [krNews, usNews] = await Promise.all([
-          getNews("business", "kr"),
-          getNews("business", "us"),
-        ]);
-        // Interleave KR and US news, take top 4
-        const mixed: NewsArticle[] = [];
-        const maxLen = Math.max(krNews.length, usNews.length);
-        for (let i = 0; i < maxLen && mixed.length < 4; i++) {
-          if (i < krNews.length && mixed.length < 4) mixed.push(krNews[i]);
-          if (i < usNews.length && mixed.length < 4) mixed.push(usNews[i]);
-        }
-        setNewsItems(mixed);
-        setNewsTimestamp(new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }));
-      } catch (e) {
-        console.warn("News fetch error:", e);
-      }
-      setNewsLoading(false);
-    };
+    loadTodos().then((rows) => {
+      if (!cancelled) setTodos(rows.filter((r) => r.date === tKey));
+    });
 
-    // Fetch weather
-    const fetchWeather = async () => {
-      try {
-        const w = await getWeather("Seoul");
-        setWeather(w);
-      } catch (e) {
-        console.warn("Weather fetch error:", e);
-      }
-    };
+    loadEvents().then((rows) => {
+      if (cancelled) return;
+      setTodayEvents(
+        rows.filter((r) => r.date === tKey).sort((a, b) => (a.time || "99").localeCompare(b.time || "99")),
+      );
 
-    fetchMarket();
-    fetchNews();
-    fetchWeather();
+      // 여러 날 일정은 " (1/4)" 접미사 기준으로 묶음
+      const grouped = new Map<string, { title: string; emoji: string; dates: string[] }>();
+      for (const r of rows) {
+        const baseTitle = r.title.replace(/\s*\(\d+\/\d+\)$/, "");
+        const key = `${baseTitle}__${r.emoji}`;
+        const g = grouped.get(key) ?? { title: baseTitle, emoji: r.emoji, dates: [] };
+        g.dates.push(r.date);
+        grouped.set(key, g);
+      }
+      const result: UpcomingEvent[] = [];
+      for (const [key, g] of grouped) {
+        const dates = g.dates.sort();
+        const start = dates[0];
+        const end = dates[dates.length - 1];
+        // 오늘 이후 시작하는 일정만 (오늘 일정은 "오늘" 카드에 표시)
+        if (start <= tKey) continue;
+        const s = parseDateKey(start);
+        const e = parseDateKey(end);
+        result.push({
+          id: key,
+          title: g.title,
+          emoji: g.emoji,
+          date: start,
+          dateLabel: start !== end ? `${s.getMonth() + 1}/${s.getDate()}~${e.getMonth() + 1 === s.getMonth() + 1 ? "" : `${e.getMonth() + 1}/`}${e.getDate()}` : undefined,
+        });
+      }
+      result.sort((a, b) => a.date.localeCompare(b.date));
+      setUpcoming(result.slice(0, 3));
+    });
+
+    loadDdays().then((rows) => {
+      if (!cancelled) setDdays(rows);
+    });
+
+    loadMemosAsync()
+      .then((all) => {
+        if (cancelled) return;
+        setMemos(
+          [...all]
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 2),
+        );
+      })
+      .catch(() => {});
+
+    if (getChatSender()) {
+      loadTodayMessages().then((msgs) => {
+        if (cancelled) return;
+        const visible = msgs.filter((m) => !m.deleted);
+        setLastChat(visible.length > 0 ? visible[visible.length - 1] : null);
+      });
+    }
+
+    loadWeddingSummary()
+      .then((s) => {
+        if (!cancelled) setWedding(s);
+      })
+      .catch(() => {});
+
+    // 알림 닫기 상태 동기화
+    loadBlogSettings().then((settings) => {
+      if (cancelled || !settings.dismissedAlerts?.length) return;
+      setDismissed((prev) => {
+        const merged = new Set([...prev, ...settings.dismissedAlerts!]);
+        try {
+          localStorage.setItem("sophia-dismissed-alerts", JSON.stringify([...merged]));
+        } catch { /* ignore */ }
+        return merged;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
-  const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
-  const dayStr = dayNames[today.getDay()];
-
-  const toggleCheck = (id: string) => {
-    const updated = checklist.map((item) =>
-      item.id === id ? { ...item, isDone: !item.isDone } : item
+  // ---- Load: 날씨 / 경제 한 줄 ----
+  useEffect(() => {
+    let cancelled = false;
+    getWeather("Seoul")
+      .then((w) => {
+        // 실패 시 빈 값(temp 0, description "")이 오므로 유효한 데이터만 표시
+        if (!cancelled && (w.description || w.icon)) setWeather(w);
+      })
+      .catch(() => {});
+    Promise.allSettled([getExchangeRate("USD", "KRW"), getStockQuote("^KS11"), getStockQuote("^IXIC")]).then(
+      ([rateR, kospiR, nasdaqR]) => {
+        if (cancelled) return;
+        if (rateR.status === "fulfilled") setFx(rateR.value);
+        setQuotes({
+          ...(kospiR.status === "fulfilled" ? { "^KS11": kospiR.value } : {}),
+          ...(nasdaqR.status === "fulfilled" ? { "^IXIC": nasdaqR.value } : {}),
+        });
+      },
     );
-    setChecklist(updated);
-    // Sync to Supabase
-    const item = updated.find((i) => i.id === id);
-    if (item) {
-      const d = new Date();
-      const dateKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-      saveTodo({ id: item.id, title: item.title, memo: "", is_done: item.isDone, date: dateKey });
+    getSectorFearGreed()
+      .then((s) => {
+        if (!cancelled) setFearGreed(s.nasdaq ?? s.crypto);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ---- 할 일 ----
+  const toggleTodo = (id: string) => {
+    const target = todos.find((t) => t.id === id);
+    if (!target) return;
+    const updated = { ...target, is_done: !target.is_done };
+    setTodos((prev) => prev.map((t) => (t.id === id ? updated : t)));
+    saveTodo(updated);
+  };
+
+  const addTodo = () => {
+    const title = newTodo.trim();
+    if (!title) return;
+    const todo: TodoRow = { id: crypto.randomUUID(), title, memo: "", is_done: false, date: todayKey };
+    setTodos((prev) => [...prev, todo]);
+    setNewTodo("");
+    saveTodo(todo);
+  };
+
+  const focusTodoInput = () => {
+    const el = todoInputRef.current;
+    if (!el) return;
+    // iOS 키보드가 뜨도록 제스처 안에서 바로 focus
+    el.focus({ preventScroll: true });
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const doneCount = todos.filter((t) => t.is_done).length;
+
+  // ---- 기념일 칩 ----
+  const { weddingDday, metDays } = useMemo(() => {
+    const withDiff = ddays.map((d) => ({ ...d, diff: diffDays(d.date) }));
+    const w = withDiff
+      .filter((d) => d.title.includes("결혼") && d.diff >= 0)
+      .sort((a, b) => a.diff - b.diff)[0];
+    const met = withDiff.find((d) => d.title.includes("만난") && d.diff <= 0);
+    return { weddingDday: w ?? null, metDays: met ? -met.diff + 1 : null };
+  }, [ddays]);
+
+  // ---- 생활비 ----
+  const spent = getMonthlyExpenseTotal(monthKey);
+  const budget = state.monthlyBudgets.find((b) => b.month === monthKey);
+  const spendingCats = useMemo(
+    () => (budget?.categories ?? []).filter((c) => !ALLOCATION_IDS.has(c.id) && c.amount > 0),
+    [budget],
+  );
+  const budgetTotal = spendingCats.reduce((s, c) => s + c.amount, 0);
+  const usedPct = budgetTotal > 0 ? Math.round((spent / budgetTotal) * 100) : 0;
+  const remaining = budgetTotal - spent;
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const daysLeft = lastDay - today.getDate();
+
+  const topCats = useMemo(() => {
+    const spentByName = new Map<string, number>();
+    for (const e of state.expenses) {
+      if (e.type === "expense" && e.date.startsWith(monthKey)) {
+        spentByName.set(e.category, (spentByName.get(e.category) || 0) + e.amount);
+      }
     }
-  };
+    return spendingCats
+      .map((c) => {
+        const s = spentByName.get(c.name) || 0;
+        return { name: c.name, spent: s, pct: Math.round((s / c.amount) * 100) };
+      })
+      .sort((a, b) => b.spent - a.spent || b.pct - a.pct)
+      .slice(0, 3);
+  }, [state.expenses, spendingCats, monthKey]);
 
-  const getDday = (dateStr: string) => {
-    const target = new Date(dateStr);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    target.setHours(0, 0, 0, 0);
-    const diff = Math.ceil(
-      (target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    if (diff === 0) return "D-Day";
-    if (diff > 0) return `D-${diff}`;
-    return `D+${Math.abs(diff)}`;
-  };
+  const nextMonthKey = toMonthKey(new Date(today.getFullYear(), today.getMonth() + 1, 1));
+  const nextMonthBudgetExists = state.monthlyBudgets.some((b) => b.month === nextMonthKey);
 
-  const formatAmount = (n: number) =>
-    new Intl.NumberFormat("ko-KR").format(n) + "\uC6D0";
-
-  const doneCount = checklist.filter((c) => c.isDone).length;
-
-  // Compute expense & budget totals from store
-  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  const monthlyExpenseUsed = getMonthlyExpenseTotal(currentMonthStr);
-  const currentBudget = state.monthlyBudgets.find((b) => b.month === currentMonthStr);
-  const monthlyBudgetTotal = currentBudget
-    ? currentBudget.categories
-        .filter((c) => !["savings", "emergency", "investment"].includes(c.id))
-        .reduce((sum, c) => sum + c.amount, 0)
-    : 0;
-
-  // Check if next month budget exists
-  const nextMonthStr = (() => {
-    const [y, m] = currentMonthStr.split("-").map(Number);
-    const nm = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 };
-    return `${nm.y}-${String(nm.m).padStart(2, "0")}`;
-  })();
-  const nextMonthBudgetExists = state.monthlyBudgets.some((b) => b.month === nextMonthStr);
-
-  // Alert system
-  const alerts = useMemo(() => {
-    if (marketLoading) return [];
-    return generateAlerts(
-      fearGreed?.value ?? null,
-      stockQuotes,
-      exchangeRate,
-      events,
-      monthlyExpenseUsed,
-      monthlyBudgetTotal,
-      nextMonthBudgetExists,
-    );
-  }, [fearGreed, stockQuotes, exchangeRate, marketLoading, monthlyExpenseUsed, monthlyBudgetTotal, nextMonthBudgetExists]);
-
-  const visibleAlerts = alerts.filter((a) => !dismissedAlerts.has(a.id));
+  const alerts = useMemo(
+    () => buildAlerts({ monthKey, spent, budgetTotal, nextMonthBudgetExists }).filter((a) => !dismissed.has(a.id)),
+    [monthKey, spent, budgetTotal, nextMonthBudgetExists, dismissed],
+  );
 
   const dismissAlert = (id: string) => {
-    // Budget noti: save today's date so it re-appears tomorrow
     if (id === "budget-next-month") {
-      const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-      localStorage.setItem("sophia-budget-noti-dismissed", todayStr);
+      try {
+        localStorage.setItem("sophia-budget-noti-dismissed", todayKey);
+      } catch { /* ignore */ }
     }
-    setDismissedAlerts((prev) => {
+    setDismissed((prev) => {
       const next = new Set(prev);
       next.add(id);
       const arr = [...next];
       try {
         localStorage.setItem("sophia-dismissed-alerts", JSON.stringify(arr));
-      } catch (e) {
-        console.warn("Failed to save dismissed alerts:", e);
-      }
+      } catch { /* ignore */ }
       saveBlogSettings({ dismissed_alerts: arr });
       return next;
     });
   };
 
-  // Relative time helper for news
-  const getRelativeTime = (dateStr: string) => {
-    const now = new Date();
-    const pubDate = new Date(dateStr);
-    const diffMs = now.getTime() - pubDate.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    if (diffMins < 60) return `${diffMins}분 전`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}시간 전`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}일 전`;
-  };
+  // ---- 경제 한 줄 ----
+  const tickerItems: { label: string; value: string; tone?: "up" | "down" }[] = [];
+  if (fx) tickerItems.push({ label: "환율", value: Math.round(fx.rate).toLocaleString("ko-KR") });
+  for (const [sym, label] of [["^KS11", "코스피"], ["^IXIC", "나스닥"]] as const) {
+    const q = quotes[sym];
+    if (q) {
+      const up = q.changePercent >= 0;
+      tickerItems.push({ label, value: `${up ? "▲" : "▼"}${Math.abs(q.changePercent).toFixed(1)}%`, tone: up ? "up" : "down" });
+    }
+  }
+  if (fearGreed) tickerItems.push({ label: fearGreedKo(fearGreed.value), value: String(fearGreed.value) });
 
-  // Fear & Greed derived values
-  const fearGreedValue = fearGreed?.value ?? null;
-  const fearGreedDisplay = fearGreedValue ?? 0;
-  const fearGreedKoLabel = fearGreedValue === null ? "--" : fearGreedValue <= 25 ? "극단적 공포" : fearGreedValue <= 45 ? "공포" : fearGreedValue <= 55 ? "중립" : fearGreedValue <= 75 ? "탐욕" : "극단적 탐욕";
-  const fearGreedColor = fearGreedValue === null ? "#6b7280" : fearGreedValue <= 25 ? "#ef4444" : fearGreedValue <= 45 ? "#f97316" : fearGreedValue <= 55 ? "#eab308" : fearGreedValue <= 75 ? "#84cc16" : "#22c55e";
+  const showWedding = !!weddingDday;
+  // 오래된 메모는 홈에서 숨김 (최근 14일 이내만)
+  const freshMemos = memos.filter((m) => Date.now() - new Date(m.timestamp).getTime() < 14 * 86400000);
+  const chatLabel = lastChat ? (lastChat.sender === "degul" ? "데굴" : "무요") : "";
+  const chatText = lastChat
+    ? lastChat.kind === "image"
+      ? "📷 사진"
+      : parseReply(lastChat.text).body
+    : "";
 
-  const fearGreedExplanations = [
-    { range: "0-25", label: "극단적 공포", desc: "시장 패닉, 매수 기회 가능성", color: "#ef4444", min: 0, max: 25 },
-    { range: "25-45", label: "공포", desc: "투자자 불안, 방어적 전략 권장", color: "#f97316", min: 25, max: 45 },
-    { range: "45-55", label: "중립", desc: "균형 상태, 현 포지션 유지", color: "#eab308", min: 45, max: 55 },
-    { range: "55-75", label: "탐욕", desc: "과열 주의, 리스크 관리 필요", color: "#84cc16", min: 55, max: 75 },
-    { range: "75-100", label: "극단적 탐욕", desc: "버블 경계, 차익 실현 고려", color: "#22c55e", min: 75, max: 100 },
-  ];
-
-  // Market indices from fetched data (direct index symbols via Yahoo Finance)
-  const indices = [
-    {
-      name: "S&P 500",
-      value: stockQuotes["^GSPC"] ? stockQuotes["^GSPC"].price.toLocaleString() : "--",
-      change: stockQuotes["^GSPC"] ? `${stockQuotes["^GSPC"].changePercent >= 0 ? "+" : ""}${stockQuotes["^GSPC"].changePercent}%` : "--",
-      isUp: stockQuotes["^GSPC"] ? stockQuotes["^GSPC"].changePercent >= 0 : true,
-    },
-    {
-      name: "NASDAQ",
-      value: stockQuotes["^IXIC"] ? stockQuotes["^IXIC"].price.toLocaleString() : "--",
-      change: stockQuotes["^IXIC"] ? `${stockQuotes["^IXIC"].changePercent >= 0 ? "+" : ""}${stockQuotes["^IXIC"].changePercent}%` : "--",
-      isUp: stockQuotes["^IXIC"] ? stockQuotes["^IXIC"].changePercent >= 0 : true,
-    },
-    {
-      name: "KOSPI",
-      value: stockQuotes["^KS11"] ? stockQuotes["^KS11"].price.toLocaleString() : "--",
-      change: stockQuotes["^KS11"] ? `${stockQuotes["^KS11"].changePercent >= 0 ? "+" : ""}${stockQuotes["^KS11"].changePercent}%` : "--",
-      isUp: stockQuotes["^KS11"] ? stockQuotes["^KS11"].changePercent >= 0 : true,
-    },
-  ];
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { delay: i * 0.08, duration: 0.4, ease: [0.16, 1, 0.3, 1] },
-    }),
-  };
-
-  const handleNewsClick = () => {
-    onNavigate?.("news");
-  };
+  const chipClass = "inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-foreground";
 
   return (
-    <div className="space-y-5">
-      {/* Greeting */}
-      <motion.div
-        custom={0}
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-        className="bg-card rounded-xl p-5"
-      >
-        <div className="flex items-start justify-between">
-          <div className="space-y-1.5">
-            <h2 className="text-xl sm:text-2xl font-bold">
-              {isGuest ? "안녕하세요, 게스트 님!" : <>안녕하세요,<br />무요 & 데굴 님! 🩷</>}
-            </h2>
-            {weather && weather.temp != null ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="text-lg">{
-                  weather.description?.includes("맑") ? "☀️" :
-                  weather.description?.includes("구름") ? "⛅" :
-                  weather.description?.includes("흐") ? "☁️" :
-                  weather.description?.includes("비") ? "🌧️" :
-                  weather.description?.includes("눈") ? "🌨️" :
-                  weather.description?.includes("안개") ? "🌫️" : "🌤️"
-                }</span>
-                <span className="font-mono">{weather.tempMin != null && weather.tempMax != null ? `${weather.tempMin}° / ${weather.tempMax}°` : `${weather.temp}°`}</span>
-                <span className="text-[10px] text-muted-foreground/50">체감 {weather.feelsLike}°</span>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">오늘도 좋은 하루 되세요!</p>
-            )}
-            {/* Upcoming event within 3 days - inline */}
-            {(() => {
-              const todayDate = new Date();
-              todayDate.setHours(0, 0, 0, 0);
-              const nearEvents = (events || [])
-                .map((event) => {
-                  const target = new Date(event.date);
-                  target.setHours(0, 0, 0, 0);
-                  const diffDays = Math.ceil((target.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
-                  return { ...event, diffDays };
-                })
-                .filter((e) => e.diffDays >= 0 && e.diffDays <= 3)
-                .sort((a, b) => a.diffDays - b.diffDays);
-
-              if (nearEvents.length === 0) return null;
-              const nearest = nearEvents[0];
-              const dayLabel = nearest.diffDays === 0 ? "오늘" : nearest.diffDays === 1 ? "내일" : `${nearest.diffDays}일 후`;
-              return (
-                <p className="text-xs text-primary font-medium">
-                  {isGuest ? `📅 ${dayLabel} 일정` : `📅 ${dayLabel} ${nearest.title}`}
-                </p>
-              );
-            })()}
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground font-mono whitespace-nowrap ml-2 sm:ml-4 mt-1">
-            {dateStr} ({dayStr})
-          </p>
+    <motion.div variants={listVariants} initial="hidden" animate="visible" className="space-y-3 pb-4">
+      {/* 1. 헤더 */}
+      <motion.header variants={itemVariants} className="px-1 pt-1 pb-1.5">
+        <h2 className="text-[22px] font-extrabold tracking-tight">무요 & 데굴 🩷</h2>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className={chipClass}>
+            {today.getMonth() + 1}월 {today.getDate()}일 ({DAY_NAMES[today.getDay()]})
+          </span>
+          {weather && (
+            <span className={chipClass}>
+              {weatherEmoji(weather.description)} {weather.temp}° {weather.description}
+            </span>
+          )}
+          {weddingDday && (
+            <button
+              onClick={() => onNavigate?.("couple")}
+              className="inline-flex items-center gap-1 rounded-full bg-pink-500/10 px-2.5 py-1 text-xs text-pink-500 dark:text-pink-400"
+            >
+              💍 결혼 {ddayLabel(weddingDday.diff)}
+            </button>
+          )}
+          {metDays !== null && (
+            <button onClick={() => onNavigate?.("couple")} className={chipClass}>
+              💖 만난 지 {metDays.toLocaleString("ko-KR")}일
+            </button>
+          )}
+          {!weddingDday && metDays === null && ddays.length > 0 && (
+            <button onClick={() => onNavigate?.("couple")} className={chipClass}>
+              🎉 기념일 <ChevronRight className="h-3 w-3" />
+            </button>
+          )}
         </div>
+      </motion.header>
+
+      {/* 2. 빠른 입력 */}
+      <motion.div variants={itemVariants} className="grid grid-cols-4 gap-2">
+        {[
+          { label: "지출", icon: "💸", main: true, onClick: () => onQuickExpense?.() },
+          { label: "할 일", icon: "✅", onClick: focusTodoInput },
+          { label: "메모", icon: "📝", onClick: () => onNavigate?.("couple:memo") },
+          { label: "블로그", icon: "📷", onClick: () => onNavigate?.("blog:photo") },
+        ].map((q) => (
+          <button
+            key={q.label}
+            onClick={q.onClick}
+            className={`flex h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl text-[13px] font-semibold transition-transform active:scale-[0.97] ${
+              q.main ? "bg-primary text-primary-foreground" : "bg-card border border-border hover:bg-muted/60"
+            }`}
+          >
+            <span className="text-xl leading-none">{q.icon}</span>
+            {q.label}
+          </button>
+        ))}
       </motion.div>
 
-      {/* Alert Cards */}
-      <AnimatePresence mode="popLayout">
-        {visibleAlerts.length > 0 && (
-          <motion.div
-            className="space-y-2"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            {visibleAlerts.map((alert, i) => {
-              const style = alertStyles[alert.level];
-              const Icon = style.icon;
-              return (
-                <motion.div
-                  key={alert.id}
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 16, height: 0 }}
-                  transition={{ delay: i * 0.06, duration: 0.3 }}
-                  className={`rounded-xl p-3.5 flex items-start gap-3 ${style.bg}`}
-                >
-                  <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${style.iconColor}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{alert.title}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {alert.message}
-                    </p>
-                    {alert.actionLabel && alert.actionTab && (
-                      <button
-                        onClick={() => onNavigate?.(alert.actionTab!)}
-                        className="text-[10px] font-medium text-primary hover:text-primary/80 transition-colors mt-1.5 flex items-center gap-0.5"
-                      >
-                        {alert.actionLabel}
-                        <ChevronRight className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => dismissAlert(alert.id)}
-                    className="flex-shrink-0 p-0.5 hover:bg-muted/50 rounded transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 붙여넣기로 기록 — 채팅·영수증 → AI가 탭별로 정리 (승인한 것만 저장) */}
+      <motion.button
+        variants={itemVariants}
+        onClick={() => onSmartInbox?.()}
+        className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 px-4 min-h-[56px] text-left transition-colors hover:bg-muted/60 active:scale-[0.99]"
+      >
+        <span className="text-xl leading-none">📋</span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[14px] font-semibold">붙여넣기로 기록</span>
+          <span className="block truncate text-[12px] text-muted-foreground">채팅·영수증을 넣으면 지출·일정·할 일로 정리해줘요</span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </motion.button>
 
-      {/* D-day section - always visible */}
-      {ddays.length > 0 && (
-        <motion.div
-          custom={1}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          className="bg-card rounded-xl p-5"
-        >
-          <button
-            onClick={() => onNavigate?.("couple")}
-            className="flex items-center justify-between mb-3 w-full group"
-          >
-            <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-pink-400" />
-              <h3 className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">기념일</h3>
-            </div>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-          </button>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {ddays
-              .map((d) => {
-                const target = new Date(d.date);
-                const now = new Date();
-                now.setHours(0, 0, 0, 0);
-                target.setHours(0, 0, 0, 0);
-                const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                return { ...d, diff };
-              })
-              .sort((a, b) => {
-                // Show D-0 first, then nearest upcoming, then past (by recurrence)
-                const aAbs = a.diff >= 0 ? a.diff : 365 + a.diff;
-                const bAbs = b.diff >= 0 ? b.diff : 365 + b.diff;
-                return aAbs - bAbs;
-              })
-              .slice(0, 6)
-              .map((d) => (
-                <div
-                  key={d.id}
-                  className={`flex items-center gap-2 p-2.5 rounded-lg ${
-                    d.diff === 0 ? "bg-pink-500/10 ring-1 ring-pink-500/30" : "bg-muted/50"
-                  }`}
+      {/* 중요 알림 — 한 줄 스트립 */}
+      {alerts.length > 0 && (
+        <motion.div variants={itemVariants} className="space-y-1.5">
+          {alerts.slice(0, 2).map((a) => {
+            const Icon = a.level === "warning" ? AlertTriangle : a.id.startsWith("sub-") ? Bell : Info;
+            return (
+              <div
+                key={a.id}
+                className={`flex items-center gap-2 rounded-xl border pl-3 text-[13px] ${
+                  a.level === "warning" ? "border-amber-500/30 bg-amber-500/10" : "border-border bg-card"
+                }`}
+              >
+                <Icon className={`h-4 w-4 shrink-0 ${a.level === "warning" ? "text-amber-500" : "text-muted-foreground"}`} />
+                <button
+                  onClick={() => a.actionTab && onNavigate?.(a.actionTab)}
+                  className="flex min-h-[40px] min-w-0 flex-1 items-center gap-1 text-left"
                 >
-                  <span className="text-lg">{d.emoji}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium truncate">{isGuest ? "기념일" : d.title}</p>
-                    <p className={`text-[10px] font-mono ${
-                      d.diff === 0 ? "text-pink-500 font-bold" : d.diff > 0 ? "text-primary" : "text-muted-foreground"
-                    }`}>
-                      {d.diff === 0 ? "오늘!" : d.diff > 0 ? `D-${d.diff}` : `D+${Math.abs(d.diff)}`}
-                    </p>
-                  </div>
-                </div>
-              ))}
-          </div>
+                  <span className="truncate">{a.text}</span>
+                  {a.actionTab && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                </button>
+                <button
+                  onClick={() => dismissAlert(a.id)}
+                  aria-label="알림 닫기"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
         </motion.div>
       )}
 
-      {/* 2-column: checklist + events - BEFORE economy */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Today's checklist */}
-        <motion.div
-          custom={2}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          className="bg-card rounded-xl p-5"
-        >
-          <button
-            onClick={() => onNavigate?.("schedule:checklist")}
-            className="flex items-center justify-between mb-3 w-full group"
-          >
-            <h3 className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">오늘 할 일</h3>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-mono text-muted-foreground">{doneCount}/{checklist.length}</span>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-            </div>
-          </button>
-          <div className="space-y-1.5">
-            {checklist.length === 0 && (
-              <p className="text-xs text-muted-foreground/50">등록된 할 일이 없습니다</p>
-            )}
-            {checklist.map((item) => (
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
+        {/* 3. 오늘 */}
+        <motion.section variants={itemVariants} className={cardClass}>
+          <CardHeader
+            title="오늘"
+            linkLabel={todos.length > 0 ? `${doneCount}/${todos.length} 완료` : "체크리스트"}
+            onLink={() => onNavigate?.("schedule:checklist")}
+          />
+          <div className="divide-y divide-border">
+            {todos.map((t) => (
               <button
-                key={item.id}
-                onClick={() => toggleCheck(item.id)}
-                className="flex items-center gap-2 w-full text-left group py-0.5"
+                key={t.id}
+                onClick={() => toggleTodo(t.id)}
+                className="flex min-h-[44px] w-full items-center gap-2.5 py-2 text-left text-sm"
               >
-                {item.isDone ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                ) : (
-                  <Circle className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary/60 flex-shrink-0 transition-colors" />
-                )}
-                <span className={`text-sm transition-all ${item.isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                  {item.title}
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-[1.5px] transition-colors ${
+                    t.is_done ? "border-emerald-500 bg-emerald-500 text-white" : "border-muted-foreground/50"
+                  }`}
+                >
+                  {t.is_done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                </span>
+                <span className={`min-w-0 flex-1 truncate ${t.is_done ? "text-muted-foreground line-through" : ""}`}>
+                  {t.title}
                 </span>
               </button>
             ))}
+            {todayEvents.map((e) => (
+              <button
+                key={e.id}
+                onClick={() => onNavigate?.("schedule:calendar")}
+                className="flex min-h-[44px] w-full items-center gap-2.5 py-2 text-left text-sm"
+              >
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center text-base leading-none">{e.emoji || "📅"}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {e.time ? `${e.time.slice(0, 5)} ` : ""}
+                  {e.title}
+                </span>
+                <span className="shrink-0 rounded-md bg-sky-500/10 px-1.5 py-0.5 text-[11px] text-sky-600 dark:text-sky-400">일정</span>
+              </button>
+            ))}
+            <form
+              onSubmit={(ev) => {
+                ev.preventDefault();
+                addTodo();
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                ref={todoInputRef}
+                value={newTodo}
+                onChange={(ev) => setNewTodo(ev.target.value)}
+                placeholder="＋ 할 일 추가"
+                enterKeyHint="done"
+                className="min-h-[44px] min-w-0 flex-1 bg-transparent text-base placeholder:text-muted-foreground focus:outline-none md:text-sm"
+              />
+              {newTodo.trim() && (
+                <button type="submit" className="min-h-[36px] shrink-0 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground">
+                  추가
+                </button>
+              )}
+            </form>
           </div>
-        </motion.div>
+        </motion.section>
 
-        {/* Upcoming events */}
-        <motion.div
-          custom={3}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          className="bg-card rounded-xl p-5"
-        >
-          <button
-            onClick={() => onNavigate?.("schedule:calendar")}
-            className="flex items-center justify-between mb-3 w-full group"
-          >
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">다가오는 일정</h3>
-            </div>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-          </button>
-          <div className="space-y-2.5">
-            {events.length === 0 && (
-              <p className="text-xs text-muted-foreground/50">등록된 일정이 없습니다</p>
-            )}
-            {events.map((event) => (
-              <div key={event.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">{event.emoji}</span>
-                  <span className="text-sm">{isGuest ? "일정이 있습니다" : event.title}</span>
-                  {event.dateLabel && (
-                    <span className="text-[10px] text-muted-foreground/60 font-mono">({event.dateLabel})</span>
+        {/* 4. 이번 달 생활비 */}
+        <motion.section variants={itemVariants} className={cardClass}>
+          <CardHeader title={`${today.getMonth() + 1}월 생활비`} linkLabel="돈 탭" onLink={() => onNavigate?.("finance:budget")} />
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="font-mono text-[22px] font-bold tabular-nums">{formatWon(spent)}</span>
+            {budgetTotal > 0 && <span className="shrink-0 text-[13px] text-muted-foreground">/ {formatMan(budgetTotal)}원</span>}
+          </div>
+          {budgetTotal > 0 ? (
+            <>
+              <div className="mt-2.5 mb-2 h-2 overflow-hidden rounded-full bg-muted">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(usedPct, 100)}%` }}
+                  transition={{ duration: 0.6, ease: EASE_OUT }}
+                  className={`h-full rounded-full ${
+                    usedPct >= 100 ? "bg-red-500" : usedPct >= 90 ? "bg-amber-500" : "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                  }`}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[13px]">
+                <span className="text-muted-foreground">
+                  {usedPct}% 사용 · {daysLeft}일 남음
+                </span>
+                <span className={remaining >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}>
+                  {remaining >= 0 ? `${formatMan(remaining)}원 남음` : `${formatMan(-remaining)}원 초과`}
+                </span>
+              </div>
+              {topCats.length > 0 && (
+                <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+                  {topCats.map((c) => (
+                    <div key={c.name} className="min-w-0 rounded-xl bg-muted px-2.5 py-2">
+                      <p className="truncate text-xs text-muted-foreground">{c.name}</p>
+                      <p className={`mt-0.5 text-[13px] font-bold tabular-nums ${c.pct > 90 ? "text-amber-500" : ""}`}>{c.pct}%</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={() => onNavigate?.("finance:budget")}
+              className="mt-1 flex min-h-[40px] items-center gap-0.5 text-[13px] text-muted-foreground"
+            >
+              이번 달 예산이 아직 없어요 · 예산 세우기 <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </motion.section>
+
+        {/* 5. 결혼 준비 (결혼식 전까지만) */}
+        {showWedding && (
+          <motion.section variants={itemVariants}>
+            <button
+              onClick={() => onNavigate?.("wedding")}
+              className="w-full rounded-2xl border border-pink-500/25 bg-gradient-to-br from-pink-500/[0.14] to-pink-500/[0.03] p-4 text-left"
+            >
+              <div className="flex items-center gap-3.5">
+                {wedding && wedding.checklistTotal > 0 ? (
+                  <WeddingRing pct={Math.round((wedding.checklistDone / wedding.checklistTotal) * 100)} />
+                ) : (
+                  <span className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full bg-pink-500/10 text-2xl">💍</span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1 text-[15px] font-bold">
+                    결혼 준비 · {ddayLabel(weddingDday.diff)}
+                    <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+                  </p>
+                  {wedding && (wedding.checklistTotal > 0 || wedding.total > 0) && (
+                    <p className="mt-0.5 text-[13px] text-muted-foreground">
+                      {[
+                        wedding.checklistTotal > 0 ? `체크리스트 ${wedding.checklistDone}/${wedding.checklistTotal}` : null,
+                        wedding.total > 0 ? `결제 ${formatMan(wedding.paid)} / ${formatMan(wedding.total)}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
                   )}
                 </div>
-                <span className="text-xs font-mono text-primary font-medium">{getDday(event.date)}</span>
               </div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
+              {wedding?.nextThisWeek && (
+                <p className="mt-3 border-t border-pink-500/20 pt-2.5 text-[13px]">
+                  이번 주 ▸ {wedding.nextThisWeek.title}{" "}
+                  <span className="text-muted-foreground">({shortDate(wedding.nextThisWeek.date)})</span>
+                </p>
+              )}
+            </button>
+          </motion.section>
+        )}
 
-      {/* Economy section - collapsible on mobile */}
-      <button
-        onClick={() => setMarketExpanded(!marketExpanded)}
-        className="w-full flex items-center justify-between bg-card rounded-xl px-5 py-3 md:hidden"
-      >
-        <span className="text-sm font-mono text-muted-foreground flex items-center gap-2">
-          <Gauge className="h-4 w-4" />
-          경제 & 시장
-        </span>
-        {marketExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-      </button>
+        {/* 6. 최근 채팅 */}
+        {lastChat && (
+          <motion.section variants={itemVariants} className={cardClass}>
+            <CardHeader title="💬 채팅" linkLabel="열기" onLink={() => onNavigate?.("chat")} />
+            <button onClick={() => onNavigate?.("chat")} className="block w-full text-left">
+              <p className="mb-1 text-xs text-muted-foreground">
+                {chatLabel} · {relativeTime(lastChat.created_at)}
+              </p>
+              <p className="inline-block max-w-[85%] rounded-[14px] rounded-bl-[4px] bg-muted px-3 py-2 text-sm line-clamp-2 break-words">
+                {chatText}
+              </p>
+            </button>
+          </motion.section>
+        )}
 
-      <div className={`space-y-4 ${!marketExpanded ? "hidden md:block" : ""}`}>
-      {/* Fear & Greed + USD/KRW - prominent */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <motion.div
-          custom={1}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          className="bg-card rounded-xl p-5"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Gauge className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-mono text-muted-foreground">
-              Fear & Greed Index
-            </h3>
-            {marketTimestamp && (
-              <span className="text-[11px] text-muted-foreground/40 font-mono ml-auto">
-                {marketTimestamp}
-              </span>
-            )}
-          </div>
-          {/* Sector Fear & Greed */}
-          <div className="space-y-3">
-            {marketLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                <span className="text-xs text-muted-foreground ml-2">불러오는 중...</span>
-              </div>
-            ) : (
-            <>
-            {/* 3-sector gauges */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {([
-                { label: "나스닥", data: sectorFG.nasdaq, fallback: null },
-                { label: "코스피", data: sectorFG.kosdaq, fallback: null },
-                { label: "코인", data: sectorFG.crypto, fallback: null },
-              ] as const).map((sector) => {
-                const fg = sector.data ?? sector.fallback;
-                const val = fg?.value ?? null;
-                const color = val === null ? "#6b7280" : val <= 25 ? "#ef4444" : val <= 45 ? "#f97316" : val <= 55 ? "#eab308" : val <= 75 ? "#84cc16" : "#22c55e";
-                const koLabel = val === null ? "--" : val <= 25 ? "극단공포" : val <= 45 ? "공포" : val <= 55 ? "중립" : val <= 75 ? "탐욕" : "극단탐욕";
+        {/* 속닥속닥 — 최근 메모 */}
+        {freshMemos.length > 0 && (
+          <motion.section variants={itemVariants} className={cardClass}>
+            <CardHeader title="🩷 속닥속닥" linkLabel="메모" onLink={() => onNavigate?.("couple:memo")} />
+            <div className="space-y-1">
+              {freshMemos.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => onNavigate?.("couple:memo")}
+                  className="flex min-h-[40px] w-full items-center gap-2 text-left text-sm"
+                >
+                  <span className={`shrink-0 text-xs font-semibold ${m.author === "sophia" ? "text-pink-500" : "text-sky-500"}`}>
+                    {m.author === "sophia" ? "데굴" : "무요"}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{m.message}</span>
+                  <span className="shrink-0 text-[11px] text-muted-foreground">{relativeTime(m.timestamp)}</span>
+                </button>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* 7. 다가오는 일정 */}
+        <motion.section variants={itemVariants} className={cardClass}>
+          <CardHeader title="다가오는 일정" linkLabel="일정" onLink={() => onNavigate?.("schedule:calendar")} />
+          {upcoming.length === 0 ? (
+            <p className="py-1.5 text-[13px] text-muted-foreground">예정된 일정이 없어요</p>
+          ) : (
+            <div>
+              {upcoming.map((e) => {
+                const diff = diffDays(e.date);
                 return (
-                  <div key={sector.label} className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1.5 font-medium">{sector.label}</p>
-                    <p className="text-3xl sm:text-4xl font-mono font-extrabold tabular-nums" style={{ color }}>
-                      {val ?? "--"}
-                    </p>
-                    <p className="text-xs font-medium mt-1" style={{ color }}>{koLabel}</p>
-                    {/* Mini bar */}
-                    <div className="mt-1.5 mx-auto max-w-[80px]">
-                      <div className="flex h-1.5 rounded-full overflow-hidden gap-px">
-                        <div className="flex-1 bg-[#ef4444] rounded-l-full" />
-                        <div className="flex-1 bg-[#f97316]" />
-                        <div className="flex-1 bg-[#eab308]" />
-                        <div className="flex-1 bg-[#84cc16]" />
-                        <div className="flex-1 bg-[#22c55e] rounded-r-full" />
-                      </div>
-                      {val !== null && (
-                        <div className="relative h-1.5">
-                          <motion.div
-                            className="absolute -top-0.5 w-1.5 h-1.5 rounded-full bg-foreground border border-background shadow"
-                            initial={{ left: "0%" }}
-                            animate={{ left: `${Math.min(Math.max(val, 2), 98)}%` }}
-                            transition={{ duration: 0.6 }}
-                            style={{ transform: "translateX(-50%)" }}
-                          />
-                        </div>
-                      )}
-                    </div>
+                  <div key={e.id} className="flex min-h-[40px] items-center gap-2.5 text-sm">
+                    <span className="shrink-0 text-base leading-none">{e.emoji}</span>
+                    <span className="min-w-0 truncate">{e.title}</span>
+                    {e.dateLabel && <span className="shrink-0 text-xs text-muted-foreground">{e.dateLabel}</span>}
+                    <span
+                      className={`ml-auto shrink-0 font-mono text-[13px] ${
+                        diff <= 7 ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"
+                      }`}
+                    >
+                      {ddayLabel(diff)}
+                    </span>
                   </div>
                 );
               })}
             </div>
-            {/* Legend + 설명 */}
-            <div className="flex justify-center gap-3 text-[9px] text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />공포</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#eab308]" />중립</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />탐욕</span>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-3 space-y-1.5 mt-1">
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                <strong className="text-foreground/70">0~25 극단공포</strong> — 시장 패닉, 역발상 매수 기회 가능성
-              </p>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                <strong className="text-foreground/70">25~45 공포</strong> — 투자자 불안, 방어적 전략 권장
-              </p>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                <strong className="text-foreground/70">45~55 중립</strong> — 균형 상태, 현 포지션 유지
-              </p>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                <strong className="text-foreground/70">55~75 탐욕</strong> — 과열 주의, 리스크 관리 필요
-              </p>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                <strong className="text-foreground/70">75~100 극단탐욕</strong> — 버블 경계, 차익 실현 고려
-              </p>
-              <hr className="border-border/50" />
-              <div className="text-[9px] text-muted-foreground/60 space-y-0.5">
-                <p>나스닥: CNN Fear & Greed Index (미국 주식 심리)</p>
-                <p>코스피: KOSPI Fear & Greed Index (kospi-fear-greed-index.co.kr)</p>
-                <p>코인: Crypto Fear & Greed Index (alternative.me)</p>
-              </div>
-            </div>
-            </>
-            )}
-          </div>
-        </motion.div>
-
-        {/* USD/KRW + Market indices */}
-        <motion.div
-          custom={2}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          className="bg-card rounded-xl p-5 space-y-4"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-mono text-muted-foreground">
-              환율 & 지수
-            </h3>
-            {marketTimestamp && (
-              <span className="text-[11px] text-muted-foreground/40 font-mono ml-auto">
-                기준: {marketTimestamp}
-              </span>
-            )}
-          </div>
-          {/* USD/KRW */}
-          <div className="bg-muted/50 rounded-lg p-3">
-            <p className="text-xs text-muted-foreground mb-1">USD/KRW</p>
-            {marketLoading ? (
-              <div className="flex items-center gap-2 h-8">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">불러오는 중...</span>
-              </div>
-            ) : (
-              <div className="flex items-end gap-2">
-                <span className="text-2xl font-mono font-extrabold tabular-nums">
-                  {exchangeRate ? exchangeRate.rate.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "--"}
-                </span>
-                <span className={`text-xs font-mono mb-1 ${exchangeRate && exchangeRate.change >= 0 ? "text-primary" : "text-destructive"}`}>
-                  {exchangeRate ? `${exchangeRate.change >= 0 ? "+" : ""}${exchangeRate.change.toFixed(2)}` : ""}
-                </span>
-              </div>
-            )}
-          </div>
-          {/* Market indices */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {marketLoading ? (
-              <div className="col-span-2 sm:col-span-3 flex items-center justify-center py-4">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              indices.map((idx) => (
-                <div
-                  key={idx.name}
-                  className="bg-muted/50 rounded-lg p-2.5 text-center"
-                >
-                  <p className="text-[11px] text-muted-foreground font-mono mb-1">
-                    {idx.name}
-                  </p>
-                  <p className="text-xs font-mono font-bold tabular-nums">
-                    {idx.value}
-                  </p>
-                  <p
-                    className={`text-[11px] font-mono tabular-nums mt-0.5 ${
-                      idx.isUp ? "text-primary" : "text-destructive"
-                    }`}
-                  >
-                    {idx.change}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        </motion.div>
+          )}
+        </motion.section>
       </div>
 
-      {/* News headlines */}
-      <motion.div
-        custom={3}
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-        className="bg-card rounded-xl p-5"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Newspaper className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-mono text-muted-foreground">
-              경제 뉴스
-            </h3>
-            {newsTimestamp && (
-              <span className="text-[9px] text-muted-foreground/40 font-mono">
-                {newsTimestamp}
-              </span>
-            )}
-          </div>
+      {/* 8. 경제 한 줄 */}
+      {tickerItems.length > 0 && (
+        <motion.div variants={itemVariants}>
           <button
-            onClick={handleNewsClick}
-            className="flex items-center gap-0.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+            onClick={() => onNavigate?.("investment")}
+            className="flex min-h-[44px] w-full flex-wrap items-center gap-x-3.5 gap-y-1 rounded-2xl border border-border bg-card px-4 py-3 text-left text-xs text-muted-foreground"
           >
-            더보기
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        <div className="space-y-2.5">
-          {newsLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              <span className="text-xs text-muted-foreground ml-2">뉴스 불러오는 중...</span>
-            </div>
-          ) : (
-            newsItems.map((news, idx) => (
-              <button
-                key={`${news.source}-${idx}`}
-                onClick={handleNewsClick}
-                className="flex items-start gap-2.5 group cursor-pointer w-full text-left"
-              >
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0 ${
-                    !news.isEnglish
-                      ? "bg-blue-500/10 text-blue-500"
-                      : "bg-green-500/10 text-green-500"
+            {tickerItems.map((t) => (
+              <span key={t.label} className="whitespace-nowrap">
+                {t.label}{" "}
+                <b
+                  className={`font-mono font-semibold ${
+                    t.tone === "up" ? "text-red-500 dark:text-red-400" : t.tone === "down" ? "text-blue-500 dark:text-blue-400" : "text-foreground"
                   }`}
                 >
-                  {!news.isEnglish ? "KR" : "US"}
-                </span>
-                <p className="text-xs sm:text-sm leading-snug group-hover:text-primary transition-colors flex-1 min-w-0">
-                  {news.title}
-                </p>
-                <div className="flex flex-col items-end flex-shrink-0 mt-0.5 hidden sm:flex">
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    {news.source}
-                  </span>
-                  <span className="text-[9px] text-muted-foreground/50 font-mono">
-                    {news.publishedAt ? getRelativeTime(news.publishedAt) : ""}
-                  </span>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-      </motion.div>
-
-      </div>{/* end economy collapsible */}
-
-      {/* Expense + couple note */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Expense summary */}
-        <motion.div
-          custom={6}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          className="bg-card rounded-xl p-5"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-mono text-muted-foreground">
-              이번 달 지출
-            </h3>
-          </div>
-          <p className="text-xl sm:text-2xl font-mono font-bold tabular-nums mb-1 break-all">
-            {isGuest ? maskAmount(monthlyExpenseUsed) : formatAmount(monthlyExpenseUsed)}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {(() => {
-              const monthExpenses = state.expenses.filter(
-                (e) => e.type === "expense" && e.date.startsWith(currentMonthStr)
-              );
-              const catMap = new Map<string, number>();
-              monthExpenses.forEach((e) => {
-                catMap.set(e.category, (catMap.get(e.category) || 0) + e.amount);
-              });
-              const top = Array.from(catMap.entries()).sort((a, b) => b[1] - a[1])[0];
-              return top
-                ? <>최다 카테고리: <span className="text-foreground font-medium">{top[0]}</span> ({isGuest ? maskAmount(top[1]) : formatAmount(top[1])})</>
-                : "지출 내역 없음";
-            })()}
-          </p>
+                  {t.value}
+                </b>
+              </span>
+            ))}
+            <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0" />
+          </button>
         </motion.div>
-
-        {/* 속닥속닥 - recent memos (hidden for guest) */}
-        {!isGuest && (
-          <motion.div
-            custom={7}
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            className="bg-card rounded-xl p-5 cursor-pointer hover:ring-1 hover:ring-primary/20 transition-all"
-            onClick={() => onNavigate?.("couple:memo")}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Heart className="h-4 w-4 text-pink-400" />
-                <h3 className="text-sm font-mono text-muted-foreground">
-                  속닥속닥
-                </h3>
-              </div>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-            </div>
-            {recentMemos.length > 0 ? (
-              <div className="space-y-2">
-                {recentMemos.map((memo) => {
-                  const isSophia = memo.author === "sophia";
-                  return (
-                    <div
-                      key={memo.id}
-                      className={`flex ${isSophia ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[85%] rounded-2xl px-3 py-2 ${
-                          isSophia
-                            ? "bg-pink-500/10 border border-pink-500/20 rounded-br-md"
-                            : "bg-blue-500/10 border border-blue-500/20 rounded-bl-md"
-                        }`}
-                      >
-                        <p className={`text-[10px] font-medium mb-0.5 ${
-                          isSophia ? "text-pink-400" : "text-blue-400"
-                        }`}>
-                          {isSophia ? "데굴" : "무요"}
-                        </p>
-                        <p className="text-sm">{memo.message}</p>
-                        <p className="text-[10px] text-muted-foreground/60 font-mono text-right mt-0.5">
-                          {(() => { try { const d = new Date(memo.timestamp); return isNaN(d.getTime()) ? memo.timestamp : d.toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return memo.timestamp; } })()}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-sm text-muted-foreground">
-                  아직 메모가 없어요
-                </p>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </div>
-    </div>
+      )}
+    </motion.div>
   );
 };
+
+function WeddingRing({ pct }: { pct: number }) {
+  return (
+    <div
+      className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full"
+      style={{ background: `conic-gradient(#f472b6 0 ${pct}%, hsl(var(--muted)) ${pct}% 100%)` }}
+    >
+      <span className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-card text-[13px] font-bold tabular-nums">
+        {pct}%
+      </span>
+    </div>
+  );
+}
 
 export default DashboardHome;

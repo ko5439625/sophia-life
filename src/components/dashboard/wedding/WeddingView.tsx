@@ -24,6 +24,7 @@ import WeddingSettlement from "./WeddingSettlement";
 import { useWeddingSettlement } from "./useWeddingSettlement";
 import { CATEGORY_EMOJIS } from "./weddingTypes";
 import type { VendorCategory } from "./weddingTypes";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 
 // ---------------------------------------------------------------------------
 // Default categories (대분류 > 소분류)
@@ -259,6 +260,7 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
   };
 
   const removeRow = async (id: string) => {
+    if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
     await deleteWeddingItem(id);
   };
@@ -548,7 +550,8 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
                     <div className="p-2 flex items-center justify-center">
                       <button
                         onClick={() => setCommentOpenId(commentOpenId === item.id ? null : item.id)}
-                        className={`p-0.5 rounded transition-colors ${item.memo ? "text-blue-400" : "text-muted-foreground/30 hover:text-muted-foreground/60 opacity-0 group-hover:opacity-100"}`}
+                        aria-label="메모"
+                        className={`p-2.5 -m-2 sm:p-0.5 sm:m-0 rounded transition-colors ${item.memo ? "text-blue-400" : "text-muted-foreground/30 hover:text-muted-foreground/60 opacity-60 sm:opacity-0 sm:group-hover:opacity-100"}`}
                       >
                         <MessageSquare className="h-3.5 w-3.5" />
                       </button>
@@ -556,7 +559,8 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
                     <div className="p-2 flex items-center justify-center">
                       <button
                         onClick={() => removeRow(item.id)}
-                        className="p-0.5 text-muted-foreground/30 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-all"
+                        aria-label="삭제"
+                        className="p-2.5 -m-2 sm:p-0.5 sm:m-0 text-muted-foreground/30 hover:text-red-400 rounded opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

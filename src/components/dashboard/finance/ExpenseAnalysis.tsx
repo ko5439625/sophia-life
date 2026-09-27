@@ -5,6 +5,7 @@ import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 import type { Expense, DeductFrom } from "../../../store/financialStore";
 import { getNextMonth, getPrevMonth, formatMonthLabel, formatKRW } from "./budgetData";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 
 const formatAmount = (n: number) => new Intl.NumberFormat("ko-KR").format(n) + "원";
 
@@ -405,8 +406,12 @@ const ExpenseAnalysis = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground font-mono">{exp.date}</span>
                   <button
-                    onClick={() => removeExpense(exp.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-destructive"
+                    onClick={async () => {
+                      if (!(await confirmDialog({ title: "삭제할까요?", description: `'${exp.memo || exp.category}' 내역을 삭제하면 되돌릴 수 없어요.`, confirmText: "삭제" }))) return;
+                      removeExpense(exp.id);
+                    }}
+                    aria-label="삭제"
+                    className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-2.5 -m-1.5 sm:p-1 sm:m-0 hover:text-destructive"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>

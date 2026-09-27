@@ -392,7 +392,7 @@ const NewsView = () => {
                       >
                         <h4 className="text-sm font-medium leading-snug group-hover:text-primary transition-colors flex items-center gap-1.5">
                           {item.title}
-                          <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                          <ExternalLink className="h-3 w-3 text-muted-foreground opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0" />
                         </h4>
                       </button>
 

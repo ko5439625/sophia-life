@@ -14,7 +14,7 @@ const tabs = [
   { id: "hedging", label: "헷징 분석" },
 ];
 
-const InvestmentHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void }) => {
+const InvestmentHub = ({ initialTab, onTabUsed, embedded }: { initialTab?: string | null; onTabUsed?: () => void; embedded?: boolean }) => {
   const [activeTab, setActiveTab] = useState(initialTab || "portfolio");
 
   useEffect(() => {
@@ -26,14 +26,14 @@ const InvestmentHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl sm:text-2xl font-bold">투자</h2>
+      {!embedded && <h2 className="text-xl sm:text-2xl font-bold">투자</h2>}
 
       <div className="flex gap-1 bg-muted rounded-lg p-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 relative px-2 sm:px-4 py-2.5 text-[11px] sm:text-sm font-medium rounded-md transition-colors min-h-[40px] ${
+            className={`flex-none sm:flex-1 whitespace-nowrap relative px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-h-[40px] ${
               activeTab === tab.id
                 ? tab.id === "hedging"
                   ? "text-primary-foreground"

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import type {
   WeddingVendor,
   WeddingSettlementItem,
@@ -142,11 +143,16 @@ export default function VendorDetail({
             </div>
           </div>
           <button
-            onClick={() => {
-              if (confirm(`"${vendor.name}" 업체를 삭제하시겠습니까?\n연결된 항목과 영수증이 모두 삭제됩니다.`))
-                store.removeVendor(vendor.id);
+            onClick={async () => {
+              const ok = await confirmDialog({
+                title: "삭제할까요?",
+                description: `"${vendor.name}" 업체와 연결된 항목·영수증이 모두 삭제돼요.`,
+                confirmText: "삭제",
+              });
+              if (ok) store.removeVendor(vendor.id);
             }}
-            className="p-1.5 text-muted-foreground/30 hover:text-red-400 rounded transition-colors"
+            aria-label="업체 삭제"
+            className="p-2 text-muted-foreground/30 hover:text-red-400 rounded transition-colors"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -618,8 +624,12 @@ function DesktopItemRow({
       {/* Delete */}
       <div className="p-1.5 flex items-center justify-center">
         <button
-          onClick={() => store.removeItem(item.id)}
-          className="p-0.5 text-muted-foreground/20 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-all"
+          onClick={async () => {
+            if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
+            store.removeItem(item.id);
+          }}
+          aria-label="삭제"
+          className="p-2.5 -m-2 sm:p-0.5 sm:m-0 text-muted-foreground/40 sm:text-muted-foreground/20 hover:text-red-400 rounded opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
         >
           <Trash2 className="h-3 w-3" />
         </button>
@@ -751,11 +761,13 @@ function ReceiptsTab({
                   )}
                 </div>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
+                    if (!(await confirmDialog({ title: "삭제할까요?", description: "영수증을 삭제하면 되돌릴 수 없어요.", confirmText: "삭제" }))) return;
                     store.removeReceipt(r.id);
                   }}
-                  className="absolute top-1 right-1 p-1 bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="영수증 삭제"
+                  className="absolute top-0.5 right-0.5 p-2.5 sm:top-1 sm:right-1 sm:p-1 bg-black/40 text-white rounded-full opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                 >
                   <X className="h-3 w-3" />
                 </button>

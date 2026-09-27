@@ -2,6 +2,10 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { enhanceBlogContent } from "../../../services/openaiApi";
 import { useGuestMode } from "../../../hooks/useGuestMode";
+import { toast } from "sonner";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
+import PhotoBlogWizard, { type PhotoBlogInsertPayload } from "./PhotoBlogWizard";
+import { uploadBlogImage } from "./blogImageUpload";
 import { loadPosts as loadPostsFromDB, savePost as savePostToDB, deletePost as deletePostFromDB, saveBlogSettings } from "../../../services/supabaseSync";
 import {
   Plus,
@@ -36,6 +40,8 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  Camera,
+  Undo2,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -203,7 +209,8 @@ const BlogSettings = ({
                       {cat}
                       <button
                         onClick={() => onRemoveCategory(cat)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                        aria-label="카테고리 삭제"
+                        className="p-2.5 -m-2 sm:p-0 sm:m-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:text-destructive"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -280,16 +287,18 @@ const PostListItem = ({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+      <div className="flex items-center gap-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
         <button
           onClick={onEdit}
-          className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+          aria-label="수정"
+          className="p-2 sm:p-1.5 hover:bg-muted rounded-lg transition-colors"
         >
           <Edit3 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
         </button>
         <button
           onClick={onDelete}
-          className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+          aria-label="삭제"
+          className="p-2 sm:p-1.5 hover:bg-muted rounded-lg transition-colors"
         >
           <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
         </button>
@@ -309,6 +318,7 @@ const PostEditor = ({
   isEditing,
   onSave,
   onCancel,
+  autoOpenPhotoWizard = false,
 }: {
   initialTitle: string;
   initialContent: string;
@@ -317,6 +327,8 @@ const PostEditor = ({
   initialIsPublic: boolean;
   categories: string[];
   isEditing: boolean;
+  /** 홈 "블로그" 바로가기 등으로 진입 시 사진으로 글쓰기 창을 바로 연다 */
+  autoOpenPhotoWizard?: boolean;
   onSave: (data: {
     title: string;
     content: string;
@@ -340,6 +352,9 @@ const PostEditor = ({
   const [aiLoading, setAiLoading] = useState(false);
   const [aiToast, setAiToast] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showPhotoWizard, setShowPhotoWizard] = useState(autoOpenPhotoWizard);
+  // AI 다듬기 직전 본문 (되돌리기용)
+  const [aiUndoHtml, setAiUndoHtml] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
@@ -385,19 +400,44 @@ const PostEditor = ({
   }, []);
 
   // Upload image to Supabase Storage → return public URL
+  // 긴 변 1600px JPEG로 줄여서 업로드 (GIF는 원본). 디코딩 불가(HEIC 등)면 토스트로 안내
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
     try {
-      const { supabase } = await import("@/lib/supabase");
-      if (!supabase) return null;
-      const ext = file.name.split(".").pop() || "png";
-      const fileName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-      const { error } = await supabase.storage.from("blog-images").upload(fileName, file, { contentType: file.type });
-      if (error) { console.error("Upload error:", error); return null; }
-      const { data: urlData } = supabase.storage.from("blog-images").getPublicUrl(fileName);
-      return urlData.publicUrl;
+      return await uploadBlogImage(file);
     } catch (e) {
-      console.error("Image upload failed:", e);
+      toast.error(e instanceof Error ? e.message : "이미지 업로드에 실패했어요.");
       return null;
+    }
+  };
+
+  // 이미지 여러 장을 커서 위치에 순서대로 삽입 (각각 placeholder → 업로드 → img 교체)
+  const insertImageFiles = async (files: File[]) => {
+    const images = files.filter((f) => f.type.startsWith("image/"));
+    if (images.length === 0) return;
+    setUploadingImage(true);
+    const placeholderIds = images.map(() => `img-loading-${crypto.randomUUID().slice(0, 8)}`);
+    insertAtCursor(
+      "<br>" +
+        placeholderIds
+          .map((id) => `<span id="${id}" style="color:#888;font-size:12px;">📷 이미지 업로드 중...</span><br>`)
+          .join("")
+    );
+    let failed = 0;
+    for (let i = 0; i < images.length; i++) {
+      const file = images[i];
+      const url = await uploadImageToStorage(file);
+      const placeholder = contentRef.current?.querySelector(`#${placeholderIds[i]}`);
+      if (url && placeholder) {
+        placeholder.outerHTML = `<img src="${url}" alt="${file.name.replace(/"/g, "&quot;")}" style="max-width:100%;border-radius:8px;margin:8px 0;" />`;
+      } else if (placeholder) {
+        failed++;
+        placeholder.outerHTML = `<span style="color:#ef4444;font-size:12px;">이미지 업로드 실패</span>`;
+      }
+    }
+    setUploadingImage(false);
+    if (failed < images.length) {
+      setPasteToast(true);
+      setTimeout(() => setPasteToast(false), 2000);
     }
   };
 
@@ -450,34 +490,19 @@ const PostEditor = ({
   // Handle paste -- detect images → upload to Supabase Storage
   const handlePaste = useCallback(
     async (e: React.ClipboardEvent<HTMLDivElement>) => {
-      const items = e.clipboardData?.files;
-      if (items && items.length > 0) {
-        const file = items[0];
-        if (file.type.startsWith("image/")) {
-          e.preventDefault();
-          setUploadingImage(true);
-          // Show placeholder
-          const placeholderId = `img-loading-${Date.now()}`;
-          insertAtCursor(`<br><span id="${placeholderId}" style="color:#888;font-size:12px;">📷 이미지 업로드 중...</span><br>`);
-          const url = await uploadImageToStorage(file);
-          // Replace placeholder with actual image
-          const placeholder = contentRef.current?.querySelector(`#${placeholderId}`);
-          if (url && placeholder) {
-            placeholder.outerHTML = `<img src="${url}" alt="pasted image" style="max-width:100%;border-radius:8px;margin:8px 0;" />`;
-          } else if (placeholder) {
-            placeholder.outerHTML = `<span style="color:#ef4444;font-size:12px;">이미지 업로드 실패</span>`;
-          }
-          setUploadingImage(false);
-          setPasteToast(true);
-          setTimeout(() => setPasteToast(false), 2000);
-          return;
-        }
+      // 붙여넣은 이미지 파일 전부 업로드
+      const pastedImages = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+      if (pastedImages.length > 0) {
+        e.preventDefault();
+        await insertImageFiles(pastedImages);
+        return;
       }
       // For plain text paste, prevent default rich-text paste
       e.preventDefault();
       const text = e.clipboardData?.getData("text/plain") || "";
       document.execCommand("insertText", false, text);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [insertAtCursor]
   );
 
@@ -550,43 +575,73 @@ const PostEditor = ({
     document.execCommand("insertHorizontalRule", false);
   }, []);
 
-  // AI content enhancement - uses OpenAI API (falls back to mock if no key)
+  // AI content enhancement - Gemini (mock 폴백 없음: 실패 시 토스트로 안내)
   const handleAiEnhance = useCallback(async () => {
     if (!contentRef.current) return;
-    setAiLoading(true);
-
     // Send full HTML to preserve images and existing formatting
     const currentHtml = contentRef.current.innerHTML;
+    if (!currentHtml.trim()) {
+      toast.info("다듬을 본문을 먼저 작성해주세요.");
+      return;
+    }
+    setAiLoading(true);
 
     try {
       const enhanced = await enhanceBlogContent(currentHtml);
+      if (!contentRef.current) return;
       contentRef.current.innerHTML = enhanced;
+      setAiUndoHtml(currentHtml); // 되돌리기용으로 이전 본문 보관
+      setAiToast(true);
+      setTimeout(() => setAiToast(false), 2500);
     } catch (err) {
       console.warn("AI enhance failed:", err);
+      toast.error(err instanceof Error ? err.message : "AI 다듬기에 실패했어요.");
+    } finally {
+      setAiLoading(false);
     }
+  }, []);
 
-    setAiLoading(false);
-    setAiToast(true);
-    setTimeout(() => setAiToast(false), 2500);
+  // AI 다듬기 되돌리기
+  const handleAiUndo = useCallback(() => {
+    if (!contentRef.current || aiUndoHtml === null) return;
+    contentRef.current.innerHTML = aiUndoHtml;
+    setAiUndoHtml(null);
+    toast.success("AI 다듬기 전으로 되돌렸어요.");
+  }, [aiUndoHtml]);
+
+  // 사진으로 글쓰기 결과 삽입 — 본문이 비어 있으면 통째로, 아니면 끝에 이어 붙임
+  const handlePhotoBlogInsert = useCallback((payload: PhotoBlogInsertPayload) => {
+    const el = contentRef.current;
+    if (!el) return;
+    const isEmpty = !el.textContent?.trim() && !el.querySelector("img");
+    el.innerHTML = isEmpty ? payload.html : `${el.innerHTML}<br>${payload.html}`;
+    setAiUndoHtml(null);
+    if (payload.title) setTitle((prev) => (prev.trim() ? prev : payload.title));
+    if (payload.tags.length > 0) {
+      setTagsInput((prev) => {
+        const existing = prev.split(",").map((t) => t.trim()).filter(Boolean);
+        return Array.from(new Set([...existing, ...payload.tags])).join(", ");
+      });
+    }
+    toast.success("사진 글을 에디터에 넣었어요. 확인 후 발행해주세요.");
   }, []);
 
   // Handle file input for inline image insertion → upload to Supabase Storage
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingImage(true);
-    contentRef.current?.focus();
-    const placeholderId = `img-loading-${Date.now()}`;
-    insertAtCursor(`<br><span id="${placeholderId}" style="color:#888;font-size:12px;">📷 이미지 업로드 중...</span><br>`);
-    const url = await uploadImageToStorage(file);
-    const placeholder = contentRef.current?.querySelector(`#${placeholderId}`);
-    if (url && placeholder) {
-      placeholder.outerHTML = `<img src="${url}" alt="${file.name}" style="max-width:100%;border-radius:8px;margin:8px 0;" />`;
-    } else if (placeholder) {
-      placeholder.outerHTML = `<span style="color:#ef4444;font-size:12px;">이미지 업로드 실패</span>`;
-    }
-    setUploadingImage(false);
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
+    if (files.length === 0) return;
+    contentRef.current?.focus();
+    // 커서가 에디터 밖이면 본문 끝으로 이동
+    const sel = window.getSelection();
+    if (contentRef.current && (!sel || sel.rangeCount === 0 || !contentRef.current.contains(sel.anchorNode))) {
+      const range = document.createRange();
+      range.selectNodeContents(contentRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+    await insertImageFiles(files);
   };
 
   const handleImageClick = () => {
@@ -804,10 +859,11 @@ const PostEditor = ({
               {/* Image */}
               <button
                 onClick={handleImageClick}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                title="이미지 삽입 (Ctrl+V로도 가능)"
+                disabled={uploadingImage}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors disabled:opacity-50"
+                title="이미지 삽입 (여러 장 선택 가능, Ctrl+V로도 가능)"
               >
-                <ImagePlus className="h-4 w-4" />
+                {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
               </button>
 
               {/* Category/Tags */}
@@ -935,7 +991,7 @@ const PostEditor = ({
               <button
                 onClick={handleAiEnhance}
                 disabled={aiLoading}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-all disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
                 title="AI로 글 다듬기 (이미지 유지)"
               >
                 {aiLoading ? (
@@ -945,12 +1001,33 @@ const PostEditor = ({
                 )}
                 <span>{aiLoading ? "작성 중..." : "AI 다듬기"}</span>
               </button>
+              {aiUndoHtml !== null && !aiLoading && (
+                <button
+                  onClick={handleAiUndo}
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors border border-border/50 flex-shrink-0"
+                  title="AI 다듬기 전 본문으로 되돌리기"
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                  <span className="whitespace-nowrap">되돌리기</span>
+                </button>
+              )}
+
+              {/* 사진으로 글쓰기 */}
+              <button
+                onClick={() => setShowPhotoWizard(true)}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-lg transition-all flex-shrink-0"
+                title="사진 여러 장으로 AI 블로그 초안 만들기"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                <span className="whitespace-nowrap">사진으로 글쓰기</span>
+              </button>
             </div>
 
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={handleImageUpload}
               className="hidden"
             />
@@ -1022,6 +1099,13 @@ const PostEditor = ({
           />
         </div>
       </div>
+
+      {/* 사진으로 글쓰기 위저드 */}
+      <PhotoBlogWizard
+        open={showPhotoWizard}
+        onOpenChange={setShowPhotoWizard}
+        onInsert={handlePhotoBlogInsert}
+      />
     </motion.div>
   );
 };
@@ -1032,7 +1116,7 @@ const PostEditor = ({
 
 const BLOG_CATEGORIES_KEY = "sophia-blog-categories";
 
-const BlogManagement = () => {
+const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void } = {}) => {
   const { isGuest } = useGuestMode();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<string[]>(() => {
@@ -1046,8 +1130,21 @@ const BlogManagement = () => {
     return localStorage.getItem("sophia-blog-subtitle") || "일상의 작은 순간들을 기록합니다";
   });
   const categoriesLoaded = useRef(false);
+  // 마지막으로 DB와 일치한다고 알려진 카테고리 스냅샷 (변경 없을 땐 저장 생략)
+  const syncedCategoriesJson = useRef<string | null>(null);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [autoPhotoWizard, setAutoPhotoWizard] = useState(false);
+
+  // "blog:photo"로 진입 → 새 글 + 사진으로 글쓰기 바로 열기 (모바일 바로 작성)
+  useEffect(() => {
+    if (initialTab === "photo") {
+      setEditingPost(null);
+      setAutoPhotoWizard(true);
+      setIsCreating(true);
+      onTabUsed?.();
+    }
+  }, [initialTab, onTabUsed]);
 
   // Load posts + blog settings from Supabase
   useEffect(() => {
@@ -1070,6 +1167,7 @@ const BlogManagement = () => {
       if (!supabase) return;
       supabase.from("user_settings").select("blog_categories, blog_subtitle").limit(1).maybeSingle().then(({ data }) => {
         if (data?.blog_categories && Array.isArray(data.blog_categories) && data.blog_categories.length > 0) {
+          syncedCategoriesJson.current = JSON.stringify(data.blog_categories);
           setCategories(data.blog_categories);
           localStorage.setItem(BLOG_CATEGORIES_KEY, JSON.stringify(data.blog_categories));
         }
@@ -1086,6 +1184,9 @@ const BlogManagement = () => {
   useEffect(() => {
     localStorage.setItem(BLOG_CATEGORIES_KEY, JSON.stringify(categories));
     if (!categoriesLoaded.current) return; // Don't save to DB until loaded
+    const json = JSON.stringify(categories);
+    if (json === syncedCategoriesJson.current) return; // 로드 직후/변경 없음 → 저장 안 함
+    syncedCategoriesJson.current = json;
     import("@/lib/supabase").then(({ supabase }) => {
       if (!supabase) return;
       supabase.from("user_settings").upsert({ id: "c7a9defe-0e45-57e0-9b26-4ef82dd867c1", blog_categories: categories });
@@ -1096,8 +1197,10 @@ const BlogManagement = () => {
   const addCategory = (cat: string) => {
     setCategories([...categories, cat]);
   };
-  const removeCategory = (cat: string) => {
-    setCategories(categories.filter((c) => c !== cat));
+  const removeCategory = async (cat: string) => {
+    const ok = await confirmDialog({ title: "삭제할까요?", description: `'${cat}' 카테고리를 삭제할까요?`, confirmText: "삭제" });
+    if (!ok) return;
+    setCategories((prev) => prev.filter((c) => c !== cat));
     // Also remove from locked categories if present
     try {
       const locked = JSON.parse(localStorage.getItem("sophia-locked-categories") || "[]");
@@ -1110,6 +1213,13 @@ const BlogManagement = () => {
   // --- Post CRUD ---
   const startCreate = () => {
     setEditingPost(null);
+    setAutoPhotoWizard(false);
+    setIsCreating(true);
+  };
+
+  const startPhotoCreate = () => {
+    setEditingPost(null);
+    setAutoPhotoWizard(true);
     setIsCreating(true);
   };
 
@@ -1119,6 +1229,7 @@ const BlogManagement = () => {
   };
 
   const cancelEditor = () => {
+    setAutoPhotoWizard(false);
     setIsCreating(false);
     setEditingPost(null);
   };
@@ -1147,8 +1258,15 @@ const BlogManagement = () => {
     cancelEditor();
   };
 
-  const deletePost = (id: string) => {
-    setPosts(posts.filter((p) => p.id !== id));
+  const deletePost = async (id: string) => {
+    const title = posts.find((p) => p.id === id)?.title;
+    const ok = await confirmDialog({
+      title: "삭제할까요?",
+      description: title ? `'${title}' 글을 삭제하면 되돌릴 수 없어요.` : undefined,
+      confirmText: "삭제",
+    });
+    if (!ok) return;
+    setPosts((prev) => prev.filter((p) => p.id !== id));
     deletePostFromDB(id);
   };
 
@@ -1186,6 +1304,7 @@ const BlogManagement = () => {
             initialIsPublic={editingPost?.isPublic ?? true}
             categories={categories}
             isEditing={!!editingPost}
+            autoOpenPhotoWizard={autoPhotoWizard}
             onSave={savePost}
             onCancel={cancelEditor}
           />
@@ -1203,13 +1322,22 @@ const BlogManagement = () => {
                 <FileText className="h-5 w-5 text-muted-foreground" />
                 <h2 className="text-xl sm:text-2xl font-bold">블로그 관리</h2>
               </div>
-              <button
-                onClick={startCreate}
-                className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
-              >
-                <Plus className="h-4 w-4" />
-                <span>새 글 작성</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={startPhotoCreate}
+                  className="flex items-center gap-1.5 bg-muted text-foreground rounded-lg px-3 min-h-[40px] text-sm font-medium hover:bg-muted/80 transition-colors"
+                >
+                  <Camera className="h-4 w-4" />
+                  <span>사진으로</span>
+                </button>
+                <button
+                  onClick={startCreate}
+                  className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 min-h-[40px] text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>새 글</span>
+                </button>
+              </div>
             </div>
 
             {/* Blog Settings */}
@@ -1222,8 +1350,8 @@ const BlogManagement = () => {
                 setSubtitle(v);
                 localStorage.setItem("sophia-blog-subtitle", v);
                 // debounce Supabase save
-                if ((window as Record<string, unknown>).__subtitleTimer) clearTimeout((window as Record<string, unknown>).__subtitleTimer as number);
-                (window as Record<string, unknown>).__subtitleTimer = setTimeout(() => {
+                if ((window as unknown as Record<string, unknown>).__subtitleTimer) clearTimeout((window as unknown as Record<string, unknown>).__subtitleTimer as number);
+                (window as unknown as Record<string, unknown>).__subtitleTimer = setTimeout(() => {
                   saveBlogSettings({ blog_subtitle: v });
                   console.log("[BlogSettings] subtitle saved to Supabase:", v);
                 }, 500);

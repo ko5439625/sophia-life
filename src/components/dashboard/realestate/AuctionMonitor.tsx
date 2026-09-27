@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import {
   Plus, X, Search, ExternalLink, Loader2, Star, Trash2, Edit3,
   ChevronDown, ChevronRight, Gavel, TrendingDown, AlertTriangle,
@@ -271,7 +272,7 @@ const AuctionMonitor = () => {
       setExpandedId(item.id);
     } catch (e) {
       console.error("AI 분석 실패:", e);
-      alert(`분석 실패: ${e instanceof Error ? e.message : "알 수 없는 오류"}`);
+      toast.error("분석 실패", { description: e instanceof Error ? e.message : "알 수 없는 오류" });
     } finally {
       setAnalyzingId(null);
     }

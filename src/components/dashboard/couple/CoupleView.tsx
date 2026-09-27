@@ -8,6 +8,7 @@ import type { PlaceResult } from "../../../services/kakaoApi";
 import { loadMemos, saveMemos, loadMemosAsync, addMemoToDB, updateMemoInDB, removeMemoFromDB } from "../../../lib/memoStore";
 import type { CoupleMemo } from "../../../lib/memoStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { loadDdays, saveDday, deleteDday as deleteDdaySync, loadWishes, saveWish, deleteWish as deleteWishSync } from "../../../services/supabaseSync";
 
 interface Dday {
@@ -193,8 +194,9 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
     setDdayDay("");
   };
 
-  const deleteDday = (id: string) => {
-    setDdays(ddays.filter((d) => d.id !== id));
+  const deleteDday = async (id: string) => {
+    if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
+    setDdays((prev) => prev.filter((d) => d.id !== id));
     deleteDdaySync(id);
   };
 
@@ -218,8 +220,9 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
     if (wish) saveWish({ id: wish.id, title: wish.title, category: wish.category, is_done: wish.isDone });
   };
 
-  const deleteWish = (id: string) => {
-    setWishes(wishes.filter((w) => w.id !== id));
+  const deleteWish = async (id: string) => {
+    if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
+    setWishes((prev) => prev.filter((w) => w.id !== id));
     deleteWishSync(id);
   };
 
@@ -387,7 +390,8 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                         </span>
                         <button
                           onClick={() => deleteDday(dday.id)}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                          aria-label="삭제"
+                        className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2 -m-2 sm:p-0 sm:m-0"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -707,7 +711,8 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                       </span>
                       <button
                         onClick={() => deleteWish(wish.id)}
-                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                        aria-label="삭제"
+                        className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2 -m-2 sm:p-0 sm:m-0"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

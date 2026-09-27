@@ -5,7 +5,7 @@
 // Helpers
 // ---------------------------------------------------------------------------
 
-const GEMINI_ENDPOINT =
+export const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 const BLOG_ENHANCE_PROMPT = `당신은 구독자 10만의 인기 블로거 전담 에디터입니다.
@@ -113,8 +113,21 @@ AFTER:
 - **사진 삽입 주석(INSERT_IMAGE)을 2~4개 꼭 넣으세요.** 사진 없는 블로그는 밋밋합니다.
 - 최종 결과물의 HTML 길이는 원문의 **2~3배**가 되어야 정상입니다.`;
 
-function getApiKey(): string | null {
+/** 설정 > API 키에서 저장한 Gemini 키 (다른 Gemini 기능에서도 재사용) */
+export function getApiKey(): string | null {
   return localStorage.getItem("sophia-api-gemini");
+}
+
+/** Gemini HTTP 에러를 사용자용 한국어 메시지로 변환 */
+export function describeGeminiError(status: number, body: string): string {
+  if (status === 400 && /API_KEY_INVALID|API key not valid/i.test(body)) {
+    return "Gemini API 키가 올바르지 않아요. 설정에서 키를 확인해주세요.";
+  }
+  if (status === 401 || status === 403) return "Gemini API 키 권한이 없어요. 설정에서 키를 확인해주세요.";
+  if (status === 429) return "AI 요청 한도를 초과했어요. 잠시 후 다시 시도해주세요.";
+  if (status === 413) return "보낸 데이터가 너무 커요. 사진 수를 줄여서 다시 시도해주세요.";
+  if (status >= 500) return "AI 서버가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해주세요.";
+  return `AI 요청에 실패했어요 (${status}).`;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,7 +213,7 @@ async function insertAutoImages(html: string): Promise<string> {
 
 async function realEnhanceBlogContent(content: string): Promise<string> {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error("No Gemini API key");
+  if (!apiKey) throw new Error("설정에서 Gemini API 키를 입력해주세요");
 
   const userMessage = `아래 블로그 글을 인기 블로그처럼 확 바꿔주세요!
 
@@ -231,7 +244,8 @@ ${content}`;
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Gemini API error ${res.status}: ${err}`);
+    console.warn("[enhanceBlog] Gemini error:", res.status, err.substring(0, 500));
+    throw new Error(describeGeminiError(res.status, err));
   }
 
   const data = await res.json();
@@ -241,7 +255,7 @@ ${content}`;
   const parts = data.candidates?.[0]?.content?.parts;
   if (!parts || parts.length === 0) {
     console.warn("[enhanceBlog] no parts found:", JSON.stringify(data).substring(0, 500));
-    return content;
+    throw new Error("AI가 빈 응답을 보냈어요. 잠시 후 다시 시도해주세요.");
   }
 
   // thinking이 아닌 마지막 part에서 텍스트 추출
@@ -268,29 +282,10 @@ ${content}`;
 }
 
 // ---------------------------------------------------------------------------
-// Mock function
-// ---------------------------------------------------------------------------
-
-function mockEnhanceBlogContent(content: string): string {
-  // Simple mock: add slight formatting enhancements
-  return content
-    .replace(/\. /g, ".\n\n")
-    .replace(/^(.+)$/m, (match) => {
-      if (match.length > 20) return match;
-      return match;
-    });
-}
-
-// ---------------------------------------------------------------------------
-// Unified export (try Gemini API, fall back to mock)
+// Unified export — mock 폴백 없음: 실패 시 에러를 그대로 올려 UI에서 안내
 // ---------------------------------------------------------------------------
 
 export async function enhanceBlogContent(content: string): Promise<string> {
-  try {
-    if (!getApiKey()) return mockEnhanceBlogContent(content);
-    return await realEnhanceBlogContent(content);
-  } catch (e) {
-    console.warn("Gemini enhanceBlogContent failed, using mock:", e);
-    return mockEnhanceBlogContent(content);
-  }
+  if (!getApiKey()) throw new Error("설정에서 Gemini API 키를 입력해주세요");
+  return await realEnhanceBlogContent(content);
 }

@@ -12,6 +12,45 @@ function isReady() {
 }
 
 // ---------------------------------------------------------------------------
+// 답장 — DB 컬럼 없이 text 앞에 보이지 않는 마커로 원본 id 저장 (데스크탑 앱과 동일 포맷)
+// ---------------------------------------------------------------------------
+
+const REPLY_RE = /^\u2063r:([0-9a-f-]{36})\u2063/;
+
+export function encodeReply(text: string, replyTo?: string): string {
+  return replyTo ? `\u2063r:${replyTo}\u2063${text}` : text;
+}
+
+export function parseReply(text: string): { replyTo?: string; body: string } {
+  const m = REPLY_RE.exec(text || "");
+  return m ? { replyTo: m[1], body: text.slice(m[0].length) } : { body: text };
+}
+
+// ---------------------------------------------------------------------------
+// 폰 푸시 (ntfy.sh) — 상대 토픽으로 "새 메시지" 알림만 (내용 X)
+// ---------------------------------------------------------------------------
+
+const PUSH_TOPIC_PREFIX = "qajj-223034603634-";
+
+export async function notifyPeer(sender: ChatSender, kind: "text" | "image"): Promise<void> {
+  const peer: ChatSender = sender === "degul" ? "muyo" : "degul";
+  if (peerViewing) return; // 상대가 지금 채팅 보는 중이면 폰 알림 생략
+  try {
+    await fetch("https://ntfy.sh/", {
+      method: "POST",
+      body: JSON.stringify({
+        topic: PUSH_TOPIC_PREFIX + peer,
+        title: "QA JJ",
+        message: kind === "image" ? "사진이 도착했어요" : "새 메시지가 도착했어요",
+        tags: ["speech_balloon"],
+      }),
+    });
+  } catch (err) {
+    console.error("[chatService] notifyPeer error:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Auth — 숫자코드 인증 (세션 기반)
 // ---------------------------------------------------------------------------
 
@@ -42,7 +81,7 @@ export async function purgeOldMessages(): Promise<void> {
     const now = new Date();
     const kstOffset = 9 * 60;
     const kstNow = new Date(now.getTime() + kstOffset * 60 * 1000);
-    const kstToday = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate());
+    const kstToday = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()));
     const utcTodayStart = new Date(kstToday.getTime() - kstOffset * 60 * 1000);
 
     // 오늘 자정(KST) 이전 메시지 삭제
@@ -65,7 +104,7 @@ export async function loadTodayMessages(): Promise<ChatMessage[]> {
     const now = new Date();
     const kstOffset = 9 * 60; // KST = UTC+9
     const kstNow = new Date(now.getTime() + kstOffset * 60 * 1000);
-    const kstToday = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate());
+    const kstToday = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()));
     const utcTodayStart = new Date(kstToday.getTime() - kstOffset * 60 * 1000);
 
     const { data, error } = await supabase
@@ -90,18 +129,14 @@ export async function sendMessage(
   sender: ChatSender,
   text: string,
   kind: "text" | "image" = "text",
-  imagePath = ""
+  imagePath = "",
+  replyTo?: string
 ): Promise<ChatMessage | null> {
   if (!isReady() || !supabase) return null;
   try {
     const { data, error } = await supabase
       .from("chat_messages")
-      .insert({
-        sender,
-        kind,
-        text,
-        image_path: imagePath,
-      })
+      .insert({ sender, kind, text: encodeReply(text, replyTo), image_path: imagePath })
       .select()
       .single();
 
@@ -109,6 +144,7 @@ export async function sendMessage(
       console.error("[chatService] sendMessage error:", error);
       return null;
     }
+    void notifyPeer(sender, kind);
     return data as ChatMessage;
   } catch (err) {
     console.error("[chatService] sendMessage error:", err);
@@ -117,12 +153,12 @@ export async function sendMessage(
 }
 
 /** 메시지 수정 */
-export async function editMessage(id: string, newText: string): Promise<boolean> {
+export async function editMessage(id: string, newText: string, replyTo?: string): Promise<boolean> {
   if (!isReady() || !supabase) return false;
   try {
     const { error } = await supabase
       .from("chat_messages")
-      .update({ text: newText, edited: true })
+      .update({ text: encodeReply(newText, replyTo), edited: true })
       .eq("id", id);
 
     if (error) {
@@ -267,7 +303,7 @@ function msUntilKSTMidnight(): number {
   const now = new Date();
   const kstOffset = 9 * 60 * 60 * 1000; // UTC+9
   const kstNow = new Date(now.getTime() + kstOffset);
-  const kstTomorrow = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate() + 1);
+  const kstTomorrow = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate() + 1));
   // KST 내일 00:00을 UTC로 변환
   const utcMidnight = new Date(kstTomorrow.getTime() - kstOffset);
   return utcMidnight.getTime() - now.getTime();
@@ -366,6 +402,13 @@ export function unsubscribeChatRealtime() {
 // ---------------------------------------------------------------------------
 
 let presenceChannel: RealtimeChannel | null = null;
+// 상대가 지금 채팅 화면을 보고 있는지 (앱·웹 중 하나라도) — 폰 푸시 생략 판단용
+let peerViewing = false;
+
+/** 채팅 화면이 실제로 보이는 중인지 (탭이 백그라운드면 false) */
+function isViewing(): boolean {
+  return typeof document !== "undefined" && document.visibilityState === "visible";
+}
 
 export function subscribePresence(
   sender: ChatSender,
@@ -383,8 +426,10 @@ export function subscribePresence(
       config: { presence: { key: sender } },
     })
     .on("presence", { event: "sync" }, () => {
-      const state = presenceChannel?.presenceState() || {};
+      const state = (presenceChannel?.presenceState() || {}) as Record<string, { viewing?: boolean }[]>;
       const online = Object.keys(state) as ChatSender[];
+      const peer: ChatSender = sender === "degul" ? "muyo" : "degul";
+      peerViewing = (state[peer] || []).some((m) => m.viewing);
       callbacks.onPresenceSync?.(online);
     })
     .on("broadcast", { event: "typing" }, (payload) => {
@@ -398,7 +443,7 @@ export function subscribePresence(
     })
     .subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
-        await presenceChannel?.track({ sender, online_at: new Date().toISOString() });
+        await presenceChannel?.track({ sender, viewing: isViewing(), online_at: new Date().toISOString() });
       }
     });
 
@@ -413,7 +458,18 @@ export function broadcastTyping(sender: ChatSender, isTyping: boolean) {
   });
 }
 
+/** 탭 전환·화면 꺼짐 시 viewing 상태 재전송 */
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    const sender = getChatSender();
+    if (presenceChannel && sender) {
+      void presenceChannel.track({ sender, viewing: isViewing(), online_at: new Date().toISOString() });
+    }
+  });
+}
+
 export function unsubscribePresence() {
+  peerViewing = false;
   if (presenceChannel && supabase) {
     supabase.removeChannel(presenceChannel);
     presenceChannel = null;

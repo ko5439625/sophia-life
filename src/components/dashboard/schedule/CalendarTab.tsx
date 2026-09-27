@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, Lock } from "lucide-react";
 import { useGuestMode } from "@/hooks/useGuestMode";
 import { loadEvents, saveEvent, deleteEvent as deleteEventSync } from "@/services/supabaseSync";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 
 interface CalendarEvent {
   id: string;
@@ -138,8 +139,9 @@ const CalendarTab = () => {
     setAddingForDate(null);
   };
 
-  const handleDeleteEvent = (id: string) => {
-    setEvents(events.filter((e) => e.id !== id));
+  const handleDeleteEvent = async (id: string) => {
+    if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
+    setEvents((prev) => prev.filter((e) => e.id !== id));
     deleteEventSync(id);
   };
 
@@ -346,7 +348,8 @@ const CalendarTab = () => {
                     )}
                     <button
                       onClick={() => handleDeleteEvent(e.id)}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-0.5"
+                      aria-label="삭제"
+                      className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2.5 -m-2 sm:p-0.5 sm:m-0"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -412,7 +415,8 @@ const CalendarTab = () => {
                     )}
                     <button
                       onClick={() => handleDeleteEvent(e.id)}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-0.5"
+                      aria-label="삭제"
+                      className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2.5 -m-2 sm:p-0.5 sm:m-0"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>

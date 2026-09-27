@@ -18,6 +18,7 @@ import {
 import { useGuestMode } from "@/hooks/useGuestMode";
 import { loadPlans, savePlan, deletePlan as deletePlanDB } from "@/services/supabaseSync";
 import type { PlanRow } from "@/services/supabaseSync";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 
 interface PlanItem {
   id: string;
@@ -234,7 +235,8 @@ const PlannerTab = () => {
     setAddingScheduleDay(null);
   };
 
-  const handleDeleteScheduleItem = (planId: string, itemId: string) => {
+  const handleDeleteScheduleItem = async (planId: string, itemId: string) => {
+    if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
     setPlans((prev) => {
       const updated = prev.map((p) =>
         p.id === planId
@@ -714,7 +716,7 @@ const PlannerTab = () => {
                                   </div>
                                   <button
                                     onClick={() => handleDeleteScheduleItem(plan.id, item.id)}
-                                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-muted rounded transition-all flex-shrink-0"
+                                    className="p-2.5 -m-1.5 sm:p-1 sm:m-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-muted rounded transition-all flex-shrink-0"
                                     title="삭제"
                                   >
                                     <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />

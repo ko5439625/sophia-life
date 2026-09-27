@@ -12,6 +12,9 @@ import {
 import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 
+const snapshotOf = (salary1: number, salary2: number, categories: BudgetCategory[]) =>
+  JSON.stringify([salary1, salary2, categories]);
+
 const BudgetPlan = () => {
   const { state, updateBudget } = useFinancial();
   const { isGuest, maskAmount } = useGuestMode();
@@ -73,23 +76,40 @@ const BudgetPlan = () => {
   const [salary2, setSalary2] = useState(selectedBudget.salary2);
   const [budget, setBudget] = useState<BudgetCategory[]>(selectedBudget.categories);
 
+  // 로드된(또는 마지막으로 저장된) 값의 스냅샷. 현재 값이 이와 다를 때만 "사용자 변경"으로 보고 저장한다.
+  const baselineRef = useRef(
+    snapshotOf(selectedBudget.salary1, selectedBudget.salary2, selectedBudget.categories)
+  );
+  const isDirty = () => snapshotOf(salary1, salary2, budget) !== baselineRef.current;
+
+  const loadIntoForm = (b: Pick<MonthlyBudget, "salary1" | "salary2" | "categories">) => {
+    setSalary1(b.salary1);
+    setSalary2(b.salary2);
+    setBudget(b.categories.map((c) => ({ ...c })));
+    baselineRef.current = snapshotOf(b.salary1, b.salary2, b.categories);
+  };
+
+  // 스토어가 뒤늦게 채워지면(Supabase 로드 등) 사용자가 편집 전일 때만 폼을 동기화 — DB 쓰기 없음
+  useEffect(() => {
+    const snap = snapshotOf(selectedBudget.salary1, selectedBudget.salary2, selectedBudget.categories);
+    if (snap === baselineRef.current || isDirty()) return;
+    loadIntoForm(selectedBudget);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBudget]);
+
   const handleMonthChange = (month: string) => {
-    saveCurrent();
+    if (isDirty()) saveCurrent();
     setSelectedMonth(month);
     const b = budgets.find((b) => b.month === month);
     if (b) {
-      setSalary1(b.salary1);
-      setSalary2(b.salary2);
-      setBudget(b.categories.map((c) => ({ ...c })));
+      loadIntoForm(b);
     } else {
       const latest = budgets[budgets.length - 1];
-      setSalary1(latest?.salary1 ?? 2500000);
-      setSalary2(latest?.salary2 ?? 2500000);
-      setBudget(
-        latest
-          ? latest.categories.map((c) => ({ ...c }))
-          : defaultCategories.map((c) => ({ ...c }))
-      );
+      loadIntoForm({
+        salary1: latest?.salary1 ?? 2500000,
+        salary2: latest?.salary2 ?? 2500000,
+        categories: latest ? latest.categories : defaultCategories,
+      });
     }
     setEditMode(false);
     setBulkApplied(false);
@@ -103,12 +123,15 @@ const BudgetPlan = () => {
       categories: budget.map((c) => ({ ...c })),
     };
     updateBudget(selectedMonth, updated);
+    baselineRef.current = snapshotOf(salary1, salary2, budget);
   };
 
-  // 자동 저장: salary/budget 변경 시 1초 후 자동 반영
+  // 자동 저장: 사용자가 salary/budget 을 실제로 바꿨을 때만 1초 후 자동 반영
+  // (탭 진입/초기 하이드레이션/월 이동만으로는 저장하지 않음)
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    if (!isDirty()) return;
     autoSaveTimer.current = setTimeout(() => {
       saveCurrent();
     }, 1000);

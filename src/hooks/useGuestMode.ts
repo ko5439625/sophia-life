@@ -1,16 +1,10 @@
-import { useMemo } from "react";
-
 /**
- * Guest mode hook
- * - PIN "0000" 으로 진입하면 게스트 모드
- * - 금액/개인정보는 마스킹
- * - 분석/차트/구조는 정상 표시
+ * Guest mode hook — 체험(게스트) 모드는 제거됨. 항상 isGuest=false.
+ * (기존 호출부 호환을 위해 API는 유지, 예전 세션의 sophia-guest 값도 정리)
  */
 export function useGuestMode() {
-  const isGuest = useMemo(
-    () => sessionStorage.getItem("sophia-guest") === "true",
-    []
-  );
+  const isGuest = false;
+  if (typeof sessionStorage !== "undefined") sessionStorage.removeItem("sophia-guest");
 
   /**
    * 금액 마스킹: 게스트면 "₩•••••••" 반환

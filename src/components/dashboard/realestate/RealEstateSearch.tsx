@@ -865,7 +865,8 @@ const RealEstateSearch = () => {
                 </button>
                 <button
                   onClick={() => handleRemoveRecent(r.code)}
-                  className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                  aria-label="최근 검색 삭제"
+                  className="p-3 -my-2 sm:p-0.5 sm:my-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                 >
                   <X className="h-2.5 w-2.5" />
                 </button>

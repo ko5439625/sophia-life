@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
@@ -6,33 +6,31 @@ import {
   Calendar,
   Wallet,
   BookHeart,
-  TrendingUp,
   Building2,
   Settings,
   LogOut,
   Menu,
-  Newspaper,
   Heart,
   MessageCircle,
   MoreHorizontal,
   X,
+  Plus,
 } from "lucide-react";
 import ThemeToggle from "../ThemeToggle";
-import { useNavigate } from "react-router-dom";
-import { useGuestMode } from "../../hooks/useGuestMode";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useIsMobile } from "../../hooks/use-mobile";
 import { supabase } from "@/lib/supabase";
 import { getChatSender } from "@/services/chatService";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import DashboardHome from "./home/DashboardHome";
 import ScheduleView from "./schedule/ScheduleView";
-import FinanceView from "./finance/FinanceView";
 import CoupleView from "./couple/CoupleView";
 import SettingsView from "./settings/SettingsView";
 import BlogManagement from "./blog/BlogManagement";
-import InvestmentHub from "./investment/InvestmentHub";
 import RealEstateHub from "./realestate/RealEstateHub";
-import NewsView from "./finance/NewsView";
+import MoneyView, { type MoneySection } from "./money/MoneyView";
+import QuickExpenseSheet from "./home/QuickExpenseSheet";
+import SmartInboxSheet from "./inbox/SmartInboxSheet";
 import WeddingView from "./wedding/WeddingView";
 import ChatView from "./chat/ChatView";
 
@@ -42,51 +40,79 @@ interface NavItem {
   id: string;
 }
 
+// 자산·투자·뉴스는 "돈" 탭 하나로 통합 (money)
 const topNav: NavItem[] = [
   { icon: Home, label: "홈", id: "home" },
   { icon: Calendar, label: "일정", id: "schedule" },
-  { icon: Wallet, label: "자산", id: "finance" },
+  { icon: Wallet, label: "돈", id: "money" },
   { icon: BookHeart, label: "기록", id: "couple" },
   { icon: Heart, label: "웨딩", id: "wedding" },
 ];
 
 const bottomNav: NavItem[] = [
   { icon: PenSquare, label: "블로그", id: "blog" },
-  { icon: TrendingUp, label: "투자", id: "investment" },
-  { icon: Newspaper, label: "뉴스", id: "news" },
   { icon: Building2, label: "부동산", id: "realestate" },
   { icon: MessageCircle, label: "채팅", id: "chat" },
   { icon: Settings, label: "설정", id: "settings" },
 ];
 
-// 모바일 하단 탭 (5개)
+// 모바일 하단 탭 (5개) — 자주 쓰는 "돈"을 하단으로
 const mobileBottomTabs: NavItem[] = [
   { icon: Home, label: "홈", id: "home" },
   { icon: Calendar, label: "일정", id: "schedule" },
+  { icon: Wallet, label: "돈", id: "money" },
   { icon: MessageCircle, label: "채팅", id: "chat" },
-  { icon: BookHeart, label: "우리", id: "couple" },
   { icon: MoreHorizontal, label: "더보기", id: "__more__" },
 ];
 
 // 더보기 메뉴에 들어갈 항목들
 const moreMenuItems: NavItem[] = [
-  { icon: Wallet, label: "자산", id: "finance" },
+  { icon: BookHeart, label: "기록", id: "couple" },
   { icon: Heart, label: "웨딩", id: "wedding" },
   { icon: PenSquare, label: "블로그", id: "blog" },
-  { icon: TrendingUp, label: "투자", id: "investment" },
-  { icon: Newspaper, label: "뉴스", id: "news" },
   { icon: Building2, label: "부동산", id: "realestate" },
   { icon: Settings, label: "설정", id: "settings" },
 ];
 
+const TAB_IDS = ["home", "schedule", "money", "couple", "wedding", "blog", "realestate", "chat", "settings"];
+const MONEY_SECTIONS: MoneySection[] = ["finance", "investment", "news"];
+
 const allNav = [...topNav, ...bottomNav];
 
 const DashboardLayout = () => {
-  const [activeTab, setActiveTab] = useState("home");
+  // 현재 탭을 주소(?tab=…&sec=…)에 저장 → 폰 뒤로가기로 이전 탭 이동, 새로고침해도 유지
+  const [params, setParams] = useSearchParams();
+  const tabParam = params.get("tab") || "home";
+  const activeTab = TAB_IDS.includes(tabParam) ? tabParam : "home";
+  const secParam = params.get("sec") as MoneySection | null;
+  const moneySection: MoneySection = secParam && MONEY_SECTIONS.includes(secParam) ? secParam : "finance";
+
+  const goTo = useCallback(
+    (tab: string, sec?: MoneySection) => {
+      const next = new URLSearchParams();
+      next.set("tab", tab);
+      if (tab === "money") next.set("sec", sec ?? "finance");
+      if (next.toString() === params.toString()) return;
+      setParams(next); // push → 뒤로가기 가능
+      window.scrollTo(0, 0);
+    },
+    [params, setParams]
+  );
+  // 예전 탭 id(finance/investment/news)도 돈 탭의 해당 섹션으로 연결
+  const setActiveTab = useCallback(
+    (id: string) => {
+      if ((MONEY_SECTIONS as string[]).includes(id)) goTo("money", id as MoneySection);
+      else goTo(id);
+    },
+    [goTo]
+  );
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { isGuest } = useGuestMode();
   const isMobile = useIsMobile();
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const activeTabRef = useRef(activeTab);
@@ -130,6 +156,7 @@ const DashboardLayout = () => {
 
   // Allow child components to navigate to tabs (supports "tab:subtab" format)
   const [subTabTarget, setSubTabTarget] = useState<string | null>(null);
+  const clearSubTab = useCallback(() => setSubTabTarget(null), []);
   const handleTabChange = (tabId: string) => {
     if (tabId.includes(":")) {
       const [main, sub] = tabId.split(":");
@@ -150,19 +177,28 @@ const DashboardLayout = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "home":
-        return <DashboardHome onNavigate={handleTabChange} />;
+        return (
+          <DashboardHome
+            onNavigate={handleTabChange}
+            onQuickExpense={() => setQuickExpenseOpen(true)}
+            onSmartInbox={() => setInboxOpen(true)}
+          />
+        );
       case "blog":
-        return <BlogManagement />;
+        return <BlogManagement initialTab={subTabTarget} onTabUsed={clearSubTab} />;
       case "schedule":
         return <ScheduleView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
-      case "finance":
-        return <FinanceView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
+      case "money":
+        return (
+          <MoneyView
+            section={moneySection}
+            onSectionChange={(s) => goTo("money", s)}
+            initialTab={subTabTarget}
+            onTabUsed={clearSubTab}
+          />
+        );
       case "couple":
         return <CoupleView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
-      case "investment":
-        return <InvestmentHub initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
-      case "news":
-        return <div className="space-y-6"><h2 className="text-xl sm:text-2xl font-bold">뉴스</h2><NewsView /></div>;
       case "wedding":
         return <WeddingView initialTab={subTabTarget} onTabUsed={() => setSubTabTarget(null)} />;
       case "realestate":
@@ -218,13 +254,8 @@ const DashboardLayout = () => {
             <span className="font-mono text-lg font-bold text-sidebar-foreground tracking-tight">
               Sophia<span className="text-primary">.</span>life
             </span>
-            {isGuest && (
-              <span className="text-[9px] font-mono font-bold bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded">
-                GUEST
-              </span>
-            )}
           </div>
-          <p className="text-[11px] text-sidebar-foreground/40 mt-1 tracking-wide">{isGuest ? "게스트 모드" : "our life together ♡"}</p>
+          <p className="text-[11px] text-sidebar-foreground/40 mt-1 tracking-wide">our life together ♡</p>
         </button>
       </div>
 
@@ -312,6 +343,48 @@ const DashboardLayout = () => {
           </div>
         </main>
 
+        {/* 어느 탭에서든 지출 바로 기록 (채팅·블로그는 입력창을 가리므로 제외) */}
+        {activeTab !== "chat" && activeTab !== "blog" && (
+          <>
+            {fabMenuOpen && (
+              <div className="fixed inset-0 z-30" onClick={() => setFabMenuOpen(false)} />
+            )}
+            <div className="fixed right-4 bottom-20 md:bottom-8 md:right-8 z-30 flex flex-col items-end gap-2">
+              <AnimatePresence>
+                {fabMenuOpen &&
+                  [
+                    { label: "📋 붙여넣기로 기록", onClick: () => setInboxOpen(true) },
+                    { label: "💸 지출 기록", onClick: () => setQuickExpenseOpen(true) },
+                  ].map((m, i) => (
+                    <motion.button
+                      key={m.label}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0, transition: { delay: i * 0.04 } }}
+                      exit={{ opacity: 0, y: 8 }}
+                      onClick={() => {
+                        setFabMenuOpen(false);
+                        m.onClick();
+                      }}
+                      className="rounded-full bg-card border border-border shadow-lg shadow-black/40 px-4 min-h-[44px] text-sm font-semibold"
+                    >
+                      {m.label}
+                    </motion.button>
+                  ))}
+              </AnimatePresence>
+              <button
+                onClick={() => setFabMenuOpen((v) => !v)}
+                aria-label="빠른 기록"
+                aria-expanded={fabMenuOpen}
+                className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-black/40 flex items-center justify-center active:scale-95 transition-transform"
+              >
+                <Plus className={`h-7 w-7 transition-transform ${fabMenuOpen ? "rotate-45" : ""}`} />
+              </button>
+            </div>
+          </>
+        )}
+        <QuickExpenseSheet open={quickExpenseOpen} onOpenChange={setQuickExpenseOpen} />
+        <SmartInboxSheet open={inboxOpen} onOpenChange={setInboxOpen} onNavigate={handleTabChange} />
+
         {/* 모바일 하단 네비게이션 */}
         {isMobile && (
           <>
@@ -320,7 +393,7 @@ const DashboardLayout = () => {
               {moreMenuOpen && (
                 <>
                   <motion.div
-                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}

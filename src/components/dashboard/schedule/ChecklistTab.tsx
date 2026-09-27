@@ -4,6 +4,7 @@ import { Plus, Check, Trash2, ChevronLeft, ChevronRight, ChevronDown, Lock } fro
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useGuestMode } from "@/hooks/useGuestMode";
 import { loadTodos, saveTodo, deleteTodo as deleteTodoSync } from "@/services/supabaseSync";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Todo {
   id: string;
@@ -112,8 +113,9 @@ const ChecklistTab = () => {
     if (todo) saveTodo({ id: todo.id, title: todo.title, memo: todo.memo, is_done: todo.isDone, date: todo.date });
   };
 
-  const deleteTodo = (id: string) => {
-    setTodos(todos.filter((t) => t.id !== id));
+  const deleteTodo = async (id: string) => {
+    if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
+    setTodos((prev) => prev.filter((t) => t.id !== id));
     deleteTodoSync(id);
   };
 
@@ -332,7 +334,8 @@ const ChecklistTab = () => {
                 </span>
                 <button
                   onClick={() => deleteTodo(todo.id)}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1"
+                  aria-label="삭제"
+                  className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2.5 -m-1.5 sm:p-1 sm:m-0"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

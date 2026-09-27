@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 import { proxyFetch } from "../../../services/proxyFetch";
 import { supabase } from "../../../lib/supabase";
 import { saveBlogSettings } from "../../../services/supabaseSync";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { useFinancial } from "../../../store/financialStore";
 import {
   Lock,
@@ -701,9 +702,14 @@ const SettingsView = () => {
   };
 
   // Sync blog categories to localStorage + Supabase
+  // 탭을 열기만 했을 때(초기 값 그대로)는 저장하지 않도록 마지막 저장 스냅샷과 비교
+  const savedBlogCategoriesJson = useRef(JSON.stringify(blogCategories));
   useEffect(() => {
+    const json = JSON.stringify(blogCategories);
+    if (json === savedBlogCategoriesJson.current) return;
+    savedBlogCategoriesJson.current = json;
     try {
-      localStorage.setItem("sophia-blog-categories", JSON.stringify(blogCategories));
+      localStorage.setItem("sophia-blog-categories", json);
       saveBlogSettings({ blog_categories: blogCategories });
     } catch (e) {
       console.warn("Failed to save blog categories:", e);
@@ -717,8 +723,10 @@ const SettingsView = () => {
     setNewBlogCat("");
   };
 
-  const removeBlogCategory = (cat: string) => {
-    setBlogCategories(blogCategories.filter((c) => c !== cat));
+  const removeBlogCategory = async (cat: string) => {
+    const ok = await confirmDialog({ title: "삭제할까요?", description: `'${cat}' 카테고리를 삭제할까요?`, confirmText: "삭제" });
+    if (!ok) return;
+    setBlogCategories((prev) => prev.filter((c) => c !== cat));
     // Also remove from locked categories if present
     if (lockedCategories.includes(cat)) {
       const updated = lockedCategories.filter((c) => c !== cat);
@@ -742,8 +750,10 @@ const SettingsView = () => {
     setNewExpenseCat("");
   };
 
-  const removeExpenseCategory = (cat: string) => {
-    setExpenseCategories(expenseCategories.filter((c) => c !== cat));
+  const removeExpenseCategory = async (cat: string) => {
+    const ok = await confirmDialog({ title: "삭제할까요?", description: `'${cat}' 카테고리를 삭제할까요?`, confirmText: "삭제" });
+    if (!ok) return;
+    setExpenseCategories((prev) => prev.filter((c) => c !== cat));
   };
 
   if (isGuest) {
@@ -1549,7 +1559,8 @@ const SettingsView = () => {
               {cat}
               <button
                 onClick={() => removeBlogCategory(cat)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="카테고리 삭제"
+                className="p-2.5 -m-2 sm:p-0 sm:m-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
               >
                 <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
               </button>
@@ -1588,7 +1599,8 @@ const SettingsView = () => {
               {cat}
               <button
                 onClick={() => removeExpenseCategory(cat)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="카테고리 삭제"
+                className="p-2.5 -m-2 sm:p-0 sm:m-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
               >
                 <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
               </button>

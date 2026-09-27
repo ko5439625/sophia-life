@@ -4,7 +4,6 @@ import { Delete, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const CORRECT_PIN = "1002";
-const GUEST_PIN = "0000";
 
 interface PinModalProps {
   open: boolean;
@@ -37,14 +36,6 @@ const PinModal = ({ open, onClose }: PinModalProps) => {
           sessionStorage.setItem("sophia-auth", "true");
           sessionStorage.removeItem("sophia-guest");
           localStorage.setItem("sophia-device-auth", "true");
-          navigate("/dashboard");
-          onClose();
-        }, 800);
-      } else if (next === GUEST_PIN) {
-        setStatus("success");
-        setTimeout(() => {
-          sessionStorage.setItem("sophia-auth", "true");
-          sessionStorage.setItem("sophia-guest", "true");
           navigate("/dashboard");
           onClose();
         }, 800);

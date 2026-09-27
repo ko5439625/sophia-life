@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGuestMode } from "../../../hooks/useGuestMode";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import {
   PieChart,
   Pie,
@@ -349,7 +350,8 @@ const PensionView = () => {
     setNewDcFund({ name: "", buyPrice: "", currentPrice: "", quantity: "", weight: "" });
   };
 
-  const handleDeleteDcFund = (id: string) => {
+  const handleDeleteDcFund = async (id: string) => {
+    if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
     setDcFunds((prev) => prev.filter((f) => f.id !== id));
   };
 
@@ -527,7 +529,8 @@ const PensionView = () => {
     setNewFund({ name: "", buyPrice: "", currentPrice: "", quantity: "", weight: "" });
   };
 
-  const handleDeleteFund = (id: string) => {
+  const handleDeleteFund = async (id: string) => {
+    if (!(await confirmDialog({ title: "삭제할까요?", confirmText: "삭제" }))) return;
     setFunds((prev) => prev.filter((f) => f.id !== id));
   };
 
@@ -965,16 +968,16 @@ const PensionView = () => {
                                 {returnPct}%
                               </p>
                             </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleEditDcFund(fund)}
-                                className="p-1 text-muted-foreground hover:text-foreground"
+                                aria-label="수정" className="p-2.5 sm:p-1 text-muted-foreground hover:text-foreground"
                               >
                                 <Edit3 className="h-3 w-3" />
                               </button>
                               <button
                                 onClick={() => handleDeleteDcFund(fund.id)}
-                                className="p-1 text-muted-foreground hover:text-destructive"
+                                aria-label="삭제" className="p-2.5 sm:p-1 text-muted-foreground hover:text-destructive"
                               >
                                 <X className="h-3 w-3" />
                               </button>
@@ -1213,16 +1216,16 @@ const PensionView = () => {
                           {returnPct}%
                         </p>
                       </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleEditFund(fund)}
-                          className="p-1 text-muted-foreground hover:text-foreground"
+                          aria-label="수정" className="p-2.5 sm:p-1 text-muted-foreground hover:text-foreground"
                         >
                           <Edit3 className="h-3 w-3" />
                         </button>
                         <button
                           onClick={() => handleDeleteFund(fund.id)}
-                          className="p-1 text-muted-foreground hover:text-destructive"
+                          aria-label="삭제" className="p-2.5 sm:p-1 text-muted-foreground hover:text-destructive"
                         >
                           <X className="h-3 w-3" />
                         </button>

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { formatKRW } from "./budgetData";
 import { useFinancial, type Holding } from "../../../store/financialStore";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 
 // ---------------------------------------------------------------------------
@@ -329,7 +330,14 @@ const InvestmentView = () => {
     setShowForm(false);
   };
 
-  const removeHolding = (id: string) => {
+  const removeHolding = async (id: string) => {
+    const name = holdings.find((x) => x.id === id)?.name;
+    const ok = await confirmDialog({
+      title: "삭제할까요?",
+      description: name ? `'${name}' 종목을 삭제하면 되돌릴 수 없어요.` : undefined,
+      confirmText: "삭제",
+    });
+    if (!ok) return;
     storeRemoveHolding(id);
   };
 
@@ -504,8 +512,8 @@ const InvestmentView = () => {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-[10px] font-mono">{isGuest ? "₩•••" : `${formatKRW(totalValue)}원`}</span>
                     <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>{isUp ? "+" : ""}{returnPct}%</span>
-                    <button onClick={() => removeHolding(h.id)} className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X className="h-2.5 w-2.5 text-muted-foreground hover:text-destructive" />
+                    <button onClick={() => removeHolding(h.id)} aria-label="삭제" className="-m-2 p-2.5 sm:m-0 sm:p-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <X className="h-3 w-3 sm:h-2.5 sm:w-2.5 text-muted-foreground hover:text-destructive" />
                     </button>
                   </div>
                 </div>
@@ -533,8 +541,8 @@ const InvestmentView = () => {
                       <span className="text-[8px] text-muted-foreground ml-1">({isGuest ? "₩•••" : `₩${formatKRW(krwValue)}`})</span>
                     </div>
                     <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>{isUp ? "+" : ""}{returnPct}%</span>
-                    <button onClick={() => removeHolding(h.id)} className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X className="h-2.5 w-2.5 text-muted-foreground hover:text-destructive" />
+                    <button onClick={() => removeHolding(h.id)} aria-label="삭제" className="-m-2 p-2.5 sm:m-0 sm:p-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <X className="h-3 w-3 sm:h-2.5 sm:w-2.5 text-muted-foreground hover:text-destructive" />
                     </button>
                   </div>
                 </div>

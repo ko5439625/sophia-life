@@ -741,8 +741,20 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
     },
     [state.holdings, state.cashSavings]
   );
+  // 최신 예산 목록을 참조하기 위한 ref (updateBudget 의 참조 안정성 유지)
+  const monthlyBudgetsRef = useRef(state.monthlyBudgets);
+  monthlyBudgetsRef.current = state.monthlyBudgets;
   const updateBudget = useCallback(
     (month: string, budget: MonthlyBudget) => {
+      // 기존 값과 완전히 같으면 상태/DB 모두 건드리지 않음 (불필요한 PATCH 방지)
+      const existing = monthlyBudgetsRef.current.find((b) => b.month === month);
+      if (
+        existing &&
+        existing.salary1 === budget.salary1 &&
+        existing.salary2 === budget.salary2 &&
+        JSON.stringify(existing.categories) === JSON.stringify(budget.categories)
+      )
+        return;
       dispatch({ type: "UPDATE_BUDGET", payload: { month, budget } });
       if (supabaseReady.current) sync.saveBudget(month, budget);
     },
