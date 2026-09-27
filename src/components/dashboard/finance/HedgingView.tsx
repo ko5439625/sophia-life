@@ -331,7 +331,7 @@ const MiniChart = ({
         <LineChart data={data}>
           <XAxis
             dataKey="month"
-            tick={{ fontSize: 9 }}
+            tick={{ fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             interval={2}
@@ -827,7 +827,7 @@ ${personalSituation}
       {dataTimestamp && (
         <div className="flex items-center justify-end gap-1.5">
           <Clock className="h-3 w-3 text-muted-foreground/60" />
-          <span className="text-[10px] text-muted-foreground/60 font-mono">
+          <span className="text-[11px] text-muted-foreground/60 font-mono">
             기준일: {dataTimestamp} KST
           </span>
         </div>
@@ -890,11 +890,11 @@ ${personalSituation}
                 <span className="text-xs font-mono">{cycle.period}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground">
                   {cycle.duration}
                 </span>
                 <span
-                  className={`text-[10px] font-mono font-medium ${
+                  className={`text-[11px] font-mono font-medium ${
                     cycle.gdp.startsWith("+") ? "text-primary" : "text-destructive"
                   }`}
                 >
@@ -903,7 +903,7 @@ ${personalSituation}
               </div>
             </div>
           ))}
-          <p className="text-[10px] text-muted-foreground text-center mt-2">
+          <p className="text-[11px] text-muted-foreground text-center mt-2">
             평균 확장기 지속 기간: ~24개월, 현재: 14개월째
           </p>
         </div>
@@ -960,11 +960,11 @@ ${personalSituation}
                         <span className="text-xs font-medium">
                           {strategy.label}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[11px] text-muted-foreground">
                           ({strategy.labelEn})
                         </span>
                         {isCurrentPhase && (
-                          <span className="relative text-[9px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full font-medium">
+                          <span className="relative text-[11px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full font-medium">
                             <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-30" />
                             <span className="relative">현재</span>
                           </span>
@@ -1004,10 +1004,10 @@ ${personalSituation}
                                   className="w-2 h-2 rounded-full flex-shrink-0"
                                   style={{ backgroundColor: a.color }}
                                 />
-                                <span className="text-[10px] flex-1">
+                                <span className="text-[11px] flex-1">
                                   {a.name}
                                 </span>
-                                <span className="text-[10px] font-mono text-muted-foreground">
+                                <span className="text-[11px] font-mono text-muted-foreground">
                                   {a.value}%
                                 </span>
                               </div>
@@ -1017,7 +1017,7 @@ ${personalSituation}
 
                         {/* Strategies */}
                         <div className="space-y-1.5">
-                          <p className="text-[10px] font-medium text-muted-foreground">
+                          <p className="text-[11px] font-medium text-muted-foreground">
                             핵심 전략
                           </p>
                           {strategy.strategies.map((s, i) => (
@@ -1061,7 +1061,7 @@ ${personalSituation}
         <div className="flex items-center gap-2 mb-4">
           <Target className="h-4 w-4 text-amber-500" />
           <h3 className="text-sm font-medium">Fear & Greed Index</h3>
-          <span className="text-[10px] text-muted-foreground ml-auto font-mono">{dataTimestamp}</span>
+          <span className="text-[11px] text-muted-foreground ml-auto font-mono">{dataTimestamp}</span>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
@@ -1097,17 +1097,17 @@ ${personalSituation}
                   </svg>
                 </div>
                 <p className="text-3xl font-mono font-extrabold" style={{ color }}>{val ?? "--"}</p>
-                <p className="text-[10px] font-bold mt-0.5 px-2 py-0.5 rounded-full inline-block"
+                <p className="text-[11px] font-bold mt-0.5 px-2 py-0.5 rounded-full inline-block"
                   style={{ color, backgroundColor: `${color}15` }}>
                   {koLabel}
                 </p>
-                <p className="text-[8px] text-muted-foreground/50 mt-1">{sector.src}</p>
+                <p className="text-[11px] text-muted-foreground/50 mt-1">{sector.src}</p>
               </div>
             );
           })}
         </div>
 
-        <div className="flex justify-between w-full mt-3 text-[9px] text-muted-foreground font-mono border-t border-border pt-2">
+        <div className="flex justify-between w-full mt-3 text-[11px] text-muted-foreground font-mono border-t border-border pt-2">
           <span className="text-red-400">0 극단공포</span>
           <span className="text-yellow-500">50 중립</span>
           <span className="text-green-400">100 극단탐욕</span>
@@ -1125,7 +1125,7 @@ ${personalSituation}
           <h3 className="text-sm font-medium">주요 지수 (12개월)</h3>
           <div className="flex-1 h-[1px] bg-gradient-to-r from-[#45B7D1]/30 to-transparent ml-1" />
           {dataTimestamp && (
-            <span className="text-[9px] text-muted-foreground/50 font-mono flex-shrink-0">
+            <span className="text-[11px] text-muted-foreground/50 font-mono flex-shrink-0">
               {dataTimestamp}
             </span>
           )}
@@ -1200,7 +1200,7 @@ ${personalSituation}
               >
                 <div className="text-left">
                   <p className="text-xs font-medium">{pattern.trigger}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
                     {pattern.description}
                   </p>
                 </div>
@@ -1226,7 +1226,7 @@ ${personalSituation}
                           <BarChart data={pattern.data} layout="vertical">
                             <XAxis
                               type="number"
-                              tick={{ fontSize: 9 }}
+                              tick={{ fontSize: 11 }}
                               tickLine={false}
                               axisLine={false}
                               domain={["dataMin", "dataMax"]}
@@ -1235,7 +1235,7 @@ ${personalSituation}
                             <YAxis
                               type="category"
                               dataKey="name"
-                              tick={{ fontSize: 10 }}
+                              tick={{ fontSize: 11 }}
                               tickLine={false}
                               axisLine={false}
                               width={55}
@@ -1296,7 +1296,7 @@ ${personalSituation}
             {isGuest ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Lock className="h-6 w-6 text-muted-foreground/30 mb-2" />
-                <p className="text-[10px] text-muted-foreground">비공개</p>
+                <p className="text-[11px] text-muted-foreground">비공개</p>
               </div>
             ) : (
               <>
@@ -1336,8 +1336,8 @@ ${personalSituation}
                         className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: item.color }}
                       />
-                      <span className="text-[10px] flex-1 text-foreground">{item.name}</span>
-                      <span className="text-[10px] font-mono text-foreground/60">
+                      <span className="text-[11px] flex-1 text-foreground">{item.name}</span>
+                      <span className="text-[11px] font-mono text-foreground/60">
                         {item.value}%
                       </span>
                     </div>
@@ -1391,8 +1391,8 @@ ${personalSituation}
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-[10px] flex-1 text-foreground">{item.name}</span>
-                  <span className="text-[10px] font-mono text-primary font-medium">
+                  <span className="text-[11px] flex-1 text-foreground">{item.name}</span>
+                  <span className="text-[11px] font-mono text-primary font-medium">
                     {item.value}%
                   </span>
                 </div>
@@ -1424,7 +1424,7 @@ ${personalSituation}
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-foreground">{change.name}</span>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeClass}`}>
+                    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${badgeClass}`}>
                       {badgeLabel}
                     </span>
                   </div>
@@ -1444,7 +1444,7 @@ ${personalSituation}
                     </span>
                   )}
                 </div>
-                <p className="text-[10px] text-foreground/60 group-hover/change:text-foreground/70 transition-colors">
+                <p className="text-[11px] text-foreground/60 group-hover/change:text-foreground/70 transition-colors">
                   {change.reason}
                 </p>
               </div>
@@ -1538,7 +1538,7 @@ ${personalSituation}
                         ({s.allocation}%)
                       </span>
                     </p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       {s.reason}
                     </p>
                   </div>
@@ -1595,7 +1595,7 @@ ${personalSituation}
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Lock className="h-6 w-6 text-muted-foreground/30 mb-2" />
             <p className="text-xs text-muted-foreground">비공개 콘텐츠입니다</p>
-            <p className="text-[10px] text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+            <p className="text-[11px] text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
           </div>
         ) : (
         <>
@@ -1676,7 +1676,7 @@ ${personalSituation}
                   return <p key={i} className="text-xs mt-1 pl-3">{line}</p>;
                 }
                 if (line.startsWith("*") && line.endsWith("*")) {
-                  return <p key={i} className="text-[10px] text-muted-foreground mt-3 italic">{line.replace(/\*/g, "")}</p>;
+                  return <p key={i} className="text-[11px] text-muted-foreground mt-3 italic">{line.replace(/\*/g, "")}</p>;
                 }
                 if (line.trim() === "") return <br key={i} />;
                 return <p key={i} className="text-xs mt-1">{line}</p>;

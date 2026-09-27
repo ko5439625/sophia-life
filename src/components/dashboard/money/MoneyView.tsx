@@ -36,7 +36,7 @@ const MoneyView = ({ section, onSectionChange, initialTab, onTabUsed }: MoneyVie
             <button
               key={s.id}
               onClick={() => onSectionChange(s.id)}
-              className={`relative flex items-center gap-1.5 px-3.5 sm:px-4 min-h-[36px] text-sm font-medium rounded-full transition-colors ${
+              className={`relative flex items-center gap-1.5 px-3.5 sm:px-4 min-h-[40px] text-sm font-medium rounded-full transition-colors ${
                 section === s.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
             >

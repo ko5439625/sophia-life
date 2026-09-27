@@ -214,7 +214,7 @@ const PriceSlider = ({
 }) => (
   <div className="flex-1">
     <div className="flex items-center justify-between mb-1">
-      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
       <span className="text-xs font-mono font-medium">{formatPrice(value)}</span>
     </div>
     <input
@@ -248,7 +248,7 @@ const AreaSlider = ({
 }) => (
   <div className="flex-1">
     <div className="flex items-center justify-between mb-1">
-      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
       <span className="text-xs font-mono font-medium">{value}평</span>
     </div>
     <input
@@ -698,7 +698,7 @@ ${property.memo ? `- 메모: ${property.memo}` : ""}
                       {filters.regions.map((region) => (
                         <span
                           key={region}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium"
                         >
                           {region}
                           <button
@@ -716,7 +716,7 @@ ${property.memo ? `- 메모: ${property.memo}` : ""}
                       ))}
                       <button
                         onClick={() => setFilters((prev) => ({ ...prev, regions: [] }))}
-                        className="text-[10px] text-muted-foreground hover:text-foreground ml-1"
+                        className="text-[11px] text-muted-foreground hover:text-foreground ml-1"
                       >
                         전체 해제
                       </button>
@@ -844,7 +844,7 @@ ${property.memo ? `- 메모: ${property.memo}` : ""}
             {newCount > 0 && (
               <button
                 onClick={markAllSeen}
-                className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium animate-pulse"
+                className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium animate-pulse"
               >
                 새로운 거래 {newCount}건
               </button>
@@ -864,7 +864,7 @@ ${property.memo ? `- 메모: ${property.memo}` : ""}
                 <button
                   key={key}
                   onClick={() => setSortKey(key)}
-                  className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
                     sortKey === key
                       ? "bg-card text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
@@ -878,7 +878,7 @@ ${property.memo ? `- 메모: ${property.memo}` : ""}
             {/* Add manual */}
             <button
               onClick={() => setShowManualForm(!showManualForm)}
-              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+              className="relative after:absolute after:-inset-3 after:content-[''] flex items-center gap-1 whitespace-nowrap text-xs text-primary hover:text-primary/80 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               직접 등록
@@ -1053,12 +1053,12 @@ ${property.memo ? `- 메모: ${property.memo}` : ""}
                     <div className="flex items-center gap-2">
                       <h4 className="text-sm font-bold truncate">{property.name}</h4>
                       {property.isManual && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500/10 text-amber-500">
+                        <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-500">
                           수동
                         </span>
                       )}
                       {!seenIds.includes(property.id) && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-primary/10 text-primary">
+                        <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-primary/10 text-primary">
                           NEW
                         </span>
                       )}
@@ -1257,7 +1257,7 @@ ${property.memo ? `- 메모: ${property.memo}` : ""}
                                 </p>
                               </div>
 
-                              <p className="text-[10px] text-muted-foreground/50 text-right font-mono">
+                              <p className="text-[11px] text-muted-foreground/50 text-right font-mono">
                                 생성: {new Date(report.generatedAt).toLocaleString("ko-KR")}
                               </p>
                             </>

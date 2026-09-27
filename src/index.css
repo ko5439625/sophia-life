@@ -23,6 +23,22 @@
   font-display: swap;
 }
 
+/* 마루부리 Regular — 위 noonfonts 주소가 404라 네이버 한글 CDN으로 덮어씀 (같은 설명자면 나중 규칙이 우선) */
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* 마루부리 Bold — 블로그 인용구(.pull-quote)용. 사용될 때만 내려받음 */
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
 @font-face {
   font-family: 'KoPub Batang';
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/KoPubWorldBatangBold.woff2') format('woff2');
@@ -46,68 +62,75 @@
 
 @layer base {
   :root {
-    --background: 0 0% 96%;
-    --foreground: 0 0% 10%;
+    /* 모노 + 로즈 (Geist 풍 무채색, 로즈는 커플·기념일 포인트에만) */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 0 0% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
-    --primary: 160 100% 22%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 218 17% 27%;
-    --secondary-foreground: 0 0% 96%;
-    --muted: 220 14% 92%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 213 94% 68%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 88%;
-    --input: 220 13% 88%;
-    --ring: 213 94% 68%;
+    --border: 0 0% 92%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 9%;
     --radius: 0.75rem;
-    --navy: 212 52% 25%;
-    --navy-foreground: 0 0% 100%;
-    --sidebar-background: 212 52% 25%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 160 100% 22%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 212 52% 30%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 212 52% 20%;
-    --sidebar-ring: 160 100% 22%;
+    --love: 341 58% 63%;
+    --love-foreground: 0 0% 100%;
+    --warn: 36 100% 42%;
+    --navy: 0 0% 9%;
+    --navy-foreground: 0 0% 98%;
+    --sidebar-background: 0 0% 99%;
+    --sidebar-foreground: 0 0% 9%;
+    --sidebar-primary: 0 0% 9%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 95%;
+    --sidebar-accent-foreground: 0 0% 9%;
+    --sidebar-border: 0 0% 92%;
+    --sidebar-ring: 0 0% 9%;
   }
 
   .dark {
     --background: 0 0% 4%;
-    --foreground: 0 0% 92%;
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 92%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 92%;
-    --primary: 160 100% 22%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 92%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 55%;
-    --accent: 213 94% 68%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62% 40%;
-    --destructive-foreground: 0 0% 92%;
-    --border: 0 0% 16%;
-    --input: 0 0% 16%;
-    --ring: 0 0% 92%;
-    --navy: 0 0% 8%;
-    --navy-foreground: 0 0% 92%;
+    --foreground: 0 0% 93%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 93%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 0 0% 93%;
+    --primary-foreground: 0 0% 4%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 56%;
+    --accent: 0 0% 93%;
+    --accent-foreground: 0 0% 4%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 93%;
+    --love: 346 77% 81%;
+    --love-foreground: 0 0% 4%;
+    --warn: 38 91% 55%;
+    --navy: 0 0% 7%;
+    --navy-foreground: 0 0% 93%;
     --sidebar-background: 0 0% 3%;
-    --sidebar-foreground: 0 0% 92%;
-    --sidebar-primary: 160 100% 22%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-foreground: 0 0% 93%;
+    --sidebar-primary: 0 0% 93%;
+    --sidebar-primary-foreground: 0 0% 4%;
     --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 0 0% 92%;
+    --sidebar-accent-foreground: 0 0% 93%;
     --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 160 100% 22%;
+    --sidebar-ring: 0 0% 93%;
   }
 }
 
@@ -239,4 +262,290 @@
   .safe-area-bottom {
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
+}
+
+/* ==========================================================================
+   Blog content typography — 에디터(PostEditor)·미리보기·공개 글(BlogPost) 공통
+   본문: 마루부리 / 소제목·캡션·태그: Pretendard / 인용: 마루부리 Bold
+   ========================================================================== */
+.blog-content {
+  /* 로즈 포인트 (모노크롬 + 로즈 1색). 라이트는 대비를 위해 한 톤 진하게 */
+  --blog-accent: #d9668a;
+  font-family: 'MaruBuri', 'Pretendard Variable', 'Noto Serif KR', serif;
+  font-size: 17px;
+  line-height: 1.85;
+  letter-spacing: -0.01em;
+  color: hsl(var(--foreground));
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.dark .blog-content { --blog-accent: #f4a7b9; }
+.blog-content > *:first-child { margin-top: 0; }
+.blog-content p { margin: 0 0 1.1em; }
+.blog-content strong, .blog-content b { font-weight: 700; }
+.blog-content h1,
+.blog-content h2,
+.blog-content h3,
+.blog-content h4 {
+  font-family: 'Pretendard Variable', 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+  color: hsl(var(--foreground));
+  text-wrap: balance;
+}
+.blog-content h1 { font-size: 1.6em; margin: 1.6em 0 0.6em; }
+.blog-content h2 { font-size: 1.35em; margin: 1.6em 0 0.6em; }
+.blog-content h3 { font-size: 1.15em; margin: 1.8em 0 0.7em; }
+/* 소제목 위 짧은 포인트 선 */
+.blog-content h3::before {
+  content: "";
+  display: block;
+  width: 22px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--blog-accent);
+  opacity: 0.75;
+  margin-bottom: 0.55em;
+}
+.blog-content a {
+  color: hsl(var(--foreground));
+  text-decoration: underline;
+  text-decoration-color: var(--blog-accent);
+  text-underline-offset: 3px;
+}
+.blog-content ul, .blog-content ol { padding-left: 1.4em; margin: 0 0 1.1em; }
+.blog-content ul { list-style: disc; }
+.blog-content ol { list-style: decimal; }
+.blog-content li { margin: 0.3em 0; }
+.blog-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 14px;
+  margin: 1.2em 0;
+}
+.blog-content strike, .blog-content s, .blog-content del { text-decoration: line-through; }
+.blog-content code {
+  background: hsl(var(--muted));
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.88em;
+  font-family: 'JetBrains Mono', monospace;
+}
+.blog-content pre {
+  background: hsl(var(--muted));
+  padding: 16px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+/* 한 줄 요약 (사진으로 글쓰기) */
+.blog-content .post-summary {
+  font-family: 'Pretendard Variable', 'Inter', sans-serif;
+  font-size: 0.9em;
+  font-weight: 500;
+  line-height: 1.6;
+  color: hsl(var(--muted-foreground));
+  padding: 0.1em 0 0.1em 0.85em;
+  border-left: 2px solid hsl(var(--foreground) / 0.25);
+  margin: 0 0 1.4em;
+}
+/* 도입 문단 */
+.blog-content .lead {
+  font-size: 1.08em;
+  line-height: 1.9;
+  color: hsl(var(--foreground) / 0.88);
+  margin-bottom: 1.6em;
+}
+.blog-content .outro { margin-top: 1.6em; }
+
+/* 사진 + 캡션 */
+.blog-content figure,
+.blog-content .post-figure { margin: 1.4em 0 1.2em; }
+.blog-content figure img { width: 100%; margin: 0; object-fit: cover; }
+.blog-content figcaption {
+  font-family: 'Pretendard Variable', 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+  margin-top: 0.6em;
+}
+
+/* 일반 인용 */
+.blog-content blockquote {
+  border-left: 3px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.35);
+  padding: 0.9em 1.1em;
+  margin: 1.4em 0;
+  border-radius: 0 10px 10px 0;
+  font-style: normal;
+  color: hsl(var(--foreground) / 0.85);
+}
+.blog-content blockquote p { margin: 0; }
+/* 인용구 (문단 하이라이트) — 로즈 세로선 + 마루부리 Bold */
+.blog-content blockquote.pull-quote {
+  border: none;
+  border-left: 3px solid var(--blog-accent);
+  border-radius: 0;
+  background: none;
+  font-weight: 700;
+  font-size: 1.12em;
+  line-height: 1.65;
+  color: hsl(var(--foreground));
+  padding: 0.15em 0 0.15em 0.95em;
+  margin: 1.5em 0 1.7em;
+}
+.blog-content blockquote.pull-quote p { margin: 0; }
+
+/* 구분선 */
+.blog-content hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 2em 0;
+}
+.blog-content hr.section-divider {
+  border: none;
+  height: auto;
+  margin: 2.2em 0;
+  text-align: center;
+  overflow: visible;
+}
+.blog-content hr.section-divider::before {
+  content: "\00B7 \00B7 \00B7";
+  letter-spacing: 0.6em;
+  font-size: 1.1em;
+  color: hsl(var(--muted-foreground) / 0.8);
+}
+
+/* 태그 칩 */
+.blog-content .post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2em 0 0;
+}
+.blog-content .tag-chip {
+  display: inline-block;
+  font-family: 'Pretendard Variable', 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+/* 토글 (details/summary) */
+.blog-content details {
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  margin: 1em 0;
+  overflow: hidden;
+}
+.blog-content details summary {
+  padding: 12px 16px;
+  font-family: 'Pretendard Variable', 'Inter', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  background: hsl(var(--muted) / 0.3);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.blog-content details summary::-webkit-details-marker { display: none; }
+.blog-content details summary::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 6px solid currentColor;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.blog-content details[open] summary::before { transform: rotate(90deg); }
+.blog-content details summary:hover { background: hsl(var(--muted) / 0.5); }
+.blog-content details > *:not(summary) { padding: 0 16px; }
+.blog-content details > p,
+.blog-content details > div { padding: 12px 16px; margin: 0; }
+
+@media (min-width: 768px) {
+  .blog-content { font-size: 17.5px; }
+  .blog-content h3 { font-size: 1.2em; }
+}
+
+/*
+ * 다크/라이트 모드 인라인 색상 보정:
+ * 다크 모드에서 쓴 글의 흰 글씨(라이트에서 안 보임)와 그 반대를 기본 글자색으로 되돌린다.
+ */
+:root:not(.dark) .blog-content font[color="#ffffff"],
+:root:not(.dark) .blog-content font[color="#FFFFFF"],
+:root:not(.dark) .blog-content font[color="white"],
+:root:not(.dark) .blog-content font[color="#fafafa"],
+:root:not(.dark) .blog-content font[color="#f5f5f5"],
+:root:not(.dark) .blog-content font[color="#eeeeee"],
+:root:not(.dark) .blog-content font[color="#e5e5e5"],
+:root:not(.dark) .blog-content font[color="#d4d4d4"],
+:root:not(.dark) .blog-content font[color="#e2e8f0"],
+:root:not(.dark) .blog-content font[color="#f1f5f9"],
+:root:not(.dark) .blog-content font[color="#f8fafc"],
+:root:not(.dark) .blog-content span[style*="color: white"],
+:root:not(.dark) .blog-content span[style*="color: rgb(255, 255, 255)"],
+:root:not(.dark) .blog-content span[style*="color: rgb(255,255,255)"],
+:root:not(.dark) .blog-content span[style*="color:#ffffff"],
+:root:not(.dark) .blog-content span[style*="color:#FFFFFF"],
+:root:not(.dark) .blog-content span[style*="color: #ffffff"],
+:root:not(.dark) .blog-content span[style*="color: #FFFFFF"],
+:root:not(.dark) .blog-content span[style*="color:#fafafa"],
+:root:not(.dark) .blog-content span[style*="color: #fafafa"],
+:root:not(.dark) .blog-content span[style*="color:#f5f5f5"],
+:root:not(.dark) .blog-content span[style*="color: #f5f5f5"],
+:root:not(.dark) .blog-content span[style*="color: rgb(250, 250, 250)"],
+:root:not(.dark) .blog-content span[style*="color: rgb(245, 245, 245)"],
+:root:not(.dark) .blog-content span[style*="color: rgb(229, 229, 229)"],
+:root:not(.dark) .blog-content span[style*="color: rgb(212, 212, 212)"] {
+  color: inherit !important;
+}
+.dark .blog-content font[color="#000000"],
+.dark .blog-content font[color="#000"],
+.dark .blog-content font[color="black"],
+.dark .blog-content font[color="#0a0a0a"],
+.dark .blog-content font[color="#171717"],
+.dark .blog-content font[color="#1a1a1a"],
+.dark .blog-content font[color="#262626"],
+.dark .blog-content font[color="#333333"],
+.dark .blog-content font[color="#1e293b"],
+.dark .blog-content font[color="#0f172a"],
+.dark .blog-content font[color="#020617"],
+.dark .blog-content span[style*="color: black"],
+.dark .blog-content span[style*="color: rgb(0, 0, 0)"],
+.dark .blog-content span[style*="color: rgb(0,0,0)"],
+.dark .blog-content span[style*="color:#000000"],
+.dark .blog-content span[style*="color: #000000"],
+.dark .blog-content span[style*="color:#000"],
+.dark .blog-content span[style*="color: #000"],
+.dark .blog-content span[style*="color: rgb(10, 10, 10)"],
+.dark .blog-content span[style*="color: rgb(23, 23, 23)"],
+.dark .blog-content span[style*="color: rgb(26, 26, 26)"],
+.dark .blog-content span[style*="color: rgb(38, 38, 38)"],
+.dark .blog-content span[style*="color: rgb(51, 51, 51)"] {
+  color: inherit !important;
+}
+/* 예전 AI 다듬기 결과의 밝은 배경 박스(인라인)가 다크 모드에서 글자를 가리지 않도록 */
+.dark .blog-content blockquote[style*="background"] {
+  background: hsl(var(--muted) / 0.4) !important;
+  color: hsl(var(--foreground) / 0.9);
+}
+
+/* 사진으로 글쓰기 — 생성 중 진행 바 */
+@keyframes photoblog-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
 }

@@ -52,13 +52,16 @@ export default function SmartInboxSheet({ open, onOpenChange, onNavigate }: Prop
   const desc = "채팅·메모·사진을 넣으면 AI가 지출/할 일/일정/메모로 나눠드려요. 승인한 것만 저장돼요.";
 
   const panel = useInboxPanel({ open, onOpenChange, onNavigate });
+  const keyboard = useKeyboardInset(open && isMobile);
 
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={panel.requestOpenChange}>
         <SheetContent
           side="bottom"
-          className="flex max-h-[92dvh] flex-col gap-0 rounded-t-2xl p-0 pb-[env(safe-area-inset-bottom)] [&>button:last-child]:right-2 [&>button:last-child]:top-2 [&>button:last-child]:flex [&>button:last-child]:h-11 [&>button:last-child]:w-11 [&>button:last-child]:items-center [&>button:last-child]:justify-center"
+          // 키보드가 올라오면(visualViewport 축소) 시트를 키보드 위로 올리고 높이를 보이는 영역에 맞춘다 (iOS Safari / Android Chrome)
+          style={keyboard ? { bottom: keyboard.inset, maxHeight: keyboard.height - 8 } : undefined}
+          className="flex max-h-[92vh] flex-col gap-0 rounded-t-2xl p-0 pb-[env(safe-area-inset-bottom)] supports-[height:100dvh]:max-h-[92dvh] [&>button:last-child]:right-2 [&>button:last-child]:top-2 [&>button:last-child]:flex [&>button:last-child]:h-11 [&>button:last-child]:w-11 [&>button:last-child]:items-center [&>button:last-child]:justify-center"
         >
           <SheetTitle className="sr-only">{title}</SheetTitle>
           <SheetDescription className="sr-only">{desc}</SheetDescription>
@@ -79,6 +82,31 @@ export default function SmartInboxSheet({ open, onOpenChange, onNavigate }: Prop
 }
 
 // ---------------------------------------------------------------------------
+
+/** 모바일 키보드가 가리는 높이. 키보드가 없으면 null */
+function useKeyboardInset(enabled: boolean): { inset: number; height: number } | null {
+  const [kb, setKb] = useState<{ inset: number; height: number } | null>(null);
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!enabled || !vv) {
+      setKb(null);
+      return;
+    }
+    const update = () => {
+      const inset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      // 주소창 변화 같은 작은 차이는 무시 (키보드는 보통 150px 이상)
+      setKb(inset > 120 ? { inset, height: Math.round(vv.height) } : null);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [enabled]);
+  return kb;
+}
 
 function useInboxPanel({ onOpenChange, onNavigate }: Props) {
   const { state, addExpense } = useFinancial();
@@ -392,9 +420,9 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2" data-testid="inbox-attachments">
             {attachments.map((a, i) => (
-              <div key={a.id} className="relative h-20 w-20 overflow-hidden rounded-xl border border-border">
+              <div key={a.id} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-border">
                 <img src={a.preview} alt={`첨부 ${i + 1}`} className="h-full w-full object-cover" />
-                <span className="absolute bottom-0 left-0 rounded-tr-md bg-black/55 px-1.5 text-[11px] text-white">{i + 1}</span>
+                <span className="absolute bottom-0 left-0 rounded-tr-md bg-black/55 px-1.5 text-[12px] leading-5 text-white">{i + 1}</span>
                 <button
                   type="button"
                   onClick={() => removeAttachment(a.id)}
@@ -415,17 +443,19 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
             type="button"
             onClick={pasteFromClipboard}
             disabled={busy !== null}
-            className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-border text-[14px] hover:bg-muted"
+            className="flex min-h-[44px] min-w-0 items-center justify-center gap-1.5 rounded-xl border border-border px-2 py-1.5 text-[14px] leading-tight hover:bg-muted disabled:opacity-50"
           >
-            <ClipboardPaste className="h-4 w-4" /> 클립보드에서 붙여넣기
+            <ClipboardPaste className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 break-keep text-center">클립보드에서 붙여넣기</span>
           </button>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={busy !== null || attachments.length >= INBOX_MAX_IMAGES}
-            className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-border text-[14px] hover:bg-muted disabled:opacity-50"
+            className="flex min-h-[44px] min-w-0 items-center justify-center gap-1.5 rounded-xl border border-border px-2 py-1.5 text-[14px] leading-tight hover:bg-muted disabled:opacity-50"
           >
-            {busy === "attach" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />} 사진 추가
+            {busy === "attach" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <ImagePlus className="h-4 w-4 shrink-0" />}
+            <span className="min-w-0 break-keep text-center">사진 추가</span>
           </button>
         </div>
         <input
@@ -453,17 +483,10 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
         type="button"
         onClick={() => runExtract("extract")}
         disabled={busy !== null || (!text.trim() && attachments.length === 0)}
-        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-40"
+        className="flex min-h-[48px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-3 text-[15px] font-semibold text-primary-foreground disabled:opacity-40"
       >
-        {busy === "extract" ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" /> 정리하는 중…
-          </>
-        ) : (
-          <>
-            <Sparkles className="h-4 w-4" /> 정리하기
-          </>
-        )}
+        {busy === "extract" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Sparkles className="h-4 w-4 shrink-0" />}
+        <span className="truncate">{busy === "extract" ? "정리하는 중…" : "정리하기"}</span>
       </button>
     );
   } else if (step === "review") {
@@ -505,12 +528,12 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
             type="button"
             onClick={() => runExtract("refine")}
             disabled={busy !== null || (!note.trim() && qaLog.length === 0)}
-            className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-border text-[14px] hover:bg-muted disabled:opacity-40"
+            className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-[14px] leading-tight hover:bg-muted disabled:opacity-40"
           >
-            {busy === "refine" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            답변 반영해서 다시 정리
+            {busy === "refine" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Send className="h-4 w-4 shrink-0" />}
+            <span className="min-w-0 break-keep text-center">{busy === "refine" ? "다시 정리하는 중…" : "답변 반영해서 다시 정리"}</span>
           </button>
-          <p className="mt-1 text-[11px] text-muted-foreground">다시 정리하면 승인 상태는 초기화돼요.</p>
+          <p className="mt-1 text-[12px] text-muted-foreground">다시 정리하면 승인 상태는 초기화돼요.</p>
         </div>
         {error && <InlineError message={error} />}
       </div>
@@ -518,12 +541,12 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
     footer = (
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[13px] text-muted-foreground" data-testid="inbox-counts">
+          <p className="min-w-0 break-keep text-[13px] leading-snug text-muted-foreground" data-testid="inbox-counts">
             승인 <b className="text-emerald-600 dark:text-emerald-400">{approvedItems.length}</b> · 대기 {pendingReady.length} · 답변 필요{" "}
             <b className={needAnswer.length ? "text-amber-600 dark:text-amber-400" : ""}>{needAnswer.length}</b>
           </p>
           {pendingReady.length > 0 && (
-            <button type="button" onClick={approveAll} className="min-h-[44px] px-2 text-[13px] text-primary">
+            <button type="button" onClick={approveAll} className="min-h-[44px] shrink-0 whitespace-nowrap px-2 text-[13px] text-primary">
               모두 승인
             </button>
           )}
@@ -532,7 +555,7 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
           type="button"
           onClick={() => setStep("confirm")}
           disabled={approvedItems.length === 0 || busy !== null}
-          className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-40"
+          className="flex min-h-[48px] w-full items-center justify-center whitespace-nowrap rounded-xl bg-primary px-3 text-[15px] font-semibold text-primary-foreground disabled:opacity-40"
         >
           승인한 {approvedItems.length}개 저장
         </button>
@@ -549,18 +572,18 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
           const st = saveStates[it.id];
           return (
             <div key={it.id} className="rounded-xl border border-border p-3" data-testid="inbox-confirm-item">
-              <div className="flex items-center gap-1.5">
-                <span className={cn("rounded-full px-2 py-0.5 text-[12px] font-semibold", TYPE_STYLE[it.type])}>{INBOX_TYPE_LABEL[it.type]}</span>
-                <span className="text-[12px] text-muted-foreground">→ {INBOX_TARGET_LABEL[it.type]}</span>
-                {st?.status === "saving" && <Loader2 className="ml-auto h-4 w-4 animate-spin text-muted-foreground" />}
+              <div className="flex min-h-[24px] items-center gap-1.5">
+                <span className={cn("shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-semibold", TYPE_STYLE[it.type])}>{INBOX_TYPE_LABEL[it.type]}</span>
+                <span className="min-w-0 truncate text-[12px] text-muted-foreground">→ {INBOX_TARGET_LABEL[it.type]}</span>
+                {st?.status === "saving" && <Loader2 className="ml-auto h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
               </div>
               <p className="mt-1.5 break-words text-[14px] leading-snug">{summarizeItem(it)}</p>
               {previews.length > 0 && (
                 <div className="mt-2 flex items-center gap-2">
                   {previews.map((u, i) => (
-                    <img key={i} src={u} alt="" className="h-9 w-9 rounded-md border border-border object-cover" />
+                    <img key={i} src={u} alt="" className="h-9 w-9 shrink-0 rounded-md border border-border object-cover" />
                   ))}
-                  <span className="text-[12px] text-muted-foreground">
+                  <span className="min-w-0 text-[12px] leading-snug text-muted-foreground">
                     {canStoreAttachment(it.type)
                       ? `사진 ${previews.length}장을 올려 메모에 링크로 붙여요`
                       : "이 항목은 첨부를 저장할 수 없어요 (사진은 저장 안 됨)"}
@@ -578,7 +601,7 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
           type="button"
           onClick={() => setStep("review")}
           disabled={busy === "save"}
-          className="min-h-[48px] rounded-xl border border-border text-[15px] disabled:opacity-40"
+          className="min-h-[48px] whitespace-nowrap rounded-xl border border-border px-2 text-[15px] disabled:opacity-40"
         >
           뒤로
         </button>
@@ -586,16 +609,11 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
           type="button"
           onClick={runSave}
           disabled={busy === "save" || approvedItems.length === 0}
-          className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-60"
+          className="flex min-h-[48px] min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-3 text-[15px] font-semibold text-primary-foreground disabled:opacity-60"
           data-testid="inbox-final-save"
         >
-          {busy === "save" ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" /> 저장하는 중…
-            </>
-          ) : (
-            "저장"
-          )}
+          {busy === "save" && <Loader2 className="h-4 w-4 shrink-0 animate-spin" />}
+          <span className="truncate">{busy === "save" ? "저장하는 중…" : "저장"}</span>
         </button>
       </div>
     );
@@ -625,7 +643,7 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
               {ok && onNavigate && (
                 <button
                   type="button"
-                  className="min-h-[44px] shrink-0 px-2 text-[13px] text-primary"
+                  className="min-h-[44px] shrink-0 whitespace-nowrap px-2 text-[13px] text-primary"
                   onClick={() => {
                     onNavigate(INBOX_TARGET_TAB[it.type]);
                     reset();
@@ -649,7 +667,7 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
           <button
             type="button"
             onClick={() => setStep("review")}
-            className="min-h-[48px] rounded-xl border border-border text-[15px]"
+            className="min-h-[48px] min-w-0 break-keep rounded-xl border border-border px-2 py-1.5 text-[15px] leading-tight"
           >
             {failedItems.length > 0 ? "실패한 항목 다시 시도" : "남은 항목 검토"}
           </button>
@@ -657,7 +675,7 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
           <button
             type="button"
             onClick={reset}
-            className="min-h-[48px] rounded-xl border border-border text-[15px]"
+            className="min-h-[48px] min-w-0 break-keep rounded-xl border border-border px-2 py-1.5 text-[15px] leading-tight"
           >
             더 기록하기
           </button>
@@ -668,7 +686,7 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
             reset();
             onOpenChange(false);
           }}
-          className="min-h-[48px] rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground"
+          className="min-h-[48px] whitespace-nowrap rounded-xl bg-primary px-2 text-[15px] font-semibold text-primary-foreground"
         >
           닫기
         </button>
@@ -678,25 +696,25 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
 
   const content = (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="smart-inbox" data-step={step}>
-      <div className="flex min-h-[56px] items-center gap-1 border-b border-border px-2 pr-14">
+      <div className="flex min-h-[56px] shrink-0 items-center gap-1 border-b border-border px-2 pr-14">
         {onBack ? (
           <button
             type="button"
             onClick={onBack}
-            className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-muted"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-muted"
             aria-label="뒤로"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
         ) : (
-          <span className="flex h-11 w-11 items-center justify-center text-primary">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center text-primary">
             <Sparkles className="h-5 w-5" />
           </span>
         )}
-        <h2 className="truncate text-[16px] font-bold">{heading}</h2>
+        <h2 className="min-w-0 flex-1 truncate text-[16px] font-bold">{heading}</h2>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3">{body}</div>
-      <div className="border-t border-border bg-background px-4 py-3">{footer}</div>
+      <div className="shrink-0 border-t border-border bg-background px-4 py-3">{footer}</div>
     </div>
   );
 

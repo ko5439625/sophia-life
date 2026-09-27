@@ -134,7 +134,7 @@ const PriceChart = ({
         <LineChart data={chartData}>
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 10, fill: "#8B949E" }}
+            tick={{ fontSize: 11, fill: "#8B949E" }}
             axisLine={false}
             tickLine={false}
           />
@@ -144,7 +144,7 @@ const PriceChart = ({
                 ? `${(v / 10000).toFixed(1)}억`
                 : `${(v / 1000).toFixed(0)}천`
             }
-            tick={{ fontSize: 10, fill: "#8B949E" }}
+            tick={{ fontSize: 11, fill: "#8B949E" }}
             axisLine={false}
             tickLine={false}
             width={48}
@@ -492,7 +492,7 @@ const ApartmentView = () => {
           <input type="range" min={30} max={80} step={5} value={ltvRate}
             onChange={(e) => setLtvRate(Number(e.target.value))}
             className="w-full accent-primary h-1.5" />
-          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+          <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
             <span>30%</span><span>80%</span>
           </div>
         </div>
@@ -506,7 +506,7 @@ const ApartmentView = () => {
           <input type="range" min={2} max={7} step={0.1} value={interestRate}
             onChange={(e) => setInterestRate(Number(e.target.value))}
             className="w-full accent-primary h-1.5" />
-          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+          <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
             <span>2%</span><span>7%</span>
           </div>
         </div>
@@ -520,7 +520,7 @@ const ApartmentView = () => {
           <input type="range" min={10} max={40} step={5} value={loanYears}
             onChange={(e) => setLoanYears(Number(e.target.value))}
             className="w-full accent-primary h-1.5" />
-          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+          <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
             <span>10년</span><span>40년</span>
           </div>
         </div>
@@ -544,7 +544,7 @@ const ApartmentView = () => {
                 }`}
               >
                 <p className="text-xs font-medium">{opt.label}</p>
-                <p className="text-[10px] text-muted-foreground">{opt.desc}</p>
+                <p className="text-[11px] text-muted-foreground">{opt.desc}</p>
               </button>
             ))}
           </div>
@@ -559,7 +559,7 @@ const ApartmentView = () => {
           <input type="range" min={0} max={5} step={1} value={gracePeriod}
             onChange={(e) => setGracePeriod(Number(e.target.value))}
             className="w-full accent-primary h-1.5" />
-          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+          <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
             <span>없음</span><span>5년</span>
           </div>
         </div>
@@ -576,7 +576,7 @@ const ApartmentView = () => {
           </div>
 
           <div className="bg-background/50 rounded-lg p-3 space-y-1.5 border border-border/50">
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-1">
+            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-1">
               {repaymentType === "equal_payment" ? "원리금균등" : repaymentType === "equal_principal" ? "원금균등" : "체증식"} 상환
               {gracePeriod > 0 && ` · 거치 ${gracePeriod}년`}
             </p>
@@ -692,7 +692,7 @@ const ApartmentView = () => {
             <div>
               <p className="text-xs text-muted-foreground">최근 실거래가</p>
               <p className="text-base font-mono font-bold text-foreground">{formatMan(apt.recentPrice)}</p>
-              <p className="text-[10px] text-muted-foreground font-mono">{formatDate(apt.recentDate)}</p>
+              <p className="text-[11px] text-muted-foreground font-mono">{formatDate(apt.recentDate)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">전세가</p>
@@ -730,11 +730,11 @@ const ApartmentView = () => {
                 <div className="flex items-center gap-4 mt-2 justify-center">
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-0.5 bg-[hsl(var(--primary))] rounded" />
-                    <span className="text-[10px] text-muted-foreground">실거래가</span>
+                    <span className="text-[11px] text-muted-foreground">실거래가</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-0.5 bg-[#f59e0b] rounded border-dashed" />
-                    <span className="text-[10px] text-muted-foreground">전세가</span>
+                    <span className="text-[11px] text-muted-foreground">전세가</span>
                   </div>
                 </div>
               </CollapsibleSection>
@@ -789,7 +789,7 @@ const ApartmentView = () => {
               <h4 className="text-sm font-mono text-muted-foreground flex items-center gap-1.5">
                 <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                 내 관심 아파트
-                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded ml-1">
+                <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded ml-1">
                   {allFavorites.length}
                 </span>
               </h4>
@@ -826,7 +826,7 @@ const ApartmentView = () => {
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-mono font-bold">{formatMan(apt.recentPrice)}</span>
-                          <span className="text-[10px] text-muted-foreground">전세율 {apt.jeonseRate}%</span>
+                          <span className="text-[11px] text-muted-foreground">전세율 {apt.jeonseRate}%</span>
                         </div>
                       </div>
 
@@ -857,11 +857,11 @@ const ApartmentView = () => {
                               <div className="flex items-center gap-4 mt-2 justify-center">
                                 <div className="flex items-center gap-1.5">
                                   <div className="w-3 h-0.5 bg-[hsl(var(--primary))] rounded" />
-                                  <span className="text-[10px] text-muted-foreground">실거래가</span>
+                                  <span className="text-[11px] text-muted-foreground">실거래가</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                   <div className="w-3 h-0.5 bg-[#f59e0b] rounded border-dashed" />
-                                  <span className="text-[10px] text-muted-foreground">전세가</span>
+                                  <span className="text-[11px] text-muted-foreground">전세가</span>
                                 </div>
                               </div>
                             </CollapsibleSection>
@@ -1004,7 +1004,7 @@ const ApartmentView = () => {
                         }`}
                       >
                         <p className="text-xs font-mono font-medium">{area}m2</p>
-                        <p className="text-[10px] text-muted-foreground">{sqmToPyeong(area)}평</p>
+                        <p className="text-[11px] text-muted-foreground">{sqmToPyeong(area)}평</p>
                       </button>
                     ))}
                   </div>

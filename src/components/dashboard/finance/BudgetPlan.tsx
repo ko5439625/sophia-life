@@ -198,7 +198,7 @@ const BudgetPlan = () => {
           <button
             onClick={handlePrevMonth}
             disabled={allMonths.indexOf(selectedMonth) <= 0}
-            className="p-2 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="p-2.5 -m-0.5 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -226,7 +226,7 @@ const BudgetPlan = () => {
           <button
             onClick={handleNextMonth}
             disabled={allMonths.indexOf(selectedMonth) >= allMonths.length - 1}
-            className="p-2 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="p-2.5 -m-0.5 rounded-lg hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -284,7 +284,7 @@ const BudgetPlan = () => {
             {!isGuest && (
               <button
                 onClick={() => setShowBulkApply(!showBulkApply)}
-                className="text-xs px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors flex items-center gap-1"
+                className="relative after:absolute after:-inset-2 after:content-[''] text-xs px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors flex items-center gap-1 whitespace-nowrap"
               >
                 <Copy className="h-3 w-3" />
                 연간 적용
@@ -295,7 +295,7 @@ const BudgetPlan = () => {
                 if (editMode) saveCurrent();
                 setEditMode(!editMode);
               }}
-              className="text-xs px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+              className="relative after:absolute after:-inset-2 after:content-[''] whitespace-nowrap text-xs px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
             >
               {editMode ? "저장" : "수정"}
             </button>
@@ -339,7 +339,7 @@ const BudgetPlan = () => {
                   </button>
                 </div>
                 {bulkEndMonth && (
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     {formatMonthLabel(getNextMonth(selectedMonth))} ~ {formatMonthLabel(bulkEndMonth)} ({
                       (() => {
                         let count = 0;
@@ -526,7 +526,7 @@ const BudgetPlan = () => {
       <div className="bg-card rounded-xl p-5">
         <button
           onClick={() => setShowHistory(!showHistory)}
-          className="w-full flex items-center justify-between"
+          className="w-full min-h-[40px] -my-2.5 flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
             <History className="h-4 w-4 text-muted-foreground" />

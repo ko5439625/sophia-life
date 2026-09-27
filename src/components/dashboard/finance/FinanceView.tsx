@@ -26,7 +26,7 @@ const FinanceView = ({ initialTab, onTabUsed, embedded }: { initialTab?: string 
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 relative px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors flex-shrink-0 ${
+            className={`flex-1 relative min-h-[40px] px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors flex-shrink-0 ${
               activeTab === tab.id
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"

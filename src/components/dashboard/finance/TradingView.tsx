@@ -264,7 +264,7 @@ const TradingView = () => {
   return (
     <div className="space-y-4">
       {/* 시장 심리 한 줄 */}
-      <div className="flex items-center justify-center gap-3 text-[10px] font-mono py-1.5 bg-card rounded-lg px-3">
+      <div className="flex items-center justify-center gap-3 text-[11px] font-mono py-1.5 bg-card rounded-lg px-3">
         <span className={fgColor(fg.nasdaq)}>나스닥 {fg.nasdaq ?? "--"} {fgLabel(fg.nasdaq)}</span>
         <span className="text-muted-foreground/30">·</span>
         <span className={fgColor(fg.kospi)}>코스피 {fg.kospi ?? "--"} {fgLabel(fg.kospi)}</span>
@@ -284,7 +284,7 @@ const TradingView = () => {
             {krTop.length > 0 && (
               <div>
                 <button onClick={() => setKrListOpen(!krListOpen)} className="w-full flex items-center justify-between py-1">
-                  <span className="text-[10px] font-bold">국장 Top {krTop.length}</span>
+                  <span className="text-[11px] font-bold">국장 Top {krTop.length}</span>
                   {krListOpen ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
                 </button>
                 {krListOpen && <div className="space-y-0.5">
@@ -292,10 +292,10 @@ const TradingView = () => {
                     <button key={s.symbol} onClick={() => quickBuy(s)}
                       className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-muted/50 rounded text-xs transition-colors">
                       <div className="flex items-center gap-2">
-                        <span className="w-5 text-[10px] text-muted-foreground">{i < 3 ? ["🥇","🥈","🥉"][i] : `${i+1}`}</span>
+                        <span className="w-5 text-[11px] text-muted-foreground">{i < 3 ? ["🥇","🥈","🥉"][i] : `${i+1}`}</span>
                         <span className="font-medium">{s.name}</span>
                       </div>
-                      <span className="text-[10px] font-mono text-muted-foreground">{fmt(s.price, s.currency)}</span>
+                      <span className="text-[11px] font-mono text-muted-foreground">{fmt(s.price, s.currency)}</span>
                     </button>
                   ))}
                 </div>}
@@ -304,7 +304,7 @@ const TradingView = () => {
             {usTop.length > 0 && (
               <div>
                 <button onClick={() => setUsListOpen(!usListOpen)} className="w-full flex items-center justify-between py-1">
-                  <span className="text-[10px] font-bold">미장 Top {usTop.length}</span>
+                  <span className="text-[11px] font-bold">미장 Top {usTop.length}</span>
                   {usListOpen ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
                 </button>
                 {usListOpen && <div className="space-y-0.5">
@@ -312,10 +312,10 @@ const TradingView = () => {
                     <button key={s.symbol} onClick={() => quickBuy(s)}
                       className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-muted/50 rounded text-xs transition-colors">
                       <div className="flex items-center gap-2">
-                        <span className="w-5 text-[10px] text-muted-foreground">{i < 3 ? ["🥇","🥈","🥉"][i] : `${i+1}`}</span>
+                        <span className="w-5 text-[11px] text-muted-foreground">{i < 3 ? ["🥇","🥈","🥉"][i] : `${i+1}`}</span>
                         <span className="font-medium">{s.name}</span>
                       </div>
-                      <span className="text-[10px] font-mono text-muted-foreground">{fmt(s.price, s.currency)}</span>
+                      <span className="text-[11px] font-mono text-muted-foreground">{fmt(s.price, s.currency)}</span>
                     </button>
                   ))}
                 </div>}
@@ -329,7 +329,7 @@ const TradingView = () => {
       <div className="flex justify-between items-center">
         <h3 className="text-sm font-bold">보유 포지션 ({openTrades.length})</h3>
         <button onClick={() => setShowBuyForm(!showBuyForm)}
-          className="flex items-center gap-1 text-xs text-primary"><ShoppingCart className="h-3.5 w-3.5" /> 매수</button>
+          className="relative after:absolute after:-inset-3 after:content-[''] flex items-center gap-1 whitespace-nowrap text-xs text-primary"><ShoppingCart className="h-3.5 w-3.5" /> 매수</button>
       </div>
 
       <AnimatePresence>
@@ -337,26 +337,26 @@ const TradingView = () => {
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <div className="bg-card rounded-xl p-4 space-y-3 border border-primary/20">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div><label className="text-[9px] text-muted-foreground">종목명</label>
+                <div><label className="text-[11px] text-muted-foreground">종목명</label>
                   <input value={buyForm.name} onChange={(e) => setBuyForm({ ...buyForm, name: e.target.value })} placeholder="삼성전자"
                     className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs" /></div>
-                <div><label className="text-[9px] text-muted-foreground">심볼</label>
+                <div><label className="text-[11px] text-muted-foreground">심볼</label>
                   <input value={buyForm.symbol} onChange={(e) => setBuyForm({ ...buyForm, symbol: e.target.value })} placeholder="005930.KS"
                     className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono" /></div>
-                <div><label className="text-[9px] text-muted-foreground">매수가</label>
+                <div><label className="text-[11px] text-muted-foreground">매수가</label>
                   <input type="number" value={buyForm.entryPrice} onChange={(e) => setBuyForm({ ...buyForm, entryPrice: e.target.value })}
                     className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono" /></div>
-                <div><label className="text-[9px] text-muted-foreground">수량</label>
+                <div><label className="text-[11px] text-muted-foreground">수량</label>
                   <input type="number" value={buyForm.quantity} onChange={(e) => setBuyForm({ ...buyForm, quantity: e.target.value })}
                     className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono" /></div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div><label className="text-[9px] text-primary">목표가 {quickAiLoading && <Loader2 className="h-2.5 w-2.5 animate-spin inline ml-1" />}</label>
+                <div><label className="text-[11px] text-primary">목표가 {quickAiLoading && <Loader2 className="h-2.5 w-2.5 animate-spin inline ml-1" />}</label>
                   <input type="number" value={buyForm.targetPrice} onChange={(e) => setBuyForm({ ...buyForm, targetPrice: e.target.value })}
                     placeholder={quickAiLoading ? "AI 분석 중..." : "자동 입력됨"}
                     className="w-full bg-background border border-primary/30 rounded px-2 py-1.5 text-xs font-mono placeholder:text-muted-foreground/30" />
                 </div>
-                <div><label className="text-[9px] text-destructive">손절가 {quickAiLoading && <Loader2 className="h-2.5 w-2.5 animate-spin inline ml-1" />}</label>
+                <div><label className="text-[11px] text-destructive">손절가 {quickAiLoading && <Loader2 className="h-2.5 w-2.5 animate-spin inline ml-1" />}</label>
                   <input type="number" value={buyForm.stopLoss} onChange={(e) => setBuyForm({ ...buyForm, stopLoss: e.target.value })}
                     placeholder={quickAiLoading ? "AI 분석 중..." : "자동 입력됨"}
                     className="w-full bg-background border border-destructive/30 rounded px-2 py-1.5 text-xs font-mono placeholder:text-muted-foreground/30" />
@@ -382,7 +382,7 @@ const TradingView = () => {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-sm font-bold">{t.name}</span>
-                <span className="text-[10px] text-muted-foreground ml-1">{t.symbol}</span>
+                <span className="text-[11px] text-muted-foreground ml-1">{t.symbol}</span>
               </div>
               <div className="text-right">
                 <span className={`text-sm font-mono font-bold ${pnl >= 0 ? "text-primary" : "text-destructive"}`}>
@@ -411,18 +411,18 @@ const TradingView = () => {
               })()}
             </div>
 
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>{t.quantity}주 · {t.entryDate}</span>
               <div className="flex gap-2">
                 {isSelling ? (
                   <div className="flex gap-1 items-center">
                     <input type="number" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} placeholder="매도가"
-                      className="w-20 bg-background border border-border rounded px-1.5 py-0.5 text-[10px] font-mono" />
-                    <button onClick={() => handleSell(t.id)} className="text-[10px] text-destructive font-bold">확인</button>
-                    <button onClick={() => setSellId(null)} className="text-[10px] text-muted-foreground">취소</button>
+                      className="w-20 bg-background border border-border rounded px-1.5 py-0.5 text-[11px] font-mono" />
+                    <button onClick={() => handleSell(t.id)} className="text-[11px] text-destructive font-bold">확인</button>
+                    <button onClick={() => setSellId(null)} className="text-[11px] text-muted-foreground">취소</button>
                   </div>
                 ) : (
-                  <button onClick={() => setSellId(t.id)} className="text-[10px] text-destructive font-bold hover:underline">매도</button>
+                  <button onClick={() => setSellId(t.id)} className="text-[11px] text-destructive font-bold hover:underline">매도</button>
                 )}
               </div>
             </div>
@@ -448,7 +448,7 @@ const TradingView = () => {
                     {pnl >= 0 ? "+" : ""}{Math.round(pnl).toLocaleString()}
                   </span>
                 </div>
-                <span className="text-[9px] text-muted-foreground">{t.entryDate} → {t.closeDate}</span>
+                <span className="text-[11px] text-muted-foreground">{t.entryDate} → {t.closeDate}</span>
               </div>
             );
           })}
@@ -466,7 +466,7 @@ const TradingView = () => {
                 <span className="text-xs font-bold">국장 뉴스 ({newsKr.length})</span>
                 {newsKrOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
               </button>
-              {newsKrOpen && <div className="px-4 pb-3 space-y-1">{newsKr.map((n, i) => <p key={i} className="text-[10px] text-muted-foreground">{n}</p>)}</div>}
+              {newsKrOpen && <div className="px-4 pb-3 space-y-1">{newsKr.map((n, i) => <p key={i} className="text-[11px] text-muted-foreground">{n}</p>)}</div>}
             </div>
           )}
 
@@ -476,7 +476,7 @@ const TradingView = () => {
                 <span className="text-xs font-bold">미장 뉴스 ({newsUs.length})</span>
                 {newsUsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
               </button>
-              {newsUsOpen && <div className="px-4 pb-3 space-y-1">{newsUs.map((n, i) => <p key={i} className="text-[10px] text-muted-foreground">{n}</p>)}</div>}
+              {newsUsOpen && <div className="px-4 pb-3 space-y-1">{newsUs.map((n, i) => <p key={i} className="text-[11px] text-muted-foreground">{n}</p>)}</div>}
             </div>
           )}
         </div>

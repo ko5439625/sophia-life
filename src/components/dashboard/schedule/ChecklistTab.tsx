@@ -166,7 +166,7 @@ const ChecklistTab = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => setWeekOffset((w) => w - 1)}
-          className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+          className="relative after:absolute after:-inset-2 after:content-[''] p-1.5 hover:bg-muted rounded-lg transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -186,7 +186,7 @@ const ChecklistTab = () => {
         </div>
         <button
           onClick={() => setWeekOffset((w) => w + 1)}
-          className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+          className="relative after:absolute after:-inset-2 after:content-[''] p-1.5 hover:bg-muted rounded-lg transition-colors"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -313,7 +313,7 @@ const ChecklistTab = () => {
               >
                 <button
                   onClick={() => toggleTodo(todo.id)}
-                  className={`w-5 h-5 rounded-md flex items-center justify-center transition-all flex-shrink-0 border-2 ${
+                  className={`relative after:absolute after:-inset-2.5 after:content-[''] w-5 h-5 rounded-md flex items-center justify-center transition-all flex-shrink-0 border-2 ${
                     todo.isDone
                       ? "bg-primary border-primary"
                       : "border-muted-foreground/30 hover:border-primary"
@@ -335,7 +335,7 @@ const ChecklistTab = () => {
                 <button
                   onClick={() => deleteTodo(todo.id)}
                   aria-label="삭제"
-                  className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2.5 -m-1.5 sm:p-1 sm:m-0"
+                  className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all flex h-10 w-10 -m-2.5 items-center justify-center sm:h-auto sm:w-auto sm:p-1 sm:m-0"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -360,7 +360,7 @@ const ChecklistTab = () => {
             />
             <button
               onClick={() => addTodo(effectiveSelectedDay)}
-              className="bg-primary text-primary-foreground hover:opacity-90 transition-opacity rounded-lg px-3 py-2 flex-shrink-0"
+              className="min-h-[40px] bg-primary text-primary-foreground hover:opacity-90 transition-opacity rounded-lg px-3 py-2 flex-shrink-0"
             >
               <Plus className="h-4 w-4" />
             </button>

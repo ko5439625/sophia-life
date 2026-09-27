@@ -351,7 +351,7 @@ const AssetOverview = () => {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <p className="text-sm text-muted-foreground">총 자산</p>
-              <span className="text-[10px] text-muted-foreground/50 font-mono">{now.getFullYear()}년 {now.getMonth() + 1}월 기준</span>
+              <span className="text-[11px] text-muted-foreground/50 font-mono">{now.getFullYear()}년 {now.getMonth() + 1}월 기준</span>
             </div>
             <div className="flex items-end gap-3">
               <span className="text-2xl sm:text-3xl font-mono font-extrabold break-all">
@@ -362,15 +362,15 @@ const AssetOverview = () => {
               </span>
             </div>
             {!isGuest && (
-              <p className="text-[10px] text-muted-foreground/50 mt-1">{"현금 + 투자 + 연금 + 부동산 (설정 > 현금보유 포함)"}</p>
+              <p className="text-[11px] text-muted-foreground/50 mt-1">{"현금 + 투자 + 연금 + 부동산 (설정 > 현금보유 포함)"}</p>
             )}
             <div className="flex gap-4 mt-2">
               <div>
-                <p className="text-[10px] text-muted-foreground">가용자산</p>
+                <p className="text-[11px] text-muted-foreground">가용자산</p>
                 <p className="text-sm font-mono font-bold text-primary">{isGuest ? "₩•••" : `${formatKRW(totalAvailable)}원`}</p>
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">연금 (비가용)</p>
+                <p className="text-[11px] text-muted-foreground">연금 (비가용)</p>
                 <p className="text-sm font-mono font-bold text-purple-400">{isGuest ? "₩•••" : `${formatKRW(totalPension)}원`}</p>
               </div>
             </div>
@@ -379,7 +379,7 @@ const AssetOverview = () => {
           {!isGuest && (
             <button
               onClick={() => setShowReport(!showReport)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+              className="relative after:absolute after:-inset-2 after:content-[''] flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
             >
               <Sparkles className="h-3.5 w-3.5" />
               AI 분석
@@ -468,7 +468,7 @@ const AssetOverview = () => {
               <button
                 key={mode}
                 onClick={() => setChartView(mode)}
-                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-all ${
+                className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] px-3 py-1 rounded-md text-[11px] font-medium transition-all ${
                   chartView === mode
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -484,14 +484,14 @@ const AssetOverview = () => {
             <ComposedChart data={activeChartData} barGap={2} barCategoryGap="20%">
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 10, fill: "#8B949E" }}
+                tick={{ fontSize: 11, fill: "#8B949E" }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 yAxisId="left"
                 tickFormatter={(v) => isGuest ? "•••" : `${(v / 10000).toFixed(0)}만`}
-                tick={{ fontSize: 10, fill: "#8B949E" }}
+                tick={{ fontSize: 11, fill: "#8B949E" }}
                 axisLine={false}
                 tickLine={false}
                 width={50}
@@ -500,7 +500,7 @@ const AssetOverview = () => {
                 yAxisId="right"
                 orientation="right"
                 tickFormatter={(v) => `${v}%`}
-                tick={{ fontSize: 10, fill: "#10B981" }}
+                tick={{ fontSize: 11, fill: "#10B981" }}
                 axisLine={false}
                 tickLine={false}
                 width={40}
@@ -519,7 +519,7 @@ const AssetOverview = () => {
                         <span className="font-mono font-bold">{formatKRW(point.assetTotal)}원</span>
                       </div>
                       <div className="text-muted-foreground/70">
-                        <span className="text-[10px]">저축 {formatCompact(point.planSavings)} · 비상금 {formatCompact(point.planEmergency)} · 투자 {formatCompact(point.planInvestment)}</span>
+                        <span className="text-[11px]">저축 {formatCompact(point.planSavings)} · 비상금 {formatCompact(point.planEmergency)} · 투자 {formatCompact(point.planInvestment)}</span>
                       </div>
                       <hr className="border-border" />
                       <div className="flex justify-between gap-6">
@@ -534,7 +534,7 @@ const AssetOverview = () => {
                         <span className="text-amber-400">전월 대비</span>
                         <span className="font-mono text-amber-400 font-bold">{point.momPct >= 0 ? "+" : ""}{point.momPct}%</span>
                       </div>
-                      <p className={`text-[10px] font-bold ${point.gap >= 0 ? "text-primary" : "text-destructive"}`}>
+                      <p className={`text-[11px] font-bold ${point.gap >= 0 ? "text-primary" : "text-destructive"}`}>
                         {point.gap >= 0 ? `실질 +${formatCompact(point.gap)}원` : `실질 -${formatCompact(Math.abs(point.gap))}원`}
                       </p>
                     </div>
@@ -609,7 +609,7 @@ const AssetOverview = () => {
                     plan: "계획", actual: "실제",
                     asset: "자산 총액", cpi: "물가", growth: "누적 증식(%)", mom: "전월 대비(%)",
                   };
-                  return <span className="text-[10px]">{labels[value] || ""}</span>;
+                  return <span className="text-[11px]">{labels[value] || ""}</span>;
                 }}
                 iconSize={8}
               />
@@ -642,14 +642,14 @@ const AssetOverview = () => {
             </div>
           );
         })()}
-        <p className="text-[10px] text-muted-foreground text-center mt-1">
+        <p className="text-[11px] text-muted-foreground text-center mt-1">
           {"연한 막대 = 계획 · 진한 막대 = 실제 · 빨간 점선 위로 자산이 올라가야 실질 성장"}
         </p>
       </div>
 
       {/* 자산 요약 카드 (2x2) */}
       {!isGuest && (
-        <p className="text-[10px] text-muted-foreground text-right font-mono">
+        <p className="text-[11px] text-muted-foreground text-right font-mono">
           {now.getFullYear()}년 {now.getMonth() + 1}월 기준 · 현재가 반영
         </p>
       )}
@@ -657,46 +657,46 @@ const AssetOverview = () => {
         <div className="bg-card rounded-xl p-4 border border-primary/15">
           <div className="flex items-center gap-2 mb-1.5">
             <Wallet className="h-4 w-4 text-primary" />
-            <span className="text-[10px] text-muted-foreground">현금자산</span>
-            <span className="text-[10px] text-primary font-mono ml-auto">{cashPct}%</span>
+            <span className="text-[11px] text-muted-foreground">현금자산</span>
+            <span className="text-[11px] text-primary font-mono ml-auto">{cashPct}%</span>
           </div>
           <p className="text-lg font-mono font-bold text-primary">
             {isGuest ? "₩•••" : `${formatCompact(totalCash)}원`}
           </p>
-          <p className="text-[10px] text-muted-foreground/60 mt-0.5">{"저축 + 비상금 + 현금보유 (설정)"}</p>
+          <p className="text-[11px] text-muted-foreground/60 mt-0.5">{"저축 + 비상금 + 현금보유 (설정)"}</p>
         </div>
         <div className="bg-card rounded-xl p-4 border border-blue-500/15">
           <div className="flex items-center gap-2 mb-1.5">
             <BarChart3 className="h-4 w-4 text-blue-500" />
-            <span className="text-[10px] text-muted-foreground">투자자산</span>
-            <span className="text-[10px] text-blue-500 font-mono ml-auto">{investPct}%</span>
+            <span className="text-[11px] text-muted-foreground">투자자산</span>
+            <span className="text-[11px] text-blue-500 font-mono ml-auto">{investPct}%</span>
           </div>
           <p className="text-lg font-mono font-bold text-blue-500">
             {isGuest ? "₩•••" : `${formatCompact(totalInvestment)}원`}
           </p>
-          <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+          <p className="text-[11px] text-muted-foreground/60 mt-0.5">
             {state.holdings.length > 0 ? `${state.holdings.length}종목 보유` : "보유 종목 없음"}
           </p>
         </div>
         <div className="bg-card rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <Banknote className="h-4 w-4 text-primary" />
-            <span className="text-[10px] text-muted-foreground">저축</span>
+            <span className="text-[11px] text-muted-foreground">저축</span>
           </div>
           <p className="text-base font-mono font-bold text-primary">
             {isGuest ? "₩•••" : `${formatCompact(effectiveCashSavings)}원`}
           </p>
-          <p className="text-[10px] text-muted-foreground/60 mt-0.5">기초 {formatCompact(state.cashSavings)} + 적립분</p>
+          <p className="text-[11px] text-muted-foreground/60 mt-0.5">기초 {formatCompact(state.cashSavings)} + 적립분</p>
         </div>
         <div className="bg-card rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <ShieldCheck className="h-4 w-4 text-yellow-500" />
-            <span className="text-[10px] text-muted-foreground">비상금</span>
+            <span className="text-[11px] text-muted-foreground">비상금</span>
           </div>
           <p className="text-base font-mono font-bold text-yellow-500">
             {isGuest ? "₩•••" : `${formatCompact(effectiveEmergencyFund)}원`}
           </p>
-          <p className="text-[10px] text-muted-foreground/60 mt-0.5">기초 {formatCompact(state.emergencyFund)} + 적립분</p>
+          <p className="text-[11px] text-muted-foreground/60 mt-0.5">기초 {formatCompact(state.emergencyFund)} + 적립분</p>
         </div>
       </div>
 
@@ -742,8 +742,8 @@ const AssetOverview = () => {
         <div className="flex justify-center gap-3 mt-1 flex-wrap">
           {pieData.map((d) => (
             <div key={d.name} className="text-center">
-              <p className="text-[10px] text-muted-foreground">{d.name}</p>
-              <p className="text-[10px] font-mono font-bold" style={{ color: d.color }}>
+              <p className="text-[11px] text-muted-foreground">{d.name}</p>
+              <p className="text-[11px] font-mono font-bold" style={{ color: d.color }}>
                 {isGuest ? "₩•••" : `${formatCompact(d.value)}원`}
               </p>
             </div>
@@ -782,15 +782,15 @@ const AssetOverview = () => {
                     >
                       <div>
                         <span className="text-sm font-mono text-muted-foreground">{m.month}</span>
-                        <p className="text-[10px] text-muted-foreground/60">
+                        <p className="text-[11px] text-muted-foreground/60">
                           +저축 {isGuest ? "₩•••" : formatCompact(monthlySavings)} / +비상 {isGuest ? "₩•••" : formatCompact(monthlyEmergency)}
                         </p>
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-mono font-medium">{isGuest ? "₩•••" : `${formatCompact(m.total)}원`}</span>
                         <div className="flex gap-2 mt-0.5">
-                          <span className="text-[10px] text-primary font-mono">현금 {isGuest ? "₩•••" : formatCompact(m.cash)}</span>
-                          <span className="text-[10px] text-blue-500 font-mono">투자 {isGuest ? "₩•••" : formatCompact(m.investment)}</span>
+                          <span className="text-[11px] text-primary font-mono">현금 {isGuest ? "₩•••" : formatCompact(m.cash)}</span>
+                          <span className="text-[11px] text-blue-500 font-mono">투자 {isGuest ? "₩•••" : formatCompact(m.investment)}</span>
                         </div>
                       </div>
                     </div>

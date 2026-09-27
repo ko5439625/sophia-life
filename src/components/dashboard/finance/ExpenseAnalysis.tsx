@@ -149,23 +149,23 @@ const ExpenseAnalysis = () => {
         <button
           onClick={() => canGoPrev && setSelectedMonth(sortedMonths[currentIdx - 1])}
           disabled={!canGoPrev}
-          className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-20 transition-colors"
+          className="relative after:absolute after:-inset-1.5 after:content-[''] p-1.5 rounded-lg hover:bg-muted disabled:opacity-20 transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <span className="text-sm font-bold font-mono min-w-[100px] text-center">
           {formatMonthLabel(selectedMonth)}
           {selectedMonth > currentMonth && (
-            <span className="ml-1.5 text-[10px] text-primary font-normal">(미래)</span>
+            <span className="ml-1.5 text-[11px] text-primary font-normal">(미래)</span>
           )}
           {selectedMonth < currentMonth && (
-            <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">(지난달)</span>
+            <span className="ml-1.5 text-[11px] text-muted-foreground font-normal">(지난달)</span>
           )}
         </span>
         <button
           onClick={() => canGoNext && setSelectedMonth(sortedMonths[currentIdx + 1])}
           disabled={!canGoNext}
-          className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-20 transition-colors"
+          className="relative after:absolute after:-inset-1.5 after:content-[''] p-1.5 rounded-lg hover:bg-muted disabled:opacity-20 transition-colors"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -177,7 +177,7 @@ const ExpenseAnalysis = () => {
           <p className="text-sm text-muted-foreground font-mono">{selectedMonth} 지출 현황</p>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+            className="relative after:absolute after:-inset-3 after:content-[''] flex items-center gap-1 whitespace-nowrap text-xs text-primary hover:text-primary/80 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             지출 추가
@@ -187,7 +187,7 @@ const ExpenseAnalysis = () => {
         {/* Row 1: 계획 지출 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-muted-foreground">계획 지출</span>
+            <span className="text-[11px] text-muted-foreground">계획 지출</span>
             <span className="text-xs font-mono">
               <span className="text-destructive font-bold">{formatAmount(budgetFunded)}</span>
               <span className="text-muted-foreground"> / {formatAmount(spendingBudget)}</span>
@@ -199,7 +199,7 @@ const ExpenseAnalysis = () => {
               style={{ width: `${Math.min(spendingPct, 100)}%` }}
             />
           </div>
-          <div className="flex justify-between text-[10px] text-muted-foreground">
+          <div className="flex justify-between text-[11px] text-muted-foreground">
             <span>잔여 {spendingRemaining >= 0 ? formatAmount(spendingRemaining) : `-${formatAmount(Math.abs(spendingRemaining))}`}</span>
             <span>{spendingPct}%</span>
           </div>
@@ -209,19 +209,19 @@ const ExpenseAnalysis = () => {
         {extraSpending > 0 && (
           <div className="mt-3 pt-3 border-t border-border space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] text-amber-500 font-bold">추가 지출</span>
+              <span className="text-[11px] text-amber-500 font-bold">추가 지출</span>
               <span className="text-xs font-mono font-bold text-amber-500">{formatAmount(extraSpending)}</span>
             </div>
             {cashFunded > 0 && (
               <div className="flex items-center justify-between pl-2">
-                <span className="text-[10px] text-muted-foreground">현금저축에서</span>
-                <span className="text-[10px] font-mono text-muted-foreground">-{formatAmount(cashFunded)}</span>
+                <span className="text-[11px] text-muted-foreground">현금저축에서</span>
+                <span className="text-[11px] font-mono text-muted-foreground">-{formatAmount(cashFunded)}</span>
               </div>
             )}
             {emergencyFunded > 0 && (
               <div className="flex items-center justify-between pl-2">
-                <span className="text-[10px] text-muted-foreground">비상금에서</span>
-                <span className="text-[10px] font-mono text-muted-foreground">-{formatAmount(emergencyFunded)}</span>
+                <span className="text-[11px] text-muted-foreground">비상금에서</span>
+                <span className="text-[11px] font-mono text-muted-foreground">-{formatAmount(emergencyFunded)}</span>
               </div>
             )}
           </div>
@@ -235,11 +235,11 @@ const ExpenseAnalysis = () => {
           </div>
           <div className="grid grid-cols-2 gap-3 mt-2">
             <div className="bg-primary/5 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-muted-foreground">현금저축 잔액 <span className="text-muted-foreground/50">({formatMonthLabel(selectedMonth)})</span></p>
+              <p className="text-[11px] text-muted-foreground">현금저축 잔액 <span className="text-muted-foreground/50">({formatMonthLabel(selectedMonth)})</span></p>
               <p className="text-sm font-mono font-bold text-primary">{formatAmount(monthCashSavings)}</p>
             </div>
             <div className="bg-yellow-500/5 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-muted-foreground">비상금 잔액 <span className="text-muted-foreground/50">({formatMonthLabel(selectedMonth)})</span></p>
+              <p className="text-[11px] text-muted-foreground">비상금 잔액 <span className="text-muted-foreground/50">({formatMonthLabel(selectedMonth)})</span></p>
               <p className="text-sm font-mono font-bold text-yellow-500">{formatAmount(monthEmergencyFund)}</p>
             </div>
           </div>
@@ -307,7 +307,7 @@ const ExpenseAnalysis = () => {
                     >
                       <div className="font-medium">{opt.label}</div>
                       {opt.balance >= 0 && (
-                        <div className="text-[10px] font-mono mt-0.5">{formatKRW(opt.balance)}원</div>
+                        <div className="text-[11px] font-mono mt-0.5">{formatKRW(opt.balance)}원</div>
                       )}
                     </button>
                   ))}
@@ -348,7 +348,7 @@ const ExpenseAnalysis = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono text-muted-foreground">{formatAmount(cat.spent)}</span>
-                  <span className="text-[10px] text-muted-foreground">/</span>
+                  <span className="text-[11px] text-muted-foreground">/</span>
                   <span className="text-xs font-mono">{formatAmount(cat.budget)}</span>
                 </div>
               </div>
@@ -359,7 +359,7 @@ const ExpenseAnalysis = () => {
                 />
               </div>
               {cat.over && (
-                <p className="text-[10px] text-destructive flex items-center gap-1 mt-1">
+                <p className="text-[11px] text-destructive flex items-center gap-1 mt-1">
                   <AlertTriangle className="h-3 w-3" />
                   {formatAmount(Math.abs(cat.remaining))} 초과
                 </p>
@@ -396,22 +396,22 @@ const ExpenseAnalysis = () => {
                     <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{exp.category}</span>
                     <span className="text-sm">{formatAmount(exp.amount)}</span>
                     {exp.deductFrom && exp.deductFrom !== "none" && (
-                      <span className="text-[10px] px-1 py-0.5 rounded bg-primary/10 text-primary">
+                      <span className="text-[11px] px-1 py-0.5 rounded bg-primary/10 text-primary">
                         {exp.deductFrom === "cashSavings" ? "현금" : "비상금"}
                       </span>
                     )}
                   </div>
-                  {exp.memo && <p className="text-[10px] text-muted-foreground mt-0.5">{exp.memo}</p>}
+                  {exp.memo && <p className="text-[11px] text-muted-foreground mt-0.5">{exp.memo}</p>}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground font-mono">{exp.date}</span>
+                  <span className="text-[11px] text-muted-foreground font-mono">{exp.date}</span>
                   <button
                     onClick={async () => {
                       if (!(await confirmDialog({ title: "삭제할까요?", description: `'${exp.memo || exp.category}' 내역을 삭제하면 되돌릴 수 없어요.`, confirmText: "삭제" }))) return;
                       removeExpense(exp.id);
                     }}
                     aria-label="삭제"
-                    className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-2.5 -m-1.5 sm:p-1 sm:m-0 hover:text-destructive"
+                    className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-3.5 -m-2.5 sm:p-1 sm:m-0 hover:text-destructive"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -491,7 +491,7 @@ function MonthlyHistory({
             <div className="px-5 pb-4 space-y-4">
               {Array.from(byYear.entries()).map(([year, yearMonths]) => (
                 <div key={year}>
-                  <p className="text-[10px] text-muted-foreground font-mono mb-2">{year}년</p>
+                  <p className="text-[11px] text-muted-foreground font-mono mb-2">{year}년</p>
                   <div className="space-y-2">
                     {yearMonths.map((month) => {
                       const budget = budgets.find((b) => b.month === month);
@@ -521,7 +521,7 @@ function MonthlyHistory({
                             />
                           </div>
                           {unbudgetedCats.size > 0 && (
-                            <p className="text-[10px] text-amber-500 mt-1">
+                            <p className="text-[11px] text-amber-500 mt-1">
                               예산 외: {Array.from(unbudgetedCats).join(", ")}
                             </p>
                           )}

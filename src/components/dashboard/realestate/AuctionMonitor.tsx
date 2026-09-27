@@ -333,7 +333,7 @@ const AuctionMonitor = () => {
             경매 물건 관리
           </h3>
           <button onClick={() => { resetForm(); setShowForm(true); }}
-            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors">
+            className="relative after:absolute after:-inset-3 after:content-[''] flex items-center gap-1 whitespace-nowrap text-xs text-primary hover:text-primary/80 transition-colors">
             <Plus className="h-3.5 w-3.5" /> 물건 등록
           </button>
         </div>
@@ -350,7 +350,7 @@ const AuctionMonitor = () => {
           <div className="flex gap-1">
             {["전체", ...STATUSES].map((s) => (
               <button key={s} onClick={() => setFilterStatus(s)}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
                   filterStatus === s ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted text-muted-foreground border border-transparent"
                 }`}>{s}</button>
             ))}
@@ -358,7 +358,7 @@ const AuctionMonitor = () => {
           <div className="flex gap-1">
             {["전체", "아파트", "다세대/빌라", "오피스텔"].map((t) => (
               <button key={t} onClick={() => setFilterType(t)}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
                   filterType === t ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted text-muted-foreground border border-transparent"
                 }`}>{t}</button>
             ))}
@@ -378,12 +378,12 @@ const AuctionMonitor = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">사건번호 *</label>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">사건번호 *</label>
                   <input type="text" value={form.case_no} onChange={(e) => setForm({ ...form, case_no: e.target.value })}
                     placeholder="2025타경12345" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">법원</label>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">법원</label>
                   <select value={form.court} onChange={(e) => setForm({ ...form, court: e.target.value })}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30">
                     {COURTS.map((c) => <option key={c} value={c}>{c}지방법원</option>)}
@@ -393,33 +393,33 @@ const AuctionMonitor = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">물건종류</label>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">물건종류</label>
                   <select value={form.property_type} onChange={(e) => setForm({ ...form, property_type: e.target.value })}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30">
                     {PROPERTY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">면적 (m2)</label>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">면적 (m2)</label>
                   <input type="number" value={form.area_m2} onChange={(e) => setForm({ ...form, area_m2: e.target.value })}
                     placeholder="84.9" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">소재지 *</label>
+                <label className="text-[11px] text-muted-foreground mb-1 block">소재지 *</label>
                 <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
                   placeholder="서울시 강남구 개포동 ..." className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">감정가 (만원)</label>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">감정가 (만원)</label>
                   <input type="number" value={form.appraisal_price} onChange={(e) => setForm({ ...form, appraisal_price: e.target.value })}
                     placeholder="100000 (= 10억)" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">최저매각가 (만원)</label>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">최저매각가 (만원)</label>
                   <input type="number" value={form.min_bid_price} onChange={(e) => setForm({ ...form, min_bid_price: e.target.value })}
                     placeholder="80000 (= 8억)" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
@@ -427,17 +427,17 @@ const AuctionMonitor = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">매각기일</label>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">매각기일</label>
                   <input type="date" value={form.bid_date} onChange={(e) => setForm({ ...form, bid_date: e.target.value })}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">유찰횟수</label>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">유찰횟수</label>
                   <input type="number" value={form.bid_count} onChange={(e) => setForm({ ...form, bid_count: e.target.value })}
                     min="0" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">상태</label>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">상태</label>
                   <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30">
                     {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -446,13 +446,13 @@ const AuctionMonitor = () => {
               </div>
 
               <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">법원 경매정보 URL (선택)</label>
+                <label className="text-[11px] text-muted-foreground mb-1 block">법원 경매정보 URL (선택)</label>
                 <input type="text" value={form.detail_url} onChange={(e) => setForm({ ...form, detail_url: e.target.value })}
                   placeholder="https://www.courtauction.go.kr/..." className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
 
               <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">메모</label>
+                <label className="text-[11px] text-muted-foreground mb-1 block">메모</label>
                 <textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })}
                   placeholder="특이사항, 권리관계 등 메모..." rows={2}
                   className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
@@ -499,7 +499,7 @@ const AuctionMonitor = () => {
           <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-500/5 border-b border-amber-400/20">
             <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
             <span className="text-xs font-bold text-amber-600">관심 물건</span>
-            <span className="text-[10px] text-muted-foreground">{favoritedItems.length}건</span>
+            <span className="text-[11px] text-muted-foreground">{favoritedItems.length}건</span>
           </div>
           <div className="divide-y divide-border/50">
             {favoritedItems.map((item) => (
@@ -570,16 +570,16 @@ const AuctionCard = ({ item, onToggleFavorite, onEdit, onDelete, onAnalyze, isEx
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${getStatusColor(item.status)}`}>{item.status}</span>
-            <span className="text-[10px] text-muted-foreground font-mono">{item.case_no}</span>
-            <span className="text-[10px] text-muted-foreground">{item.court}</span>
+            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${getStatusColor(item.status)}`}>{item.status}</span>
+            <span className="text-[11px] text-muted-foreground font-mono">{item.case_no}</span>
+            <span className="text-[11px] text-muted-foreground">{item.court}</span>
             {item.bid_count > 0 && (
-              <span className="text-[9px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded font-medium">
+              <span className="text-[11px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded font-medium">
                 {item.bid_count}회 유찰
               </span>
             )}
             {analysis && (
-              <span className="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium">AI 분석</span>
+              <span className="text-[11px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium">AI 분석</span>
             )}
           </div>
           <div className="flex items-center gap-2 mt-1">
@@ -604,19 +604,19 @@ const AuctionCard = ({ item, onToggleFavorite, onEdit, onDelete, onAnalyze, isEx
               {/* 상세 정보 */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div>
-                  <span className="text-[10px] text-muted-foreground block">물건종류</span>
+                  <span className="text-[11px] text-muted-foreground block">물건종류</span>
                   <span className="font-medium">{item.property_type}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-muted-foreground block">매각기일</span>
+                  <span className="text-[11px] text-muted-foreground block">매각기일</span>
                   <span className="font-medium font-mono">{item.bid_date || "미정"}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-muted-foreground block">면적</span>
+                  <span className="text-[11px] text-muted-foreground block">면적</span>
                   <span className="font-medium font-mono">{item.area_m2 ? `${item.area_m2}m2 (${item.area_pyeong}평)` : "-"}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-muted-foreground block">매각가율</span>
+                  <span className="text-[11px] text-muted-foreground block">매각가율</span>
                   <span className={`font-bold ${bidRate <= 50 ? "text-green-600" : bidRate <= 70 ? "text-amber-600" : ""}`}>
                     {bidRate}% ({item.bid_count}회 유찰)
                   </span>
@@ -635,27 +635,27 @@ const AuctionCard = ({ item, onToggleFavorite, onEdit, onDelete, onAnalyze, isEx
                   <div className="flex items-center gap-2">
                     <Brain className="h-4 w-4 text-primary" />
                     <span className="text-xs font-bold">AI 분석 결과</span>
-                    <span className={`text-[10px] font-bold ${getRiskColor(analysis.riskLevel)}`}>
+                    <span className={`text-[11px] font-bold ${getRiskColor(analysis.riskLevel)}`}>
                       위험도: {analysis.riskLevel === "low" ? "낮음" : analysis.riskLevel === "medium" ? "보통" : "높음"}
                     </span>
-                    <span className="text-[10px] font-mono text-primary">투자점수: {analysis.investmentScore}/10</span>
+                    <span className="text-[11px] font-mono text-primary">투자점수: {analysis.investmentScore}/10</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <span className="text-[10px] font-bold text-muted-foreground block mb-1">시세 분석</span>
+                      <span className="text-[11px] font-bold text-muted-foreground block mb-1">시세 분석</span>
                       <p className="text-foreground leading-relaxed">{analysis.marketPrice}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-muted-foreground block mb-1">입찰 추천</span>
+                      <span className="text-[11px] font-bold text-muted-foreground block mb-1">입찰 추천</span>
                       <p className="text-foreground leading-relaxed">{analysis.bidRecommendation}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-muted-foreground block mb-1">권리분석</span>
+                      <span className="text-[11px] font-bold text-muted-foreground block mb-1">권리분석</span>
                       <p className="text-foreground leading-relaxed">{analysis.rightAnalysis}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-muted-foreground block mb-1">임차인/명도</span>
+                      <span className="text-[11px] font-bold text-muted-foreground block mb-1">임차인/명도</span>
                       <p className="text-foreground leading-relaxed">{analysis.tenantStatus}</p>
                       <p className="text-muted-foreground mt-1">{analysis.evictionRisk}</p>
                     </div>
@@ -663,10 +663,10 @@ const AuctionCard = ({ item, onToggleFavorite, onEdit, onDelete, onAnalyze, isEx
 
                   {analysis.riskFactors && analysis.riskFactors.length > 0 && (
                     <div>
-                      <span className="text-[10px] font-bold text-muted-foreground block mb-1">위험 요소</span>
+                      <span className="text-[11px] font-bold text-muted-foreground block mb-1">위험 요소</span>
                       <div className="flex flex-wrap gap-1">
                         {analysis.riskFactors.map((rf, i) => (
-                          <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-600">
+                          <span key={i} className="text-[11px] px-2 py-0.5 rounded bg-red-500/10 text-red-600">
                             <AlertTriangle className="h-2.5 w-2.5 inline mr-1" />{rf}
                           </span>
                         ))}
@@ -675,7 +675,7 @@ const AuctionCard = ({ item, onToggleFavorite, onEdit, onDelete, onAnalyze, isEx
                   )}
 
                   <div className="text-xs text-foreground border-t border-border/50 pt-2">
-                    <span className="text-[10px] font-bold text-muted-foreground block mb-1">종합 의견</span>
+                    <span className="text-[11px] font-bold text-muted-foreground block mb-1">종합 의견</span>
                     <p className="leading-relaxed">{analysis.summary}</p>
                   </div>
                 </div>

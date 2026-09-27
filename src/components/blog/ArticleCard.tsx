@@ -76,6 +76,11 @@ const ArticleCard = ({ post, index, onTagClick, activeTag, likeCount }: ArticleC
           )}
         </div>
         <h3 className="text-sm font-sans font-semibold leading-snug mb-1.5 group-hover:translate-x-0.5 transition-transform duration-300 line-clamp-2">
+          {post.isPublic === false && (
+            <span className="mr-1.5 inline-flex items-center rounded bg-muted px-1.5 py-0.5 align-middle text-[11px] font-medium text-muted-foreground">
+              🔒 비공개
+            </span>
+          )}
           {post.title}
         </h3>
         <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2">

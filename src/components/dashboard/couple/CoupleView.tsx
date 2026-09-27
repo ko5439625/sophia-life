@@ -333,7 +333,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                       <button
                         key={e}
                         onClick={() => setNewDdayEmoji(e)}
-                        className={`text-lg p-1 rounded transition-all ${
+                        className={`flex h-10 w-10 items-center justify-center text-lg rounded-lg transition-all ${
                           newDdayEmoji === e
                             ? "bg-primary/15 ring-1 ring-primary/30"
                             : "hover:bg-muted"
@@ -346,7 +346,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                 </div>
                 <button
                   onClick={addDday}
-                  className="w-full bg-primary text-primary-foreground rounded-lg py-2 text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  className="w-full min-h-[44px] bg-primary text-primary-foreground rounded-lg py-2 text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                 >
                   <Plus className="h-4 w-4" /> 추가
                 </button>
@@ -391,7 +391,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                         <button
                           onClick={() => deleteDday(dday.id)}
                           aria-label="삭제"
-                        className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2 -m-2 sm:p-0 sm:m-0"
+                        className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-3 -m-3 sm:p-0 sm:m-0"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -415,7 +415,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                   <div className="flex gap-1">
                     <button
                       onClick={() => setNewMemoAuthor("sophia")}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                      className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                         newMemoAuthor === "sophia"
                           ? "bg-pink-500/15 text-pink-400 ring-1 ring-pink-400/30"
                           : "bg-muted text-muted-foreground hover:text-foreground"
@@ -426,7 +426,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                     </button>
                     <button
                       onClick={() => setNewMemoAuthor("partner")}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                      className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                         newMemoAuthor === "partner"
                           ? "bg-blue-500/15 text-blue-400 ring-1 ring-blue-400/30"
                           : "bg-muted text-muted-foreground hover:text-foreground"
@@ -457,7 +457,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                       handleAddMemo(newMemoAuthor, newMemoText.trim());
                       setNewMemoText("");
                     }}
-                    className="bg-primary text-primary-foreground rounded-full p-2.5 hover:opacity-90 transition-opacity"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-opacity"
                   >
                     <Send className="h-4 w-4" />
                   </button>
@@ -502,7 +502,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => toggleMemoPin(memo.id)}
-                              className={`flex items-center gap-1 text-[11px] font-medium transition-colors rounded-full px-1.5 py-0.5 ${
+                              className={`flex min-h-[40px] items-center gap-1 whitespace-nowrap text-[11px] font-medium transition-colors rounded-full px-2 -my-2 ${
                                 memo.pinned
                                   ? "text-amber-500 bg-amber-500/10"
                                   : "text-muted-foreground/50 hover:text-muted-foreground"
@@ -514,8 +514,9 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                             </button>
                             <button
                               onClick={() => handleDeleteMemo(memo.id)}
-                              className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/50 hover:text-destructive transition-colors rounded-full px-1.5 py-0.5"
+                              className="-my-2 flex h-10 w-10 items-center justify-center text-[11px] font-medium text-muted-foreground/50 hover:text-destructive transition-colors rounded-full"
                               title="삭제"
+                              aria-label="삭제"
                             >
                               <Trash2 className="h-2.5 w-2.5" />
                             </button>
@@ -642,7 +643,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                       <button
                         key={cat}
                         onClick={() => setNewWishCategory(cat)}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        className={`flex-1 flex min-h-[40px] items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                           newWishCategory === cat
                             ? "bg-primary/15 text-primary"
                             : "bg-muted text-muted-foreground hover:text-foreground"
@@ -656,7 +657,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                 </div>
                 <button
                   onClick={addWish}
-                  className="w-full bg-primary text-primary-foreground rounded-lg py-2 text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  className="w-full min-h-[44px] bg-primary text-primary-foreground rounded-lg py-2 text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                 >
                   <Plus className="h-4 w-4" /> 추가
                 </button>
@@ -676,7 +677,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                     >
                       <button
                         onClick={() => toggleWish(wish.id)}
-                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                        className={`relative after:absolute after:-inset-2.5 after:content-[''] w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                           wish.isDone
                             ? "bg-primary border-primary"
                             : "border-muted-foreground/30 hover:border-primary"
@@ -712,7 +713,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                       <button
                         onClick={() => deleteWish(wish.id)}
                         aria-label="삭제"
-                        className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2 -m-2 sm:p-0 sm:m-0"
+                        className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-3 -m-3 sm:p-0 sm:m-0"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

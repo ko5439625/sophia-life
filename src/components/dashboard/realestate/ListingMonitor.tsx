@@ -337,7 +337,7 @@ const ListingMonitor = () => {
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold">내 모니터링 필터</h3>
           <button onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors">
+            className="-my-2 -mr-2 flex min-h-[40px] items-center gap-1 px-2 text-xs text-primary hover:text-primary/80 transition-colors">
             <Plus className="h-3.5 w-3.5" /> 필터 추가
           </button>
         </div>
@@ -354,14 +354,14 @@ const ListingMonitor = () => {
 
                 {/* 지역 선택 (다중) */}
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1.5 block font-medium">
+                  <label className="text-[11px] text-muted-foreground mb-1.5 block font-medium">
                     지역 선택 {form.regionCodes.length > 0 && <span className="text-primary">({form.regionCodes.length}개)</span>}
                   </label>
                   {/* 선택된 지역 태그 */}
                   {form.regionNames.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
                       {form.regionNames.map((name, i) => (
-                        <span key={form.regionCodes[i]} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-medium">
+                        <span key={form.regionCodes[i]} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-[11px] font-medium">
                           {name}
                           <button onClick={() => toggleRegion(form.regionCodes[i], name)} className="hover:text-primary/60"><X className="h-2.5 w-2.5" /></button>
                         </span>
@@ -407,7 +407,7 @@ const ListingMonitor = () => {
 
                 {/* 매매유형 */}
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1.5 block font-medium">매매유형</label>
+                  <label className="text-[11px] text-muted-foreground mb-1.5 block font-medium">매매유형</label>
                   <div className="flex gap-2">
                     {[
                       { value: "A1", label: "매매" },
@@ -429,7 +429,7 @@ const ListingMonitor = () => {
 
                 {/* 가격 범위 */}
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1.5 block font-medium">
+                  <label className="text-[11px] text-muted-foreground mb-1.5 block font-medium">
                     가격 범위 ({priceUnit})
                   </label>
                   {/* 프리셋 버튼 */}
@@ -439,7 +439,7 @@ const ListingMonitor = () => {
                       return (
                         <button key={p.label}
                           onClick={() => setForm({ ...form, priceMin: p.min, priceMax: p.max })}
-                          className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
                             isActive
                               ? "bg-primary/15 text-primary border border-primary/30"
                               : "bg-muted text-muted-foreground hover:bg-muted/80 border border-transparent"
@@ -456,20 +456,20 @@ const ListingMonitor = () => {
                     <span className="text-xs text-muted-foreground flex-shrink-0">~</span>
                     <input type="number" value={form.priceMax} onChange={(e) => setForm({ ...form, priceMax: e.target.value })}
                       placeholder="최대" className="w-full bg-background border border-border rounded-lg px-2.5 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                    <span className="text-[10px] text-muted-foreground flex-shrink-0">{priceUnit}</span>
+                    <span className="text-[11px] text-muted-foreground flex-shrink-0">{priceUnit}</span>
                   </div>
                 </div>
 
                 {/* 면적 */}
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1.5 block font-medium">최소 면적 (평)</label>
+                  <label className="text-[11px] text-muted-foreground mb-1.5 block font-medium">최소 면적 (평)</label>
                   <div className="flex gap-1.5 flex-wrap mb-2">
                     {AREA_PRESETS.map((p) => {
                       const isActive = form.areaMin === p.min;
                       return (
                         <button key={p.label}
                           onClick={() => setForm({ ...form, areaMin: p.min })}
-                          className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
                             isActive
                               ? "bg-primary/15 text-primary border border-primary/30"
                               : "bg-muted text-muted-foreground hover:bg-muted/80 border border-transparent"
@@ -485,11 +485,11 @@ const ListingMonitor = () => {
 
                 {/* 필터 이름 */}
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1.5 block font-medium">필터 이름 (선택)</label>
+                  <label className="text-[11px] text-muted-foreground mb-1.5 block font-medium">필터 이름 (선택)</label>
                   <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
                     placeholder={autoName || "자동 생성됩니다"} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   {autoName && !form.name && (
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">미입력 시: "{autoName}"</p>
+                    <p className="text-[11px] text-muted-foreground/60 mt-1">미입력 시: "{autoName}"</p>
                   )}
                 </div>
 
@@ -512,7 +512,7 @@ const ListingMonitor = () => {
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-1 flex-wrap">
             <button onClick={() => setActiveFilter(null)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0 transition-colors ${
+              className={`min-h-[40px] px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0 transition-colors ${
                 activeFilter === null ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}>
               전체 ({listings.filter((l) => l.status === "active").length})
@@ -520,17 +520,17 @@ const ListingMonitor = () => {
             {filters.map((f) => {
               const count = listings.filter((l) => l.filter_id === f.id && l.status === "active").length;
               return (
-                <div key={f.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0 transition-colors cursor-pointer ${
+                <div key={f.id} className={`flex min-h-[40px] items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium flex-shrink-0 transition-colors cursor-pointer ${
                   activeFilter === f.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}>
                   <span onClick={() => setActiveFilter(f.id)}>{f.name}</span>
-                  <span className={`text-[9px] ${activeFilter === f.id ? "opacity-70" : "opacity-50"}`}>
+                  <span className={`text-[11px] ${activeFilter === f.id ? "opacity-70" : "opacity-50"}`}>
                     {count}건
                   </span>
                   <button onClick={(e) => { e.stopPropagation(); handleEditFilter(f); }}
-                    className="ml-0.5 opacity-50 hover:opacity-100"><Pencil className="h-2.5 w-2.5" /></button>
+                    aria-label="필터 수정" className="relative -my-1 flex h-8 w-8 items-center justify-center rounded-md opacity-60 hover:opacity-100 after:absolute after:-inset-1 after:content-['']"><Pencil className="h-3.5 w-3.5" /></button>
                   <button onClick={(e) => { e.stopPropagation(); handleDeleteFilter(f.id); }}
-                    className="hover:text-destructive opacity-50 hover:opacity-100"><X className="h-3 w-3" /></button>
+                    aria-label="필터 삭제" className="relative -my-1 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-md hover:text-destructive opacity-60 hover:opacity-100 after:absolute after:-inset-1 after:content-['']"><X className="h-3.5 w-3.5" /></button>
                 </div>
               );
             })}
@@ -581,7 +581,7 @@ const ListingMonitor = () => {
           </div>
           {/* 둘째 줄: 크롤링 시간 */}
           {lastCrawlTime && (
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60" title={`마지막 크롤링: ${new Date(lastCrawlTime).toLocaleString("ko-KR")}`}>
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60" title={`마지막 크롤링: ${new Date(lastCrawlTime).toLocaleString("ko-KR")}`}>
               <Clock className="h-3 w-3" />
               <span>마지막 수집: {formatCrawlTime(lastCrawlTime)}</span>
               <span>({formatRelativeTime(lastCrawlTime)})</span>
@@ -593,9 +593,9 @@ const ListingMonitor = () => {
       {/* 키워드 하이라이트 범례 */}
       {activeListings.length > 0 && (
         <div className="flex items-center gap-2 px-1 flex-wrap">
-          <span className="text-[10px] text-muted-foreground/50">하이라이트</span>
+          <span className="text-[11px] text-muted-foreground/50">하이라이트</span>
           {KEYWORD_HIGHLIGHTS.map((h) => (
-            <span key={h.label} className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${h.bg} ${h.legendText}`}>{h.label}</span>
+            <span key={h.label} className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${h.bg} ${h.legendText}`}>{h.label}</span>
           ))}
         </div>
       )}
@@ -606,7 +606,7 @@ const ListingMonitor = () => {
           <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-500/5 border-b border-amber-400/20">
             <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
             <span className="text-xs font-bold text-amber-600">관심 매물</span>
-            <span className="text-[10px] text-muted-foreground">{favoritedListings.length}건</span>
+            <span className="text-[11px] text-muted-foreground">{favoritedListings.length}건</span>
           </div>
           <div className="divide-y divide-border/50">
             {favoritedListings.map((listing) => (
@@ -624,7 +624,7 @@ const ListingMonitor = () => {
                     </div>
                   </div>
                   {listing.description && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{listing.description}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{listing.description}</p>
                   )}
                 </div>
                 {listing.detail_url && (
@@ -662,15 +662,15 @@ const ListingMonitor = () => {
                     <div className="flex items-center gap-2">
                       <h4 className="text-sm font-bold truncate">{group.name}</h4>
                       {group.buildYear && (
-                        <span className="text-[10px] text-muted-foreground/70">{group.buildYear}년</span>
+                        <span className="text-[11px] text-muted-foreground/70">{group.buildYear}년</span>
                       )}
-                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{group.listings.length}건</span>
+                      <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{group.listings.length}건</span>
                       {group.newCount > 0 && (
-                        <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">NEW {group.newCount}</span>
+                        <span className="text-[11px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">NEW {group.newCount}</span>
                       )}
                     </div>
                     {group.address && (
-                      <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate">{group.address}</p>
+                      <p className="text-[11px] text-muted-foreground/60 mt-0.5 truncate">{group.address}</p>
                     )}
                     <p className="text-xs text-muted-foreground mt-0.5 font-mono">{priceRange}</p>
                   </div>
@@ -697,7 +697,7 @@ const ListingMonitor = () => {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 {listing.is_new && (
-                                  <span className="text-[9px] font-bold text-primary bg-primary/10 px-1 py-0.5 rounded">N</span>
+                                  <span className="text-[11px] font-bold text-primary bg-primary/10 px-1 py-0.5 rounded">N</span>
                                 )}
                                 <span className="text-sm font-bold">{listing.price_text || formatPrice(listing.price_man)}</span>
                                 <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
@@ -707,7 +707,7 @@ const ListingMonitor = () => {
                                 </div>
                               </div>
                               {listing.description && (
-                                <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{listing.description}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{listing.description}</p>
                               )}
                             </div>
                             {listing.detail_url && (

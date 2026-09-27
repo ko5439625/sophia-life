@@ -16,7 +16,7 @@ export type ReviewStatus = "pending" | "approved" | "excluded";
 
 // 16px 이상(iOS 줌 방지), 44px 높이
 const inputCls =
-  "w-full min-h-[44px] rounded-lg border border-border bg-background px-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/30";
+  "w-full min-w-0 min-h-[44px] rounded-lg border border-border bg-background px-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/30";
 const labelCls = "mb-1 block text-[12px] text-muted-foreground";
 
 interface Props {
@@ -53,14 +53,14 @@ export default function InboxItemCard({
   if (status === "excluded") {
     return (
       <div className="flex items-center gap-2 rounded-2xl border border-dashed border-border px-3 py-1" data-testid="inbox-item" data-status="excluded">
-        <span className="shrink-0 text-[12px] text-muted-foreground">제외됨</span>
+        <span className="shrink-0 whitespace-nowrap text-[12px] text-muted-foreground">제외됨</span>
         <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground line-through">{summarizeItem(item)}</span>
         <button
           type="button"
           onClick={() => onStatus("pending")}
-          className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] text-muted-foreground hover:text-foreground"
+          className="flex min-h-[44px] shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-[13px] text-muted-foreground hover:text-foreground"
         >
-          <Undo2 className="h-4 w-4" /> 되돌리기
+          <Undo2 className="h-4 w-4 shrink-0" /> 되돌리기
         </button>
       </div>
     );
@@ -79,15 +79,15 @@ export default function InboxItemCard({
     >
       {/* 헤더: 타입 / 대상 탭 / 상태 */}
       <div className="flex min-h-[28px] flex-wrap items-center gap-1.5 px-1">
-        <span className={cn("rounded-full px-2 py-0.5 text-[12px] font-semibold", TYPE_STYLE[item.type])}>
+        <span className={cn("shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-semibold", TYPE_STYLE[item.type])}>
           {INBOX_TYPE_LABEL[item.type]}
         </span>
         <span className="min-w-0 truncate text-[12px] text-muted-foreground">→ {INBOX_TARGET_LABEL[item.type]}</span>
-        <span className="ml-auto flex items-center gap-1.5">
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
           {item.confidence < 0.6 && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">확인 필요</span>
+            <span className="whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[12px] text-muted-foreground">확인 필요</span>
           )}
-          <span className="text-[11px] text-muted-foreground/70" title="AI 확신도 (참고용)">
+          <span className="text-[12px] tabular-nums text-muted-foreground/70" title="AI 확신도 (참고용)">
             {Math.round(item.confidence * 100)}%
           </span>
         </span>
@@ -111,9 +111,9 @@ export default function InboxItemCard({
       {(item.source || attachmentPreviews.length > 0) && (
         <div className="mt-2 flex items-start gap-2 px-1">
           {attachmentPreviews.length > 0 && (
-            <div className="flex shrink-0 gap-1">
+            <div className="flex max-w-[45%] shrink-0 flex-wrap gap-1">
               {attachmentPreviews.map((u, i) => (
-                <img key={i} src={u} alt={`첨부 ${i + 1}`} className="h-10 w-10 rounded-md border border-border object-cover" />
+                <img key={i} src={u} alt={`첨부 ${i + 1}`} className="h-10 w-10 shrink-0 rounded-md border border-border object-cover" />
               ))}
             </div>
           )}
@@ -122,7 +122,7 @@ export default function InboxItemCard({
               <p className="break-words text-[12px] leading-snug text-muted-foreground/80">“{item.source}”</p>
             )}
             {attachmentPreviews.length > 0 && !canStoreAttachment(item.type) && (
-              <p className="text-[11px] text-muted-foreground/70">이 항목은 첨부를 저장할 수 없어요</p>
+              <p className="text-[12px] text-muted-foreground/70">이 항목은 첨부를 저장할 수 없어요</p>
             )}
           </div>
         </div>
@@ -141,14 +141,14 @@ export default function InboxItemCard({
         </p>
       ) : saving ? (
         <p className="mt-2 flex min-h-[44px] items-center justify-center gap-1 text-[14px] text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> 저장 중
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> 저장 중
         </p>
       ) : (
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => onStatus("excluded")}
-            className="min-h-[44px] rounded-xl border border-border text-[14px] text-muted-foreground hover:bg-muted"
+            className="min-h-[44px] min-w-0 whitespace-nowrap rounded-xl border border-border px-2 text-[14px] text-muted-foreground hover:bg-muted"
           >
             제외
           </button>
@@ -156,17 +156,17 @@ export default function InboxItemCard({
             <button
               type="button"
               onClick={() => onStatus("pending")}
-              className="flex min-h-[44px] items-center justify-center gap-1 rounded-xl bg-emerald-500/15 text-[14px] font-semibold text-emerald-700 dark:text-emerald-300"
+              className="flex min-h-[44px] min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-xl bg-emerald-500/15 px-2 text-[14px] font-semibold text-emerald-700 dark:text-emerald-300"
               aria-label="승인됨, 누르면 승인 취소"
             >
-              승인됨 <Check className="h-4 w-4" />
+              승인됨 <Check className="h-4 w-4 shrink-0" />
             </button>
           ) : (
             <button
               type="button"
               onClick={() => onStatus("approved")}
               disabled={!ready}
-              className="min-h-[44px] rounded-xl bg-primary text-[14px] font-semibold text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
+              className="min-h-[44px] min-w-0 break-keep rounded-xl bg-primary px-2 py-1.5 text-[14px] font-semibold leading-tight text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
             >
               {ready ? "승인" : "답변 후 승인"}
             </button>
@@ -196,7 +196,7 @@ function Fields({
       return (
         <>
           <div className="grid grid-cols-2 gap-2">
-            <div>
+            <div className="min-w-0">
               <span className={labelCls}>금액(원){req("amount")}</span>
               <input
                 className={cn(inputCls, "font-mono")}
@@ -210,7 +210,7 @@ function Fields({
                 }}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <span className={labelCls}>카테고리{req("category")}</span>
               <select
                 className={inputCls}
@@ -226,11 +226,11 @@ function Fields({
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div>
+            <div className="min-w-0">
               <span className={labelCls}>날짜</span>
               <input type="date" className={inputCls} aria-label="날짜" value={item.date} onChange={(e) => onField("date", e.target.value)} />
             </div>
-            <div>
+            <div className="min-w-0">
               <span className={labelCls}>메모</span>
               <input className={inputCls} aria-label="메모" value={item.memo} onChange={(e) => onField("memo", e.target.value)} />
             </div>
@@ -256,16 +256,16 @@ function Fields({
           <div>
             <span className={labelCls}>일정{req("title")}</span>
             <div className="flex items-center gap-2">
-              <span className="text-xl" aria-hidden>{item.emoji}</span>
+              <span className="shrink-0 text-xl" aria-hidden>{item.emoji}</span>
               <input className={inputCls} aria-label="일정 제목" value={item.title} onChange={(e) => onField("title", e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div>
+            <div className="min-w-0">
               <span className={labelCls}>날짜{req("date")}</span>
               <input type="date" className={inputCls} aria-label="날짜" value={item.date ?? ""} onChange={(e) => onField("date", e.target.value || null)} />
             </div>
-            <div>
+            <div className="min-w-0">
               <span className={labelCls}>시간</span>
               <input type="time" className={inputCls} aria-label="시간" value={item.time ?? ""} onChange={(e) => onField("time", e.target.value || null)} />
             </div>
@@ -338,7 +338,7 @@ function QuestionBubble({
 
   return (
     <div className="rounded-2xl rounded-tl-sm bg-muted/70 p-2.5" data-testid="inbox-question">
-      <p className="text-[14px] font-medium leading-snug">🤔 {q.question}</p>
+      <p className="break-words text-[14px] font-medium leading-snug">🤔 {q.question}</p>
       {q.options && q.options.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {q.options.map((o, i) => (
@@ -346,7 +346,7 @@ function QuestionBubble({
               key={`${o}-${i}`}
               type="button"
               onClick={() => submit(o, i)}
-              className="min-h-[44px] rounded-full border border-border bg-background px-3.5 text-[14px] hover:border-primary/50 hover:text-primary"
+              className="min-h-[44px] max-w-full break-keep rounded-full border border-border bg-background px-3.5 py-2 text-left text-[14px] leading-snug hover:border-primary/50 hover:text-primary"
             >
               {o}
             </button>
@@ -372,7 +372,7 @@ function QuestionBubble({
         <button
           type="submit"
           disabled={!text.trim()}
-          className="min-h-[44px] shrink-0 rounded-lg bg-primary px-3.5 text-[14px] font-medium text-primary-foreground disabled:opacity-40"
+          className="min-h-[44px] shrink-0 whitespace-nowrap rounded-lg bg-primary px-3.5 text-[14px] font-medium text-primary-foreground disabled:opacity-40"
         >
           답하기
         </button>

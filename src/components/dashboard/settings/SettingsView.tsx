@@ -291,7 +291,7 @@ const ApiConnectionStatus = () => {
         <button
           onClick={runAllTests}
           disabled={isTesting}
-          className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="relative after:absolute after:-inset-2 after:content-[''] flex items-center gap-1.5 whitespace-nowrap bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           <RefreshCw className={`h-3 w-3 ${isTesting ? "animate-spin" : ""}`} />
           연결 테스트

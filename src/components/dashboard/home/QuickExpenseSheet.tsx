@@ -87,7 +87,7 @@ export default function QuickExpenseSheet({ open, onOpenChange }: QuickExpenseSh
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="mx-auto max-w-lg border-border bg-card px-[18px] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <DrawerContent className="mx-auto max-h-[92vh] max-w-lg border-border bg-card px-[18px] pb-[max(1.5rem,env(safe-area-inset-bottom))] supports-[height:100dvh]:max-h-[92dvh]">
         <div className="mt-3 mb-3 flex items-center justify-between">
           <DrawerTitle className="text-[17px] font-bold">지출 기록</DrawerTitle>
           <DrawerDescription className="text-[13px]">
@@ -96,6 +96,7 @@ export default function QuickExpenseSheet({ open, onOpenChange }: QuickExpenseSh
         </div>
 
         <form
+          className="min-h-0 overflow-y-auto overscroll-contain"
           onSubmit={(e) => {
             e.preventDefault();
             handleSave();

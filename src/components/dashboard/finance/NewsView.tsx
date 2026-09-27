@@ -220,7 +220,7 @@ const NewsView = () => {
           <button
             key={tab.id}
             onClick={() => setActiveCategory(tab.id)}
-            className={`flex-1 relative px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[52px] flex-shrink-0 ${
+            className={`flex-1 relative min-h-[40px] px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[52px] flex-shrink-0 ${
               activeCategory === tab.id
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -253,7 +253,7 @@ const NewsView = () => {
           <button
             onClick={handleAiAnalyze}
             disabled={aiLoading}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+            className="relative after:absolute after:-inset-2 after:content-[''] flex min-w-[84px] items-center justify-center gap-1.5 whitespace-nowrap text-xs font-medium px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
           >
             {aiLoading ? (
               <>
@@ -289,7 +289,8 @@ const NewsView = () => {
             </div>
             <button
               onClick={() => setAiSummary(null)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="AI 브리핑 닫기"
+              className="-m-2 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -298,7 +299,7 @@ const NewsView = () => {
           <div className="space-y-2">
             {aiSummary.sections.map((s, i) => (
               <div key={i} className="pl-3 border-l-2 border-primary/20">
-                <span className="text-[10px] font-semibold text-primary/70">{s.category}</span>
+                <span className="text-[11px] font-semibold text-primary/70">{s.category}</span>
                 <p className="text-xs text-muted-foreground mt-0.5">{s.summary}</p>
               </div>
             ))}
@@ -325,7 +326,7 @@ const NewsView = () => {
             {hasOlderNews && (
               <button
                 onClick={handleLoadOlder}
-                className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+                className="-my-2 min-h-[40px] text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
               >
                 <ChevronDown className="h-3.5 w-3.5" />
                 이전 {DAYS_WINDOW}일 더 보기
@@ -355,14 +356,14 @@ const NewsView = () => {
                       {/* Category & language badges */}
                       <div className="flex items-center gap-2 mb-1.5">
                         <span
-                          className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                          className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
                             categoryColors[item.category]
                           }`}
                         >
                           {item.category}
                         </span>
                         {item.isEnglish && (
-                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 flex items-center gap-1">
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 flex items-center gap-1">
                             <Globe className="h-2.5 w-2.5" />
                             EN
                           </span>
@@ -371,7 +372,7 @@ const NewsView = () => {
                           <button
                             onClick={() => handleTranslate(item)}
                             disabled={translatingIds.has(item.id)}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1 disabled:opacity-50"
+                            className="relative after:absolute after:-inset-2 after:content-[''] whitespace-nowrap text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1 disabled:opacity-50"
                           >
                             {translatingIds.has(item.id) ? (
                               <>
@@ -388,7 +389,7 @@ const NewsView = () => {
                       {/* Clickable title */}
                       <button
                         onClick={() => handleOpenArticle(item.url)}
-                        className="text-left group"
+                        className="text-left group min-h-[40px]"
                       >
                         <h4 className="text-sm font-medium leading-snug group-hover:text-primary transition-colors flex items-center gap-1.5">
                           {item.title}
@@ -416,7 +417,7 @@ const NewsView = () => {
                       )}
 
                       {/* Source, date, and time */}
-                      <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground font-mono">
+                      <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground font-mono">
                         <span>{item.source}</span>
                         <span>|</span>
                         <span>{item.date}</span>
@@ -474,7 +475,7 @@ const NewsView = () => {
         <div className="flex justify-center pt-1">
           <button
             onClick={handleLoadOlder}
-            className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1 px-4 py-2 rounded-lg bg-primary/5 hover:bg-primary/10"
+            className="min-h-[40px] text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1 px-4 py-2 rounded-lg bg-primary/5 hover:bg-primary/10"
           >
             <ChevronDown className="h-3.5 w-3.5" />
             더 보기 (이전 {DAYS_WINDOW}일)

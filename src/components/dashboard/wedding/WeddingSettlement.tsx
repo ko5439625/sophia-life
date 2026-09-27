@@ -98,14 +98,14 @@ export default function WeddingSettlement() {
               a.click();
               URL.revokeObjectURL(url);
             }}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-muted transition-colors"
+            className="relative after:absolute after:-inset-2 after:content-[''] flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-muted transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">내보내기</span>
           </button>
           <button
             onClick={() => setReceiptModalOpen(true)}
-            className="flex items-center gap-1.5 text-xs text-primary-foreground bg-primary px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors"
+            className="relative after:absolute after:-inset-2 after:content-[''] flex items-center gap-1.5 whitespace-nowrap text-xs text-primary-foreground bg-primary px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             영수증 추가

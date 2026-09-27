@@ -713,10 +713,10 @@ function AIResultPanel({ result, loading, error, onClose }: {
                 const bear = parseInt(result.bearProb) || 50;
                 return (
                   <div className="mt-2">
-                    <div className="flex items-center justify-between text-[10px] mb-1">
+                    <div className="flex items-center justify-between text-[11px] mb-1">
                       <span className="text-primary font-bold">상승 {bull}%</span>
                       {result.confidence && (
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                        <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
                           result.confidence.includes("높") ? "bg-primary/10 text-primary" :
                           result.confidence.includes("낮") ? "bg-destructive/10 text-destructive" :
                           "bg-amber-500/10 text-amber-500"
@@ -731,7 +731,7 @@ function AIResultPanel({ result, loading, error, onClose }: {
                       <div className="bg-destructive transition-all" style={{ width: `${bear}%` }} />
                     </div>
                     {Math.abs(bull - bear) <= 10 && (
-                      <p className="text-[9px] text-amber-500 mt-1">{"확률 차이 "}{Math.abs(bull - bear)}%p - 방향성 불분명, 관망 권장</p>
+                      <p className="text-[11px] text-amber-500 mt-1">{"확률 차이 "}{Math.abs(bull - bear)}%p - 방향성 불분명, 관망 권장</p>
                     )}
                   </div>
                 );
@@ -741,22 +741,22 @@ function AIResultPanel({ result, loading, error, onClose }: {
                 <div className="grid grid-cols-3 gap-2 mt-2">
                   {result.entry && (
                     <div className="text-center bg-background/50 rounded-lg py-2">
-                      <p className="text-[9px] text-muted-foreground">진입가</p>
+                      <p className="text-[11px] text-muted-foreground">진입가</p>
                       <p className="text-sm font-mono font-bold text-blue-400">{result.entry}</p>
                     </div>
                   )}
                   {result.target && (
                     <div className="text-center bg-background/50 rounded-lg py-2">
-                      <p className="text-[9px] text-muted-foreground">목표가</p>
+                      <p className="text-[11px] text-muted-foreground">목표가</p>
                       <p className="text-sm font-mono font-bold text-primary">{result.target}</p>
-                      {result.reward && <p className="text-[9px] font-mono text-primary">{result.reward}</p>}
+                      {result.reward && <p className="text-[11px] font-mono text-primary">{result.reward}</p>}
                     </div>
                   )}
                   {result.stopLoss && (
                     <div className="text-center bg-background/50 rounded-lg py-2">
-                      <p className="text-[9px] text-muted-foreground">손절가</p>
+                      <p className="text-[11px] text-muted-foreground">손절가</p>
                       <p className="text-sm font-mono font-bold text-destructive">{result.stopLoss}</p>
-                      {result.riskPct && <p className="text-[9px] font-mono text-destructive">{result.riskPct}</p>}
+                      {result.riskPct && <p className="text-[11px] font-mono text-destructive">{result.riskPct}</p>}
                     </div>
                   )}
                 </div>
@@ -767,7 +767,7 @@ function AIResultPanel({ result, loading, error, onClose }: {
           {/* 근거 섹션 */}
           {result.summary && (
             <div>
-              <p className="text-[10px] text-muted-foreground font-bold mb-1">Investment Thesis</p>
+              <p className="text-[11px] text-muted-foreground font-bold mb-1">Investment Thesis</p>
               {result.summary.includes("[") ? (
                 <div className="space-y-2">
                   {result.summary.split(/\[/).filter(Boolean).map((section, i) => {
@@ -777,7 +777,7 @@ function AIResultPanel({ result, loading, error, onClose }: {
                     const colors = ["text-blue-400", "text-amber-400", "text-primary"];
                     return (
                       <div key={i}>
-                        <span className={`text-[10px] font-bold ${colors[i] || "text-muted-foreground"}`}>{title.trim()}</span>
+                        <span className={`text-[11px] font-bold ${colors[i] || "text-muted-foreground"}`}>{title.trim()}</span>
                         <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">{text}</p>
                       </div>
                     );
@@ -790,25 +790,25 @@ function AIResultPanel({ result, loading, error, onClose }: {
           )}
           {result.prediction && (
             <div className="bg-blue-500/5 rounded-lg p-2.5">
-              <p className="text-[10px] text-blue-400 font-bold mb-1">Price Target & Outlook</p>
+              <p className="text-[11px] text-blue-400 font-bold mb-1">Price Target & Outlook</p>
               <p className="text-xs leading-relaxed whitespace-pre-wrap break-words">{result.prediction}</p>
             </div>
           )}
           {result.strategy && (
             <div className="bg-muted/30 rounded-lg p-2.5">
-              <p className="text-[10px] text-muted-foreground font-bold mb-1">Trading Strategy</p>
+              <p className="text-[11px] text-muted-foreground font-bold mb-1">Trading Strategy</p>
               <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">{result.strategy}</p>
             </div>
           )}
           {result.risk && (
             <div className="bg-destructive/5 rounded-lg p-2.5">
-              <p className="text-[10px] text-destructive font-bold mb-1">Risk Factors</p>
+              <p className="text-[11px] text-destructive font-bold mb-1">Risk Factors</p>
               <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">{result.risk}</p>
             </div>
           )}
         </>
       )}
-      <button onClick={onClose} className="text-[10px] text-muted-foreground hover:text-foreground">닫기</button>
+      <button onClick={onClose} className="text-[11px] text-muted-foreground hover:text-foreground">닫기</button>
     </div>
   );
 }
@@ -816,7 +816,7 @@ function AIResultPanel({ result, loading, error, onClose }: {
 function MetricBadge({ label, value, unit }: { label: string; value: number | null; unit?: string }) {
   if (value == null) return null;
   return (
-    <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded">
+    <span className="text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded">
       {label} {value}{unit || ""}
     </span>
   );
@@ -1202,19 +1202,19 @@ const QuantRecommendView = () => {
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold">퀀트 스크리닝</h3>
-          <span className="text-[9px] text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground">
             {isKisConfigured() ? "한국투자증권 API 연동" : "Yahoo Finance (한투 API 미연동)"}
           </span>
         </div>
         <div className="flex gap-2">
           {(["us", "kr"] as const).map((m) => (
             <button key={m} onClick={() => { setMarket(m); setSelectedStock(null); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${market === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+              className={`min-w-[40px] px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${market === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
               {m === "us" ? "미장" : "국장"}
             </button>
           ))}
           <button onClick={() => setShowFilter(!showFilter)}
-            className={`px-2 py-1.5 rounded-lg text-xs transition-colors ${showFilter ? "bg-amber-500/20 text-amber-500" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
+            className={`min-w-[40px] px-2 py-1.5 rounded-lg text-xs transition-colors ${showFilter ? "bg-amber-500/20 text-amber-500" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
             필터
           </button>
           <button onClick={handleFetch} disabled={loading}
@@ -1233,32 +1233,32 @@ const QuantRecommendView = () => {
               <p className="text-xs font-bold">스크리닝 필터</p>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <div>
-                  <label className="text-[9px] text-muted-foreground block mb-0.5">PER 최대</label>
+                  <label className="text-[11px] text-muted-foreground block mb-0.5">PER 최대</label>
                   <input type="number" value={filters.perMax} onChange={(e) => setFilters({ ...filters, perMax: e.target.value })}
                     placeholder="30" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-[9px] text-muted-foreground block mb-0.5">ROE 최소(%)</label>
+                  <label className="text-[11px] text-muted-foreground block mb-0.5">ROE 최소(%)</label>
                   <input type="number" value={filters.roeMin} onChange={(e) => setFilters({ ...filters, roeMin: e.target.value })}
                     placeholder="5" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-[9px] text-muted-foreground block mb-0.5">Beta 최대</label>
+                  <label className="text-[11px] text-muted-foreground block mb-0.5">Beta 최대</label>
                   <input type="number" value={filters.betaMax} onChange={(e) => setFilters({ ...filters, betaMax: e.target.value })}
                     placeholder="제한없음" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-[9px] text-muted-foreground block mb-0.5">매출성장 최소(%)</label>
+                  <label className="text-[11px] text-muted-foreground block mb-0.5">매출성장 최소(%)</label>
                   <input type="number" value={filters.revenueGrowthMin} onChange={(e) => setFilters({ ...filters, revenueGrowthMin: e.target.value })}
                     placeholder="제한없음" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-[9px] text-muted-foreground block mb-0.5">부채비율 최대(%)</label>
+                  <label className="text-[11px] text-muted-foreground block mb-0.5">부채비율 최대(%)</label>
                   <input type="number" value={filters.debtMax} onChange={(e) => setFilters({ ...filters, debtMax: e.target.value })}
                     placeholder="200" className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/30" />
                 </div>
               </div>
-              <p className="text-[8px] text-muted-foreground">{"필터 설정 후 '스크리닝' 클릭. 적자기업(PER≤0) 자동 제외."}</p>
+              <p className="text-[11px] text-muted-foreground">{"필터 설정 후 '스크리닝' 클릭. 적자기업(PER≤0) 자동 제외."}</p>
             </div>
           </motion.div>
         )}
@@ -1290,7 +1290,7 @@ const QuantRecommendView = () => {
         )}
         {searchResults.length > 0 && (
           <div className="mt-2 space-y-1.5">
-            <p className="text-[10px] text-muted-foreground font-mono px-1">검색 결과 ({searchResults.length})</p>
+            <p className="text-[11px] text-muted-foreground font-mono px-1">검색 결과 ({searchResults.length})</p>
             {searchResults.map((stock) => {
               const isSelected = selectedStock?.symbol === stock.symbol;
               return (
@@ -1302,9 +1302,9 @@ const QuantRecommendView = () => {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                         <span className="text-sm font-medium truncate">{stock.name}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground">{stock.symbol}</span>
-                        <span className={`text-[9px] font-bold ${valColor(stock.valuation)}`}>{stock.valuation}</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${recBadge(stock.recommendation).bg}`}>
+                        <span className="text-[11px] font-mono text-muted-foreground">{stock.symbol}</span>
+                        <span className={`text-[11px] font-bold ${valColor(stock.valuation)}`}>{stock.valuation}</span>
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full border ${recBadge(stock.recommendation).bg}`}>
                           {recBadge(stock.recommendation).icon} {recBadge(stock.recommendation).text}
                         </span>
                       </div>
@@ -1312,7 +1312,7 @@ const QuantRecommendView = () => {
                         <span className="text-sm font-mono">
                           {stock.currency === "USD" ? `$${stock.price.toLocaleString()}` : `${formatKRW(stock.price)}원`}
                         </span>
-                        <span className={`text-[10px] font-mono ${stock.change >= 0 ? "text-primary" : "text-destructive"}`}>
+                        <span className={`text-[11px] font-mono ${stock.change >= 0 ? "text-primary" : "text-destructive"}`}>
                           {stock.change >= 0 ? "+" : ""}{stock.change}%
                         </span>
                       </div>
@@ -1365,7 +1365,7 @@ const QuantRecommendView = () => {
                     <Icon className="h-3.5 w-3.5" style={activePerspective === p.id ? { color: p.color } : {}} />
                     <span style={activePerspective === p.id ? { color: p.color } : {}}>{p.label} ({count})</span>
                   </div>
-                  <span className="text-[8px] text-muted-foreground">{p.desc}</span>
+                  <span className="text-[11px] text-muted-foreground">{p.desc}</span>
                 </button>
               );
             })}
@@ -1385,13 +1385,13 @@ const QuantRecommendView = () => {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                         {rank <= 10 && (
-                          <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${rank <= 3 ? "bg-yellow-500/20 text-yellow-500" : "bg-primary/10 text-primary"}`}>
+                          <span className={`text-[11px] font-bold px-1 py-0.5 rounded ${rank <= 3 ? "bg-yellow-500/20 text-yellow-500" : "bg-primary/10 text-primary"}`}>
                             {rank <= 3 ? ["🥇","🥈","🥉"][rank-1] : `${rank}위`}
                           </span>
                         )}
                         <span className="text-sm font-medium truncate">{stock.name}</span>
-                        <span className={`text-[9px] font-bold ${valColor(stock.valuation)}`}>{stock.valuation}</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${recBadge(stock.recommendation).bg}`}>
+                        <span className={`text-[11px] font-bold ${valColor(stock.valuation)}`}>{stock.valuation}</span>
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full border ${recBadge(stock.recommendation).bg}`}>
                           {recBadge(stock.recommendation).icon} {recBadge(stock.recommendation).text}
                         </span>
                       </div>
@@ -1399,7 +1399,7 @@ const QuantRecommendView = () => {
                         <span className="text-sm font-mono">
                           {stock.currency === "USD" ? `$${stock.price.toLocaleString()}` : `${formatKRW(stock.price)}원`}
                         </span>
-                        <span className={`text-[10px] font-mono ${stock.change >= 0 ? "text-primary" : "text-destructive"}`}>
+                        <span className={`text-[11px] font-mono ${stock.change >= 0 ? "text-primary" : "text-destructive"}`}>
                           {stock.change >= 0 ? "+" : ""}{stock.change}%
                         </span>
                       </div>
@@ -1427,7 +1427,7 @@ const QuantRecommendView = () => {
             })}
           </div>
 
-          <p className="text-[9px] text-muted-foreground text-center">
+          <p className="text-[11px] text-muted-foreground text-center">
             {"PER↓ = 저평가 · ROE↑ = 수익성좋음 · 종목 클릭 → AI 분석"}
           </p>
 
@@ -1441,7 +1441,7 @@ const QuantRecommendView = () => {
               <div className="flex gap-1">
                 {(["1mo" as const, "3mo" as const, "6mo" as const, "1y" as const, "3y" as const]).map((p) => (
                   <button key={p} onClick={() => handleSimulation(p as "1y" | "3y" | "5y")} disabled={simLoading}
-                    className={`px-2 py-1 text-[10px] rounded-lg font-medium transition-colors ${
+                    className={`px-2 py-1 text-[11px] rounded-lg font-medium transition-colors ${
                       simPeriod === p && simResult ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
                     }`}>
                     {p === "1mo" ? "1개월" : p === "3mo" ? "3개월" : p === "6mo" ? "6개월" : p === "1y" ? "1년" : "3년"}
@@ -1450,7 +1450,7 @@ const QuantRecommendView = () => {
               </div>
             </div>
 
-            <p className="text-[9px] text-muted-foreground mb-3">{"전략 검증: 과거 시점 기술적 지표(모멘텀/RSI/MA/변동성)로 추천했을 종목을 그때 매수 → 현재가 비교"}</p>
+            <p className="text-[11px] text-muted-foreground mb-3">{"전략 검증: 과거 시점 기술적 지표(모멘텀/RSI/MA/변동성)로 추천했을 종목을 그때 매수 → 현재가 비교"}</p>
 
             {simLoading && (
               <div className="flex items-center justify-center py-6">
@@ -1471,14 +1471,14 @@ const QuantRecommendView = () => {
                 <div className="space-y-3">
                   {/* 100만원 투자 결과 */}
                   <div className={`rounded-xl p-4 text-center ${totalReturn >= 0 ? "bg-primary/10" : "bg-destructive/10"}`}>
-                    <p className="text-[10px] text-muted-foreground">100만원 투자 → {simResult.period} 후</p>
+                    <p className="text-[11px] text-muted-foreground">100만원 투자 → {simResult.period} 후</p>
                     <p className={`text-2xl font-mono font-bold ${totalReturn >= 0 ? "text-primary" : "text-destructive"}`}>
                       {Math.round(totalNow).toLocaleString()}원
                     </p>
                     <p className={`text-sm font-mono ${totalReturn >= 0 ? "text-primary" : "text-destructive"}`}>
                       {totalReturn >= 0 ? "+" : ""}{Math.round(totalReturn).toLocaleString()}원 ({simResult.portfolioReturn >= 0 ? "+" : ""}{simResult.portfolioReturn}%)
                     </p>
-                    <p className="text-[9px] text-muted-foreground mt-1">
+                    <p className="text-[11px] text-muted-foreground mt-1">
                       {simResult.stocks.length}종목 동일비중 · 종목당 {Math.round(perStock).toLocaleString()}원
                     </p>
                   </div>
@@ -1486,10 +1486,10 @@ const QuantRecommendView = () => {
                   {/* 승/패 요약 */}
                   <div className="flex gap-2">
                     <div className="flex-1 bg-primary/5 rounded-lg p-2 text-center">
-                      <p className="text-[10px] text-primary font-bold">수익 {winners.length}종목</p>
+                      <p className="text-[11px] text-primary font-bold">수익 {winners.length}종목</p>
                     </div>
                     <div className="flex-1 bg-destructive/5 rounded-lg p-2 text-center">
-                      <p className="text-[10px] text-destructive font-bold">손실 {losers.length}종목</p>
+                      <p className="text-[11px] text-destructive font-bold">손실 {losers.length}종목</p>
                     </div>
                   </div>
 
@@ -1507,34 +1507,34 @@ const QuantRecommendView = () => {
                                 {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
                               </span>
                               <span className="text-xs font-medium truncate">{s.name}</span>
-                              <span className="text-[8px] font-mono text-muted-foreground">{s.symbol}</span>
-                              {i < 3 && <span className="text-[8px] px-1 py-0.5 rounded bg-primary/10 text-primary font-bold">강력추천</span>}
-                              {i >= 3 && i < 7 && <span className="text-[8px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-500 font-bold">추천</span>}
+                              <span className="text-[11px] font-mono text-muted-foreground">{s.symbol}</span>
+                              {i < 3 && <span className="text-[11px] px-1 py-0.5 rounded bg-primary/10 text-primary font-bold">강력추천</span>}
+                              {i >= 3 && i < 7 && <span className="text-[11px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-500 font-bold">추천</span>}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <span className={`text-xs font-mono font-bold ${s.returnPct >= 0 ? "text-primary" : "text-destructive"}`}>
                                 {profit >= 0 ? "+" : ""}{profit.toLocaleString()}원
                               </span>
-                              <span className={`text-[10px] font-mono ${s.returnPct >= 0 ? "text-primary" : "text-destructive"}`}>
+                              <span className={`text-[11px] font-mono ${s.returnPct >= 0 ? "text-primary" : "text-destructive"}`}>
                                 {s.returnPct >= 0 ? "+" : ""}{s.returnPct}%
                               </span>
                             </div>
                           </div>
-                          <div className="text-[9px] text-muted-foreground mt-0.5">
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
                             {s.startPrice.toLocaleString()} → {s.endPrice.toLocaleString()}
                           </div>
                           {s.returnPct <= -10 && (
-                            <p className="text-[9px] text-destructive mt-1">{"⚠ 대폭 하락 - 과거 추천이었으나 실적 악화/섹터 약세로 손실"}</p>
+                            <p className="text-[11px] text-destructive mt-1">{"⚠ 대폭 하락 - 과거 추천이었으나 실적 악화/섹터 약세로 손실"}</p>
                           )}
                           {s.returnPct >= 50 && (
-                            <p className="text-[9px] text-primary mt-1">{"✓ 전략 적중 - 기술적 시그널이 유효했음"}</p>
+                            <p className="text-[11px] text-primary mt-1">{"✓ 전략 적중 - 기술적 시그널이 유효했음"}</p>
                           )}
                         </div>
                       );
                     })}
                   </div>
 
-                  <p className="text-[8px] text-muted-foreground text-center">
+                  <p className="text-[11px] text-muted-foreground text-center">
                     {"과거 수익률은 미래 수익을 보장하지 않습니다. 과거 PER 추정 기반 시뮬레이션."}
                   </p>
                 </div>

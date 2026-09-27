@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Check,
   Camera,
+  Quote,
 } from "lucide-react";
 import { resizeImage } from "@/lib/imageResize";
 import {
@@ -29,6 +30,7 @@ import {
   type PhotoBlogTone,
 } from "@/services/photoBlogApi";
 import { uploadBlobToBlogStorage, BLOG_UPLOAD_MAX_SIDE } from "./blogImageUpload";
+import { buildPostHtml } from "./photoBlogHtml";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,36 +71,6 @@ const todayStr = () => {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
-
-const escapeHtml = (s: string) =>
-  s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
-const paragraph = (s: string) =>
-  s.trim() ? `<p>${escapeHtml(s.trim()).replace(/\n/g, "<br>")}</p>` : "";
-
-/** 결과 → 에디터에 넣을 깔끔한 HTML */
-function buildPostHtml(result: PhotoBlogResult, imageUrls: string[]): string {
-  const parts: string[] = [];
-  parts.push(paragraph(result.intro));
-  result.sections.forEach((s, i) => {
-    const url = imageUrls[i];
-    const heading = s.heading.trim();
-    if (url) {
-      parts.push(
-        `<img src="${escapeHtml(url)}" alt="${escapeHtml(heading || `사진 ${i + 1}`)}" style="max-width:100%;border-radius:8px;margin:16px 0 8px;" />`
-      );
-    }
-    if (heading) parts.push(`<h3>${escapeHtml(heading)}</h3>`);
-    parts.push(paragraph(s.body));
-  });
-  parts.push(paragraph(result.outro));
-  // 에디터가 white-space: pre-wrap 이라 태그 사이 줄바꿈이 빈 줄로 보이므로 붙여서 반환
-  return parts.filter(Boolean).join("");
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -252,10 +224,15 @@ const PhotoBlogWizard = ({
     setError(null);
     setRegenIndex(photoIndex);
     try {
-      const { heading, body } = await regenerateSection({ ...genRequest, draft: result }, photoIndex);
+      const { heading, body, highlight } = await regenerateSection({ ...genRequest, draft: result }, photoIndex);
       setResult((prev) =>
         prev
-          ? { ...prev, sections: prev.sections.map((s) => (s.photoIndex === photoIndex ? { ...s, heading, body } : s)) }
+          ? {
+              ...prev,
+              sections: prev.sections.map((s) =>
+                s.photoIndex === photoIndex ? { ...s, heading, body, highlight } : s
+              ),
+            }
           : prev
       );
     } catch (e) {
@@ -265,7 +242,7 @@ const PhotoBlogWizard = ({
     }
   };
 
-  const updateSection = (photoIndex: number, patch: { heading?: string; body?: string }) => {
+  const updateSection = (photoIndex: number, patch: { heading?: string; body?: string; highlight?: string }) => {
     setResult((prev) =>
       prev
         ? { ...prev, sections: prev.sections.map((s) => (s.photoIndex === photoIndex ? { ...s, ...patch } : s)) }
@@ -294,7 +271,8 @@ const PhotoBlogWizard = ({
         .split(",")
         .map((t) => t.trim().replace(/^#/, ""))
         .filter(Boolean);
-      onInsert({ title: result.title.trim(), html: buildPostHtml(result, urls), tags });
+      const captions = result.sections.map((s) => genPhotos[s.photoIndex]?.note.trim() ?? "");
+      onInsert({ title: result.title.trim(), html: buildPostHtml(result, urls, { captions, tags }), tags });
       resetAll();
       onOpenChange(false);
     } catch (e) {
@@ -329,27 +307,45 @@ const PhotoBlogWizard = ({
   // Render
   // ---------------------------------------------------------------------------
 
+  const inputCls =
+    "w-full min-w-0 bg-background border border-border rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50 disabled:opacity-50";
+  const labelCls = "text-xs text-muted-foreground mb-1.5 block";
+  const insertPct = inserting ? Math.round((inserting.done / Math.max(1, inserting.total)) * 100) : 0;
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="flex flex-col gap-0 p-0 w-full max-w-lg h-[100dvh] sm:h-[min(88vh,820px)] sm:rounded-xl overflow-hidden border-0 sm:border"
+        className="flex flex-col gap-0 p-0 w-full max-w-lg h-[100dvh] max-h-[100dvh] rounded-none sm:h-[min(88vh,820px)] sm:rounded-xl overflow-hidden border-0 sm:border [&>button:last-child]:hidden"
         onInteractOutside={(e) => e.preventDefault()}
       >
         {/* Header */}
-        <div className="flex-shrink-0 px-4 sm:px-5 pt-4 pb-3 border-b border-border/60 pr-12">
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-            <Camera className="h-4 w-4 text-primary" />
-            사진으로 글쓰기
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-            사진을 고르면 AI가 사진에 보이는 것만으로 초안을 써줘요
-          </DialogDescription>
+        <div className="flex-shrink-0 px-4 sm:px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 border-b border-border/60">
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0 pt-1.5">
+              <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                <Camera className="h-4 w-4 text-primary flex-shrink-0" />
+                <span className="truncate">사진으로 글쓰기</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1 break-keep leading-relaxed">
+                사진을 고르면 AI가 사진에 보이는 것만으로 초안을 써줘요
+              </DialogDescription>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleOpenChange(false)}
+              disabled={busy}
+              className="-mr-2 h-11 w-11 flex-shrink-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
+              aria-label="닫기"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
           {/* Step indicator */}
-          <div className="flex items-center gap-1.5 mt-3">
+          <ol className="flex items-center gap-1.5 mt-3">
             {STEPS.map((s, i) => (
-              <div key={s.key} className="flex items-center gap-1.5 flex-1">
+              <li key={s.key} className="flex items-center gap-1.5 flex-1 min-w-0 last:flex-none">
                 <div
-                  className={`flex items-center justify-center h-5 w-5 rounded-full text-[11px] font-semibold flex-shrink-0 ${
+                  className={`flex items-center justify-center h-6 w-6 rounded-full text-[11px] font-semibold flex-shrink-0 ${
                     i < stepIndex
                       ? "bg-primary text-primary-foreground"
                       : i === stepIndex
@@ -359,22 +355,31 @@ const PhotoBlogWizard = ({
                 >
                   {i < stepIndex ? <Check className="h-3 w-3" /> : i + 1}
                 </div>
-                <span className={`text-xs ${i === stepIndex ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                <span
+                  className={`text-xs whitespace-nowrap flex-shrink-0 ${i === stepIndex ? "text-foreground font-medium" : "text-muted-foreground"}`}
+                >
                   {s.label}
                 </span>
-                {i < STEPS.length - 1 && <div className="h-px flex-1 bg-border" />}
-              </div>
+                {i < STEPS.length - 1 && <div className="h-px flex-1 min-w-[8px] bg-border" />}
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
 
         {/* Body (scroll) */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 space-y-4">
+        <div
+          ref={scrollRef}
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-4 sm:px-5 py-4 space-y-4"
+        >
           {error && (
-            <div className="flex items-start gap-2 rounded-lg bg-destructive/10 text-destructive px-3 py-2.5 text-sm">
-              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              <p className="flex-1 break-keep">{error}</p>
-              <button onClick={() => setError(null)} className="p-1 -m-1" aria-label="닫기">
+            <div role="alert" className="flex items-start gap-2 rounded-lg bg-destructive/10 text-destructive pl-3 pr-1 py-1.5 text-sm">
+              <AlertCircle className="h-4 w-4 mt-2.5 flex-shrink-0" />
+              <p className="flex-1 min-w-0 py-2 break-keep [overflow-wrap:anywhere] leading-relaxed">{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-md hover:bg-destructive/10"
+                aria-label="오류 닫기"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -394,19 +399,21 @@ const PhotoBlogWizard = ({
                   if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
                 }}
                 disabled={addingPhotos || photos.length >= PHOTO_BLOG_MAX_PHOTOS}
-                className={`w-full flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-7 transition-colors disabled:opacity-50 ${
+                className={`w-full min-h-[120px] flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors disabled:opacity-50 ${
                   dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/30"
                 }`}
               >
-                {addingPhotos ? (
-                  <Loader2 className="h-6 w-6 text-primary animate-spin" />
-                ) : (
-                  <ImagePlus className="h-6 w-6 text-muted-foreground" />
-                )}
-                <span className="text-sm font-medium">
+                <span className="h-6 w-6 flex items-center justify-center">
+                  {addingPhotos ? (
+                    <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                  ) : (
+                    <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </span>
+                <span className="text-sm font-medium break-keep">
                   {addingPhotos ? "사진 준비 중..." : "사진 선택 또는 끌어다 놓기"}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground break-keep">
                   {photos.length}/{PHOTO_BLOG_MAX_PHOTOS}장 · 올린 순서대로 글이 이어져요
                 </span>
               </button>
@@ -424,9 +431,9 @@ const PhotoBlogWizard = ({
 
               <ul className="space-y-2.5">
                 {photos.map((p, i) => (
-                  <li key={p.id} className="flex gap-3 rounded-xl bg-muted/30 p-2.5">
+                  <li key={p.id} className="flex gap-3 rounded-xl bg-muted/30 p-2.5 min-w-0">
                     <div className="relative flex-shrink-0">
-                      <img src={p.thumbUrl} alt={`사진 ${i + 1}`} className="h-20 w-20 rounded-lg object-cover bg-muted" />
+                      <img src={p.thumbUrl} alt={`사진 ${i + 1}`} className="h-[92px] w-[92px] rounded-lg object-cover bg-muted" />
                       <span className="absolute top-1 left-1 rounded bg-black/60 text-white text-[11px] font-semibold px-1.5 leading-5">
                         {i + 1}
                       </span>
@@ -438,14 +445,14 @@ const PhotoBlogWizard = ({
                         onChange={(e) => setNote(p.id, e.target.value)}
                         placeholder="한 줄 메모 (선택) 예: 크림파스타 18,000원"
                         maxLength={80}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+                        className={inputCls.replace("py-2.5", "py-2")}
                       />
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => movePhoto(i, -1)}
                           disabled={i === 0}
-                          className="h-9 w-9 flex items-center justify-center rounded-lg bg-background border border-border text-muted-foreground hover:text-foreground disabled:opacity-30"
+                          className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-background border border-border text-muted-foreground hover:text-foreground disabled:opacity-30"
                           aria-label="위로"
                         >
                           <ChevronUp className="h-4 w-4" />
@@ -454,7 +461,7 @@ const PhotoBlogWizard = ({
                           type="button"
                           onClick={() => movePhoto(i, 1)}
                           disabled={i === photos.length - 1}
-                          className="h-9 w-9 flex items-center justify-center rounded-lg bg-background border border-border text-muted-foreground hover:text-foreground disabled:opacity-30"
+                          className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-background border border-border text-muted-foreground hover:text-foreground disabled:opacity-30"
                           aria-label="아래로"
                         >
                           <ChevronDown className="h-4 w-4" />
@@ -463,8 +470,8 @@ const PhotoBlogWizard = ({
                         <button
                           type="button"
                           onClick={() => removePhoto(p.id)}
-                          className="h-9 px-3 flex items-center gap-1 rounded-lg text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          aria-label="삭제"
+                          className="h-10 px-2.5 flex-shrink-0 flex items-center gap-1 rounded-lg text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          aria-label={`사진 ${i + 1} 삭제`}
                         >
                           <X className="h-4 w-4" />
                           삭제
@@ -475,7 +482,7 @@ const PhotoBlogWizard = ({
                 ))}
               </ul>
               {photos.length > 0 && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground break-keep leading-relaxed">
                   메모에 적은 가게 이름·가격·맛 같은 정보만 글에 들어가요. AI는 사진에 없는 사실을 지어내지 않아요.
                 </p>
               )}
@@ -485,61 +492,81 @@ const PhotoBlogWizard = ({
           {/* ---------------- Step 2: 정보 ---------------- */}
           {step === "info" && (
             <div className="space-y-4">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">
-                  주제 <span className="text-destructive">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder="예: 주말 성수동 카페 나들이"
-                  maxLength={60}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">장소 (선택)</label>
-                <input
-                  type="text"
-                  value={place}
-                  onChange={(e) => setPlace(e.target.value)}
-                  placeholder="예: 서울 성수동"
-                  maxLength={60}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">날짜 (선택)</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">말투</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {TONES.map((t) => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => setTone(t.value)}
-                      className={`flex flex-col items-center gap-0.5 rounded-lg px-2 py-2.5 transition-colors ${
-                        tone === t.value
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <span className="text-sm font-medium">{t.label}</span>
-                      <span className={`text-[11px] ${tone === t.value ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                        {t.desc}
-                      </span>
-                    </button>
-                  ))}
+              {generating && (
+                <div className="rounded-xl bg-primary/10 px-4 py-3.5" aria-live="polite">
+                  <div className="flex items-center gap-2.5">
+                    <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin text-primary" />
+                    <p className="flex-1 min-w-0 text-sm font-medium break-keep">
+                      사진 {photos.length}장을 보고 글을 쓰고 있어요
+                    </p>
+                  </div>
+                  <p className="mt-1 pl-[30px] text-xs text-muted-foreground break-keep">
+                    보통 10~30초 걸려요. 창을 닫지 말고 기다려주세요.
+                  </p>
+                  <div className="mt-3 h-1 overflow-hidden rounded-full bg-primary/15">
+                    <div className="h-full w-1/3 rounded-full bg-primary animate-[photoblog-indeterminate_1.4s_ease-in-out_infinite]" />
+                  </div>
                 </div>
-              </div>
+              )}
+              <fieldset disabled={generating} className="space-y-4 min-w-0">
+                <div>
+                  <label className={labelCls}>
+                    주제 <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="예: 주말 성수동 카페 나들이"
+                    maxLength={60}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>장소 (선택)</label>
+                  <input
+                    type="text"
+                    value={place}
+                    onChange={(e) => setPlace(e.target.value)}
+                    placeholder="예: 서울 성수동"
+                    maxLength={60}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>날짜 (선택)</label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className={`${inputCls} min-h-[44px] appearance-none`}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>말투</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {TONES.map((t) => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setTone(t.value)}
+                        className={`min-w-0 min-h-[56px] flex flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-2 text-center transition-colors disabled:opacity-50 ${
+                          tone === t.value
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <span className="text-sm font-medium">{t.label}</span>
+                        <span
+                          className={`text-[11px] leading-tight break-keep ${tone === t.value ? "text-primary-foreground/80" : "text-muted-foreground"}`}
+                        >
+                          {t.desc}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </fieldset>
               <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
                 {photos.map((p, i) => (
                   <img key={p.id} src={p.thumbUrl} alt={`사진 ${i + 1}`} className="h-12 w-12 rounded-md object-cover flex-shrink-0" />
@@ -550,23 +577,33 @@ const PhotoBlogWizard = ({
 
           {/* ---------------- Step 3: 결과 ---------------- */}
           {step === "result" && result && (
-            <div className="space-y-4">
+            <fieldset disabled={!!inserting} className="space-y-4 min-w-0">
               <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">제목</label>
+                <label className={labelCls}>제목</label>
                 <input
                   type="text"
                   value={result.title}
                   onChange={(e) => setResult({ ...result, title: e.target.value })}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-base font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className={`${inputCls} font-semibold`}
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">도입</label>
+                <label className={labelCls}>한 줄 요약</label>
+                <input
+                  type="text"
+                  value={result.summary}
+                  onChange={(e) => setResult({ ...result, summary: e.target.value })}
+                  placeholder="글 맨 위에 부제처럼 들어가요 (비워도 돼요)"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>도입</label>
                 <textarea
                   value={result.intro}
                   onChange={(e) => setResult({ ...result, intro: e.target.value })}
                   rows={3}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-base sm:text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
+                  className={`${inputCls} leading-relaxed resize-y`}
                 />
               </div>
 
@@ -574,13 +611,18 @@ const PhotoBlogWizard = ({
                 const photo = genPhotos[s.photoIndex];
                 const isRegen = regenIndex === s.photoIndex;
                 return (
-                  <div key={s.photoIndex} className="rounded-xl bg-muted/30 p-3 space-y-2.5">
+                  <div key={s.photoIndex} className="relative rounded-xl bg-muted/30 p-3 space-y-2.5 min-w-0">
                     {photo && (
-                      <img
-                        src={photo.thumbUrl}
-                        alt={`사진 ${s.photoIndex + 1}`}
-                        className="w-full max-h-56 rounded-lg object-cover bg-muted"
-                      />
+                      <div className="relative">
+                        <img
+                          src={photo.thumbUrl}
+                          alt={`사진 ${s.photoIndex + 1}`}
+                          className="w-full max-h-56 rounded-lg object-cover bg-muted"
+                        />
+                        <span className="absolute top-2 left-2 rounded bg-black/60 text-white text-[11px] font-semibold px-1.5 leading-5">
+                          {s.photoIndex + 1}
+                        </span>
+                      </div>
                     )}
                     <input
                       type="text"
@@ -588,104 +630,143 @@ const PhotoBlogWizard = ({
                       onChange={(e) => updateSection(s.photoIndex, { heading: e.target.value })}
                       placeholder="소제목"
                       disabled={isRegen}
-                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-base sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
+                      className={`${inputCls} py-2 font-medium`}
                     />
                     <textarea
                       value={s.body}
                       onChange={(e) => updateSection(s.photoIndex, { body: e.target.value })}
                       rows={4}
                       disabled={isRegen}
-                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-base sm:text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y disabled:opacity-50"
+                      className={`${inputCls} py-2 leading-relaxed resize-y`}
                     />
+                    <div className="flex items-start gap-2 min-w-0">
+                      <Quote className="h-4 w-4 mt-3 flex-shrink-0 text-[#d9668a] dark:text-[#f4a7b9]" aria-hidden />
+                      <input
+                        type="text"
+                        value={s.highlight}
+                        onChange={(e) => updateSection(s.photoIndex, { highlight: e.target.value })}
+                        placeholder="인용구 한 줄 (비우면 안 넣어요)"
+                        maxLength={40}
+                        disabled={isRegen}
+                        aria-label="인용구"
+                        className={`${inputCls} py-2 italic`}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleRegenerate(s.photoIndex)}
                       disabled={busy}
-                      className="w-full h-10 flex items-center justify-center gap-1.5 rounded-lg bg-blue-500/15 text-blue-500 text-sm font-medium hover:bg-blue-500/25 transition-colors disabled:opacity-50"
+                      className="w-full min-h-[44px] flex items-center justify-center gap-1.5 rounded-lg bg-muted px-3 text-foreground text-sm font-medium hover:bg-muted/70 transition-colors disabled:opacity-50"
                     >
-                      {isRegen ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                      {isRegen ? "다시 쓰는 중..." : "이 문단 다시 쓰기"}
+                      <span className="h-4 w-4 flex-shrink-0">
+                        {isRegen ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      </span>
+                      <span className="truncate">{isRegen ? "다시 쓰는 중..." : "이 문단 다시 쓰기"}</span>
                     </button>
                   </div>
                 );
               })}
 
               <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">마무리</label>
+                <label className={labelCls}>마무리</label>
                 <textarea
                   value={result.outro}
                   onChange={(e) => setResult({ ...result, outro: e.target.value })}
                   rows={3}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-base sm:text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
+                  className={`${inputCls} leading-relaxed resize-y`}
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">태그 (쉼표로 구분)</label>
+                <label className={labelCls}>태그 (쉼표로 구분)</label>
                 <input
                   type="text"
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className={inputCls}
                 />
               </div>
-            </div>
+            </fieldset>
           )}
         </div>
 
         {/* Footer (sticky) */}
-        <div className="flex-shrink-0 flex items-center gap-2 border-t border-border/60 px-4 sm:px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-background">
-          {step !== "photos" && (
-            <button
-              type="button"
-              onClick={() => { setError(null); setStep(step === "result" ? "info" : "photos"); }}
-              disabled={busy}
-              className="h-11 px-4 flex items-center gap-1 rounded-lg bg-muted text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              이전
-            </button>
+        <div className="relative flex-shrink-0 border-t border-border/60 bg-background px-4 sm:px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {inserting && (
+            <div className="absolute inset-x-0 -top-px h-0.5 bg-primary/15" aria-hidden>
+              <div className="h-full bg-primary transition-[width] duration-300" style={{ width: `${Math.max(6, insertPct)}%` }} />
+            </div>
           )}
-          <div className="flex-1" />
+          {inserting && (
+            <p className="mb-2 text-xs text-muted-foreground break-keep" aria-live="polite">
+              사진을 올리고 있어요 ({inserting.done}/{inserting.total}) · 창을 닫지 말아주세요
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            {step !== "photos" && (
+              <button
+                type="button"
+                onClick={() => { setError(null); setStep(step === "result" ? "info" : "photos"); }}
+                disabled={busy}
+                className="h-11 px-4 flex-shrink-0 flex items-center gap-1 rounded-lg bg-muted text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                이전
+              </button>
+            )}
 
-          {step === "photos" && (
-            <button
-              type="button"
-              onClick={() => { setError(null); setStep("info"); }}
-              disabled={photos.length === 0 || addingPhotos}
-              className="h-11 px-5 flex items-center gap-1 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
-            >
-              다음
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          )}
+            {step === "photos" && (
+              <button
+                type="button"
+                onClick={() => { setError(null); setStep("info"); }}
+                disabled={photos.length === 0 || addingPhotos}
+                className={primaryBtn}
+              >
+                <span className="truncate">다음</span>
+                <ArrowRight className="h-4 w-4 flex-shrink-0" />
+              </button>
+            )}
 
-          {step === "info" && (
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={generating || !topic.trim()}
-              className="h-11 px-5 flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
-            >
-              {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {generating ? "사진 보고 쓰는 중..." : result ? "새로 생성" : "글 생성"}
-            </button>
-          )}
+            {step === "info" && (
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={generating || !topic.trim()}
+                className={primaryBtn}
+              >
+                {generating ? (
+                  <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 flex-shrink-0" />
+                )}
+                <span className="truncate">{generating ? "글 쓰는 중..." : result ? "새로 생성" : "글 생성"}</span>
+              </button>
+            )}
 
-          {step === "result" && (
-            <button
-              type="button"
-              onClick={handleInsert}
-              disabled={busy || !result}
-              className="h-11 px-5 flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
-            >
-              {inserting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              {inserting ? `사진 올리는 중 ${inserting.done}/${inserting.total}` : "에디터에 넣기"}
-            </button>
-          )}
+            {step === "result" && (
+              <button
+                type="button"
+                onClick={handleInsert}
+                disabled={busy || !result}
+                className={primaryBtn}
+              >
+                {inserting ? (
+                  <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4 flex-shrink-0" />
+                )}
+                <span className="truncate tabular-nums">
+                  {inserting ? `올리는 중 ${inserting.done}/${inserting.total}` : "에디터에 넣기"}
+                </span>
+              </button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 };
+
+const primaryBtn =
+  "h-11 min-w-0 flex-1 sm:flex-none sm:ml-auto sm:min-w-[140px] px-5 flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40";
 
 export default PhotoBlogWizard;

@@ -172,7 +172,7 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
       <div className="flex gap-1 bg-muted rounded-lg p-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 relative px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[60px] flex-shrink-0 ${
+            className={`flex-1 relative min-h-[40px] px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[60px] flex-shrink-0 ${
               activeTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}>
             {activeTab === tab.id && (
@@ -226,7 +226,7 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
                   {inspLoading ? "로딩 중..." : `${inspections.length}건의 임장 기록`}
                 </p>
                 <button onClick={() => { resetForm(); setShowForm(true); }}
-                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors">
+                  className="relative after:absolute after:-inset-3 after:content-[''] flex items-center gap-1.5 whitespace-nowrap text-xs text-primary hover:text-primary/80 transition-colors">
                   <Plus className="h-3.5 w-3.5" /> 새 임장 기록
                 </button>
               </div>
@@ -297,7 +297,7 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
                       <div className="flex items-start justify-between">
                         <div>
                           <h4 className="text-sm font-bold">{ins.apartment_name}</h4>
-                          {ins.location && <p className="text-[10px] text-muted-foreground">{ins.location}</p>}
+                          {ins.location && <p className="text-[11px] text-muted-foreground">{ins.location}</p>}
                           <p className="text-xs text-muted-foreground font-mono mt-0.5">{ins.visit_date}</p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -314,7 +314,7 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
                       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-3">
                         {scoreLabels.map(({ key, label }) => (
                           <div key={key} className="text-center">
-                            <p className="text-[10px] text-muted-foreground mb-1">{label}</p>
+                            <p className="text-[11px] text-muted-foreground mb-1">{label}</p>
                             <StarRating value={scores[key]} readonly />
                           </div>
                         ))}
@@ -351,7 +351,7 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
                               })}>
                                 <PolarGrid stroke="hsl(var(--border))" />
                                 <PolarAngleAxis dataKey="label" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
-                                <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 10 }} tickCount={6} />
+                                <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 11 }} tickCount={6} />
                                 {inspForChart.map((ins, idx) => {
                                   const colors = ["#00704A", "#2563EB", "#F59E0B", "#EF4444", "#8B5CF6"];
                                   return <Radar key={idx} name={ins.name} dataKey={ins.name} stroke={colors[idx % colors.length]} fill={colors[idx % colors.length]} fillOpacity={0.15} strokeWidth={2} />;

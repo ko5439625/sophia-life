@@ -75,7 +75,7 @@ export default function ChatLogin({ onLogin }: ChatLoginProps) {
           로그인
         </button>
 
-        <p className="text-center text-[10px] text-[#4a5060] mt-4 leading-relaxed">
+        <p className="text-center text-[11px] text-[#4a5060] mt-4 leading-relaxed">
           코드 하나로 로그인 + 사용자 판별
         </p>
       </form>

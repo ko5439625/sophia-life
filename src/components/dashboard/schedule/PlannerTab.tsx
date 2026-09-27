@@ -275,7 +275,7 @@ const PlannerTab = () => {
         <div className="flex items-center justify-between">
           <button
             onClick={handlePrevMonth}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            className="relative after:absolute after:-inset-1.5 after:content-[''] p-2 hover:bg-muted rounded-lg transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -295,7 +295,7 @@ const PlannerTab = () => {
           </div>
           <button
             onClick={handleNextMonth}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            className="relative after:absolute after:-inset-1.5 after:content-[''] p-2 hover:bg-muted rounded-lg transition-colors"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -447,14 +447,14 @@ const PlannerTab = () => {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => startEditTrip(plan)}
-                  className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                  className="relative after:absolute after:-inset-2 after:content-[''] p-1.5 hover:bg-muted rounded-lg transition-colors"
                   title="수정"
                 >
                   <Edit3 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                 </button>
                 <button
                   onClick={() => handleDeleteTrip(plan.id)}
-                  className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                  className="relative after:absolute after:-inset-2 after:content-[''] p-1.5 hover:bg-muted rounded-lg transition-colors"
                   title="삭제"
                 >
                   <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />

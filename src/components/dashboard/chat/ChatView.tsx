@@ -111,12 +111,12 @@ function ChatLogin({ onLogin }: { onLogin: (s: ChatSender) => void }) {
           로그인
         </button>
 
-        <p className="text-center text-[10px] text-muted-foreground/50 mt-4 leading-relaxed">
+        <p className="text-center text-[11px] text-muted-foreground/50 mt-4 leading-relaxed">
           코드 하나로 로그인 + 사용자 판별
         </p>
 
         <div className="mt-5 pt-4 border-t border-border space-y-2">
-          <p className="text-center text-[10px] text-muted-foreground/60 mb-2">데스크탑 앱 다운로드</p>
+          <p className="text-center text-[11px] text-muted-foreground/60 mb-2">데스크탑 앱 다운로드</p>
           <div className="flex gap-2">
             <a
               href="https://github.com/ko5439625/sophia-life/releases/download/qa-jj-v0.3.1/QA.JJ.Setup.0.3.1.exe"
@@ -131,7 +131,7 @@ function ChatLogin({ onLogin }: { onLogin: (s: ChatSender) => void }) {
               <Monitor size={13} /> macOS
             </a>
           </div>
-          <p className="text-center text-[9px] text-muted-foreground/40 mt-1">v0.3.1</p>
+          <p className="text-center text-[11px] text-muted-foreground/40 mt-1">v0.3.1</p>
         </div>
       </form>
 
@@ -392,7 +392,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
       <div className="bg-card border-0 sm:border border-border rounded-none sm:rounded-xl overflow-hidden flex flex-col -mx-3 sm:mx-0" style={{ height: "calc(100dvh - 140px)", minHeight: "320px" }}>
         {/* 메시지 로그 */}
         <div ref={logRef} className="flex-1 overflow-y-auto px-2.5 sm:px-4 py-2 sm:py-3 space-y-1 sm:space-y-1.5 scroll-smooth" onClick={() => setMenuId(null)}>
-          <div className="text-center text-[10px] text-muted-foreground/50 py-1 sm:py-2">── 오늘 ──</div>
+          <div className="text-center text-[11px] text-muted-foreground/50 py-1 sm:py-2">── 오늘 ──</div>
 
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground/40">
@@ -454,7 +454,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
                       ) : (
                         <span className="whitespace-pre-wrap break-words">{body}</span>
                       )}
-                      <span className={`block text-[9px] sm:text-[9.5px] mt-0.5 sm:mt-1 text-right ${isMe ? "opacity-50" : "text-muted-foreground"}`}>
+                      <span className={`block text-[11px] sm:text-[9.5px] mt-0.5 sm:mt-1 text-right ${isMe ? "opacity-50" : "text-muted-foreground"}`}>
                         {msg.edited && "(수정됨) "}
                         {formatTime(msg.created_at)}
                         {isMe && (

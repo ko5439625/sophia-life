@@ -103,8 +103,21 @@ const Index = () => {
     setUnlockedCategories((prev) => new Set(prev).add(cat));
   }, []);
 
+  // 대시보드에 로그인한 기기(본인)에서는 비공개 글도 보이게
+  const isOwner = typeof window !== "undefined" &&
+    (sessionStorage.getItem("sophia-auth") === "true" || localStorage.getItem("sophia-device-auth") === "true");
+
+  const visiblePosts = useMemo(
+    () => (isOwner ? allPosts : allPosts.filter((p) => p.isPublic !== false)),
+    [allPosts, isOwner]
+  );
+  const postCategories = useMemo(
+    () => Array.from(new Set(visiblePosts.map((p) => p.category).filter(Boolean))),
+    [visiblePosts]
+  );
+
   const filteredPosts = useMemo(() => {
-    let posts = allPosts;
+    let posts = visiblePosts;
 
     // Hide posts from locked categories that haven't been unlocked
     posts = posts.filter((p) => {
@@ -133,7 +146,7 @@ const Index = () => {
     }
 
     return posts;
-  }, [activeCategory, searchQuery, activeTag, lockedCategories, unlockedCategories, allPosts]);
+  }, [activeCategory, searchQuery, activeTag, lockedCategories, unlockedCategories, visiblePosts]);
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
@@ -157,6 +170,7 @@ const Index = () => {
         lockedCategories={lockedCategories}
         unlockedCategories={unlockedCategories}
         onUnlock={handleUnlock}
+        postCategories={postCategories}
       />
 
       {/* Search bar - below category tabs, minimal */}

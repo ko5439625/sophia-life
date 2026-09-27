@@ -551,6 +551,19 @@ const FinancialContext = createContext<FinancialContextValue | null>(null);
 
 const STORAGE_KEY = "sophia-financial-data";
 
+// 2026-09-28 돈 데이터 초기화(가짜 데이터 정리) — 각 기기의 옛 캐시가 DB로 다시 올라가지 않게 1회 삭제
+const FINANCE_RESET_KEY = "sophia-finance-reset";
+const FINANCE_RESET_VERSION = "2026-09-28";
+try {
+  if (typeof localStorage !== "undefined" && localStorage.getItem(FINANCE_RESET_KEY) !== FINANCE_RESET_VERSION) {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem("sophia-trades"); // 매매 탭(로컬 전용)
+    localStorage.setItem(FINANCE_RESET_KEY, FINANCE_RESET_VERSION);
+  }
+} catch {
+  /* ignore */
+}
+
 function loadFromStorage(): FinancialState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

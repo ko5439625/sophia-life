@@ -40,6 +40,12 @@ export default {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
+        // 로즈 포인트 — 커플·결혼·기념일에만
+        love: {
+          DEFAULT: "hsl(var(--love))",
+          foreground: "hsl(var(--love-foreground))",
+        },
+        warn: "hsl(var(--warn))",
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",

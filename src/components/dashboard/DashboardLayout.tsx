@@ -329,8 +329,14 @@ const DashboardLayout = () => {
           <div className="w-10" />
         </header>
 
-        {/* Main content — 모바일에서는 하단 탭 높이만큼 padding-bottom */}
-        <main className="flex-1 p-3 sm:p-5 md:p-8 overflow-y-auto pb-20 md:pb-8">
+        {/* Main content — 모바일: 하단 탭(+안전영역) 높이만큼, FAB가 있는 탭은 FAB 높이까지 더해 마지막 항목이 가려지지 않게 */}
+        <main
+          className={`flex-1 p-3 sm:p-5 md:p-8 overflow-y-auto md:pb-8 ${
+            activeTab !== "chat" && activeTab !== "blog"
+              ? "pb-[calc(9rem+env(safe-area-inset-bottom))]"
+              : "pb-[calc(5rem+env(safe-area-inset-bottom))]"
+          }`}
+        >
           <div className="max-w-4xl mx-auto">
             <motion.div
               key={activeTab}
@@ -349,7 +355,7 @@ const DashboardLayout = () => {
             {fabMenuOpen && (
               <div className="fixed inset-0 z-30" onClick={() => setFabMenuOpen(false)} />
             )}
-            <div className="fixed right-4 bottom-20 md:bottom-8 md:right-8 z-30 flex flex-col items-end gap-2">
+            <div className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-8 md:right-8 z-30 flex flex-col items-end gap-2">
               <AnimatePresence>
                 {fabMenuOpen &&
                   [
@@ -365,7 +371,7 @@ const DashboardLayout = () => {
                         setFabMenuOpen(false);
                         m.onClick();
                       }}
-                      className="rounded-full bg-card border border-border shadow-lg shadow-black/40 px-4 min-h-[44px] text-sm font-semibold"
+                      className="rounded-full bg-card border border-border shadow-lg shadow-black/40 px-4 min-h-[44px] text-sm font-semibold whitespace-nowrap"
                     >
                       {m.label}
                     </motion.button>
@@ -400,18 +406,19 @@ const DashboardLayout = () => {
                     onClick={() => setMoreMenuOpen(false)}
                   />
                   <motion.div
-                    className="fixed bottom-16 left-0 right-0 z-50 px-3 pb-2"
+                    className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-50 px-3 pb-2"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
                   >
                     <div className="bg-card border border-border rounded-2xl shadow-lg p-2 mx-1">
-                      <div className="flex items-center justify-between px-3 py-2 mb-1">
+                      <div className="flex items-center justify-between px-3 py-0.5 mb-1">
                         <span className="text-sm font-semibold text-foreground">더보기</span>
                         <button
                           onClick={() => setMoreMenuOpen(false)}
-                          className="p-1 rounded-lg hover:bg-muted transition-colors"
+                          aria-label="더보기 닫기"
+                          className="-mr-2 flex h-10 w-10 items-center justify-center rounded-lg hover:bg-muted transition-colors"
                         >
                           <X className="h-4 w-4 text-muted-foreground" />
                         </button>
@@ -432,7 +439,7 @@ const DashboardLayout = () => {
                             }`}
                           >
                             <item.icon className="h-5 w-5" />
-                            <span className="text-[11px] font-medium">{item.label}</span>
+                            <span className="text-[12px] font-medium">{item.label}</span>
                           </button>
                         ))}
                         {/* 로그아웃 버튼 */}
@@ -441,7 +448,7 @@ const DashboardLayout = () => {
                           className="flex flex-col items-center gap-1 py-3 px-1 rounded-xl text-muted-foreground hover:bg-muted transition-colors"
                         >
                           <LogOut className="h-5 w-5" />
-                          <span className="text-[11px] font-medium">로그아웃</span>
+                          <span className="text-[12px] font-medium">로그아웃</span>
                         </button>
                       </div>
                     </div>
@@ -479,7 +486,7 @@ const DashboardLayout = () => {
                           <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-card animate-pulse" />
                         )}
                       </span>
-                      <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"}`}>
+                      <span className={`text-[11px] leading-tight ${isActive ? "font-semibold" : "font-medium"}`}>
                         {tab.label}
                       </span>
                     </button>

@@ -388,7 +388,7 @@ const InvestmentView = () => {
 
       {/* Portfolio timestamp */}
       <div className="flex items-center justify-end gap-1.5">
-        <span className="text-[10px] text-muted-foreground/50 font-mono">
+        <span className="text-[11px] text-muted-foreground/50 font-mono">
           기준: {new Date().toLocaleDateString("ko-KR")} 장마감
         </span>
       </div>
@@ -470,8 +470,8 @@ const InvestmentView = () => {
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="text-[10px] flex-1">{item.name}</span>
-                    <span className="text-[10px] font-mono text-muted-foreground">
+                    <span className="text-[11px] flex-1">{item.name}</span>
+                    <span className="text-[11px] font-mono text-muted-foreground">
                       {pct}%
                     </span>
                   </div>
@@ -483,12 +483,12 @@ const InvestmentView = () => {
           {/* Holdings list (compact) */}
           <div className="space-y-1.5 pt-2 border-t border-border">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] text-muted-foreground font-medium">보유 종목</p>
+              <p className="text-[11px] text-muted-foreground font-medium">보유 종목</p>
               {holdings.length > 0 && (
                 <button
                   onClick={fetchCurrentPrices}
                   disabled={priceLoading}
-                  className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
                 >
                   {priceLoading ? "업데이트 중..." : "📊 현재가 업데이트"}
                 </button>
@@ -496,7 +496,7 @@ const InvestmentView = () => {
             </div>
             {/* 국장 */}
             {krHoldings.length > 0 && (
-              <p className="text-[9px] text-muted-foreground/60 font-mono mt-1">국장 (KRW)</p>
+              <p className="text-[11px] text-muted-foreground/60 font-mono mt-1">국장 (KRW)</p>
             )}
             {krHoldings.map((h) => {
               const totalValue = h.currentPrice * h.quantity;
@@ -507,11 +507,11 @@ const InvestmentView = () => {
                 <div key={h.id} className="flex items-center justify-between py-1 group">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[h.category] || "#999" }} />
-                    <span className="text-[10px] truncate">{h.name}</span>
+                    <span className="text-[11px] truncate">{h.name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] font-mono">{isGuest ? "₩•••" : `${formatKRW(totalValue)}원`}</span>
-                    <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>{isUp ? "+" : ""}{returnPct}%</span>
+                    <span className="text-[11px] font-mono">{isGuest ? "₩•••" : `${formatKRW(totalValue)}원`}</span>
+                    <span className={`text-[11px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>{isUp ? "+" : ""}{returnPct}%</span>
                     <button onClick={() => removeHolding(h.id)} aria-label="삭제" className="-m-2 p-2.5 sm:m-0 sm:p-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <X className="h-3 w-3 sm:h-2.5 sm:w-2.5 text-muted-foreground hover:text-destructive" />
                     </button>
@@ -521,7 +521,7 @@ const InvestmentView = () => {
             })}
             {/* 미장 */}
             {usHoldings.length > 0 && (
-              <p className="text-[9px] text-muted-foreground/60 font-mono mt-2">미장 (USD · {formatKRW(Math.round(usdKrw))}원/달러)</p>
+              <p className="text-[11px] text-muted-foreground/60 font-mono mt-2">미장 (USD · {formatKRW(Math.round(usdKrw))}원/달러)</p>
             )}
             {usHoldings.map((h) => {
               const usdValue = h.currentPrice * h.quantity;
@@ -533,14 +533,14 @@ const InvestmentView = () => {
                 <div key={h.id} className="flex items-center justify-between py-1 group">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[h.category] || "#999" }} />
-                    <span className="text-[10px] truncate">{h.name}</span>
+                    <span className="text-[11px] truncate">{h.name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="text-right">
-                      <span className="text-[10px] font-mono">{isGuest ? "$•••" : `$${h.currentPrice.toLocaleString()}`}</span>
-                      <span className="text-[8px] text-muted-foreground ml-1">({isGuest ? "₩•••" : `₩${formatKRW(krwValue)}`})</span>
+                      <span className="text-[11px] font-mono">{isGuest ? "$•••" : `$${h.currentPrice.toLocaleString()}`}</span>
+                      <span className="text-[11px] text-muted-foreground ml-1">({isGuest ? "₩•••" : `₩${formatKRW(krwValue)}`})</span>
                     </div>
-                    <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>{isUp ? "+" : ""}{returnPct}%</span>
+                    <span className={`text-[11px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>{isUp ? "+" : ""}{returnPct}%</span>
                     <button onClick={() => removeHolding(h.id)} aria-label="삭제" className="-m-2 p-2.5 sm:m-0 sm:p-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <X className="h-3 w-3 sm:h-2.5 sm:w-2.5 text-muted-foreground hover:text-destructive" />
                     </button>
@@ -625,8 +625,8 @@ const InvestmentView = () => {
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="text-[10px] flex-1">{item.name}</span>
-                    <span className="text-[10px] font-mono text-muted-foreground">
+                    <span className="text-[11px] flex-1">{item.name}</span>
+                    <span className="text-[11px] font-mono text-muted-foreground">
                       {pct}%
                     </span>
                   </div>
@@ -637,7 +637,7 @@ const InvestmentView = () => {
 
           {/* Pension fund list */}
           <div className="space-y-1.5 pt-2 border-t border-border">
-            <p className="text-[10px] text-muted-foreground font-medium">보유 펀드</p>
+            <p className="text-[11px] text-muted-foreground font-medium">보유 펀드</p>
             {pensionFunds.map((h) => {
               const totalValue = h.currentPrice * h.quantity;
               const invested = h.avgPrice * h.quantity;
@@ -652,11 +652,11 @@ const InvestmentView = () => {
                       className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                       style={{ backgroundColor: PENSION_CATEGORY_COLORS[h.accountType] || "#999" }}
                     />
-                    <span className="text-[10px] truncate">{h.name}</span>
+                    <span className="text-[11px] truncate">{h.name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] font-mono">{isGuest ? "₩•••" : formatKRW(totalValue)}</span>
-                    <span className={`text-[10px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>
+                    <span className="text-[11px] font-mono">{isGuest ? "₩•••" : formatKRW(totalValue)}</span>
+                    <span className={`text-[11px] font-mono ${isUp ? "text-primary" : "text-destructive"}`}>
                       {isUp ? "+" : ""}{returnPct}%
                     </span>
                   </div>
@@ -685,7 +685,7 @@ const InvestmentView = () => {
             <p className="text-lg font-mono font-extrabold">
               {isGuest ? maskAmount(combinedTotal) : `${formatKRW(combinedTotal)}원`}
             </p>
-            <div className="flex items-center justify-end gap-3 mt-0.5 text-[10px] text-muted-foreground font-mono">
+            <div className="flex items-center justify-end gap-3 mt-0.5 text-[11px] text-muted-foreground font-mono">
               <span>투자 {isGuest ? "₩•••" : formatKRW(totalInvestment)}</span>
               <span>+</span>
               <span>연금 {isGuest ? "₩•••" : formatKRW(totalPension)}</span>
@@ -702,7 +702,7 @@ const InvestmentView = () => {
           <h4 className="text-sm font-bold">보유 종목 관리</h4>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+            className="-my-2 -mr-2 flex min-h-[40px] items-center gap-1 px-2 text-xs text-primary hover:text-primary/80 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             종목 추가
@@ -731,7 +731,7 @@ const InvestmentView = () => {
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                   {newHolding.symbol && (
-                    <p className="text-[10px] text-primary font-mono mt-0.5">선택됨: {newHolding.symbol}</p>
+                    <p className="text-[11px] text-primary font-mono mt-0.5">선택됨: {newHolding.symbol}</p>
                   )}
                   {/* Search results dropdown */}
                   {symbolSearchResults.length > 0 && (
@@ -762,7 +762,7 @@ const InvestmentView = () => {
                           className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between"
                         >
                           <span>{r.name}</span>
-                          <span className="text-[10px] font-mono text-muted-foreground">{r.symbol}</span>
+                          <span className="text-[11px] font-mono text-muted-foreground">{r.symbol}</span>
                         </button>
                       ))}
                     </div>
@@ -889,11 +889,11 @@ const InvestmentView = () => {
                       <span className="text-sm font-medium truncate">
                         {h.name}
                       </span>
-                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                      <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                         {CATEGORY_LABELS[h.category] || h.category}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3 mt-0.5 text-[10px] sm:text-xs text-muted-foreground font-mono flex-wrap">
+                    <div className="flex items-center gap-2 sm:gap-3 mt-0.5 text-[11px] sm:text-xs text-muted-foreground font-mono flex-wrap">
                       <span>{h.quantity}주</span>
                       <span>평균 {isKrStock(h.name) ? formatKRW(h.avgPrice) : `$${h.avgPrice.toLocaleString()}`}</span>
                       <span>현재 {isKrStock(h.name) ? formatKRW(h.currentPrice) : `$${h.currentPrice.toLocaleString()}`}</span>
@@ -905,7 +905,7 @@ const InvestmentView = () => {
                       {isGuest ? maskAmount(getKrwValue(h)) : `${formatKRW(getKrwValue(h))}원`}
                     </p>
                     {!isKrStock(h.name) && (
-                      <p className="text-[9px] text-muted-foreground font-mono">${(h.currentPrice * h.quantity).toLocaleString()}</p>
+                      <p className="text-[11px] text-muted-foreground font-mono">${(h.currentPrice * h.quantity).toLocaleString()}</p>
                     )}
                     <p
                       className={`text-xs font-mono tabular-nums ${
@@ -919,7 +919,7 @@ const InvestmentView = () => {
                   <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                     <button
                       onClick={() => isSelling ? setSellingId(null) : openSellForm(h)}
-                      className={`px-2 py-1 text-[10px] font-medium rounded-md transition-colors min-h-[28px] ${
+                      className={`px-2 py-1 text-[11px] font-medium rounded-md transition-colors min-h-[28px] ${
                         isSelling
                           ? "bg-muted text-muted-foreground"
                           : "bg-destructive/10 text-destructive hover:bg-destructive/20"
@@ -948,7 +948,7 @@ const InvestmentView = () => {
                       <div className="bg-muted/30 rounded-lg p-4 mb-2 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="text-[10px] text-muted-foreground mb-1 block">
+                            <label className="text-[11px] text-muted-foreground mb-1 block">
                               매도 수량 (최대 {h.quantity})
                             </label>
                             <input
@@ -966,7 +966,7 @@ const InvestmentView = () => {
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] text-muted-foreground mb-1 block">
+                            <label className="text-[11px] text-muted-foreground mb-1 block">
                               매도가
                             </label>
                             <input
@@ -984,13 +984,13 @@ const InvestmentView = () => {
                         {sellQty > 0 && (
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <div className="bg-background rounded-lg p-2 text-center">
-                              <p className="text-[9px] text-muted-foreground">매도 금액</p>
+                              <p className="text-[11px] text-muted-foreground">매도 금액</p>
                               <p className="text-xs font-mono font-bold mt-0.5">
                                 {isGuest ? maskAmount(sellTotal) : `${formatKRW(sellTotal)}원`}
                               </p>
                             </div>
                             <div className="bg-background rounded-lg p-2 text-center">
-                              <p className="text-[9px] text-muted-foreground">실현 손익</p>
+                              <p className="text-[11px] text-muted-foreground">실현 손익</p>
                               <p
                                 className={`text-xs font-mono font-bold mt-0.5 ${
                                   isSellProfit ? "text-primary" : "text-destructive"
@@ -1000,7 +1000,7 @@ const InvestmentView = () => {
                               </p>
                             </div>
                             <div className="bg-background rounded-lg p-2 text-center">
-                              <p className="text-[9px] text-muted-foreground">수익률</p>
+                              <p className="text-[11px] text-muted-foreground">수익률</p>
                               <p
                                 className={`text-xs font-mono font-bold mt-0.5 ${
                                   isSellProfit ? "text-primary" : "text-destructive"
@@ -1015,7 +1015,7 @@ const InvestmentView = () => {
 
                         {/* Destination selector */}
                         <div>
-                          <label className="text-[10px] text-muted-foreground mb-1.5 block">
+                          <label className="text-[11px] text-muted-foreground mb-1.5 block">
                             매도 대금 처리
                           </label>
                           <div className="flex gap-1.5">
@@ -1023,7 +1023,7 @@ const InvestmentView = () => {
                               <button
                                 key={dest}
                                 onClick={() => setSellForm({ ...sellForm, destination: dest })}
-                                className={`flex-1 px-2 py-1.5 text-[10px] font-medium rounded-md transition-colors ${
+                                className={`flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
                                   sellForm.destination === dest
                                     ? "bg-primary text-primary-foreground"
                                     : "bg-muted text-muted-foreground hover:text-foreground"
@@ -1072,19 +1072,19 @@ const InvestmentView = () => {
         {/* Summary stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <p className="text-[10px] text-muted-foreground">총 실현 수익</p>
+            <p className="text-[11px] text-muted-foreground">총 실현 수익</p>
             <p className="text-sm font-mono font-bold text-primary mt-0.5">
               {isGuest ? maskAmount(tradeSummary.totalGains) : `+${formatKRW(tradeSummary.totalGains)}원`}
             </p>
           </div>
           <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <p className="text-[10px] text-muted-foreground">총 실현 손실</p>
+            <p className="text-[11px] text-muted-foreground">총 실현 손실</p>
             <p className="text-sm font-mono font-bold text-destructive mt-0.5">
               {isGuest ? maskAmount(tradeSummary.totalLosses) : `${formatKRW(tradeSummary.totalLosses)}원`}
             </p>
           </div>
           <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <p className="text-[10px] text-muted-foreground">순 실현 손익</p>
+            <p className="text-[11px] text-muted-foreground">순 실현 손익</p>
             <p
               className={`text-sm font-mono font-bold mt-0.5 ${
                 tradeSummary.netPnl >= 0 ? "text-primary" : "text-destructive"
@@ -1133,7 +1133,7 @@ const InvestmentView = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${
                         isBuy
                           ? "bg-[#45B7D1]/10 text-[#45B7D1]"
                           : isPnlProfit
@@ -1147,12 +1147,12 @@ const InvestmentView = () => {
                       {trade.holdingName}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground font-mono">
+                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground font-mono">
                     <span>{trade.date}</span>
                     <span>{trade.quantity}주</span>
                     <span>@{formatKRW(trade.price)}</span>
                     {trade.destination && (
-                      <span className="text-[9px] bg-muted px-1 py-0.5 rounded">
+                      <span className="text-[11px] bg-muted px-1 py-0.5 rounded">
                         {DESTINATION_LABELS[trade.destination]}
                       </span>
                     )}
@@ -1166,7 +1166,7 @@ const InvestmentView = () => {
                   </p>
                   {!isBuy && trade.realizedPnl !== undefined && (
                     <p
-                      className={`text-[10px] font-mono tabular-nums ${
+                      className={`text-[11px] font-mono tabular-nums ${
                         isPnlProfit ? "text-primary" : "text-destructive"
                       }`}
                     >

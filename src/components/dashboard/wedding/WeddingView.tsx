@@ -97,7 +97,7 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`relative flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-md transition-colors ${
+            className={`relative flex min-h-[40px] items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-md transition-colors ${
               activeTab === tab.id
                 ? "text-foreground"
                 : "text-muted-foreground/60 hover:text-muted-foreground"
@@ -351,7 +351,7 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
         </div>
         <button
           onClick={() => setFilterCategory(null)}
-          className={`text-[11px] px-2.5 py-1 rounded-full transition-colors ${!filterCategory ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+          className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] text-[11px] px-2.5 py-1 rounded-full transition-colors ${!filterCategory ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
         >
           전체
         </button>
@@ -359,7 +359,7 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
           <button
             key={cat}
             onClick={() => setFilterCategory(filterCategory === cat ? null : cat)}
-            className={`text-[11px] px-2.5 py-1 rounded-full transition-colors ${filterCategory === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+            className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] text-[11px] px-2.5 py-1 rounded-full transition-colors ${filterCategory === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
           >
             {cat}
           </button>
@@ -369,7 +369,7 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
             <button
               key={f}
               onClick={() => setFilterDone(f)}
-              className={`text-[11px] px-2 py-0.5 rounded transition-colors ${filterDone === f ? "bg-foreground/10 text-foreground" : "text-muted-foreground/50 hover:text-muted-foreground"}`}
+              className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] text-[11px] px-2 py-0.5 rounded transition-colors ${filterDone === f ? "bg-foreground/10 text-foreground" : "text-muted-foreground/50 hover:text-muted-foreground"}`}
             >
               {f === "all" ? "전체" : f === "todo" ? "미완료" : "완료"}
             </button>
@@ -402,15 +402,15 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
               <div className="p-2 flex items-center justify-center">
                 {collapsedCats.has("__settlement__") ? <ChevronRight className="h-3 w-3 text-pink-400/60" /> : <ChevronDown className="h-3 w-3 text-pink-400/60" />}
               </div>
-              <div className="p-2 col-span-3 sm:col-span-4 text-left flex items-center gap-1.5">
-                <Banknote className="h-3.5 w-3.5 text-pink-400" />
+              <div className="p-2 col-span-2 sm:col-span-4 min-w-0 text-left flex items-center gap-1.5">
+                <Banknote className="h-3.5 w-3.5 shrink-0 text-pink-400" />
                 <span className="text-xs font-medium text-pink-600 dark:text-pink-300">정산 연동</span>
                 <span className="text-[11px] text-muted-foreground/50 font-mono">{sVendors.length}개 업체</span>
               </div>
-              <div className="p-2 text-right text-[11px] font-mono text-pink-600/70 dark:text-pink-300/70">
+              {/* 금액이 좁은 36px 칸에 들어가 넘치던 문제 → 남은 칸을 모두 사용 */}
+              <div className="p-2 col-span-3 sm:col-span-2 whitespace-nowrap text-right text-[11px] font-mono text-pink-600/70 dark:text-pink-300/70">
                 {formatAmount(sStats.totalAmount)}원
               </div>
-              <div className="p-2" />
             </button>
 
             {!collapsedCats.has("__settlement__") && sVendors.map((v) => {

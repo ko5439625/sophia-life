@@ -570,7 +570,7 @@ const PensionView = () => {
             <button
               key={type}
               onClick={() => setSelectedAccount(type)}
-              className={`flex-1 relative px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              className={`flex-1 relative min-h-[40px] px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 selectedAccount === type
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -591,13 +591,13 @@ const PensionView = () => {
         {/* Account summary */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-muted/30 rounded-lg p-3">
-            <p className="text-[10px] text-muted-foreground">총 납입액</p>
+            <p className="text-[11px] text-muted-foreground">총 납입액</p>
             <p className="text-sm font-mono font-bold mt-0.5">
               {isGuest ? maskAmount(account.totalDeposited) : `${formatKRW(account.totalDeposited)}원`}
             </p>
           </div>
           <div className="bg-muted/30 rounded-lg p-3">
-            <p className="text-[10px] text-muted-foreground">현재 평가액</p>
+            <p className="text-[11px] text-muted-foreground">현재 평가액</p>
             <p className="text-sm font-mono font-bold mt-0.5">
               {isGuest ? maskAmount(account.currentValue) : `${formatKRW(account.currentValue)}원`}
             </p>
@@ -634,7 +634,7 @@ const PensionView = () => {
               transition={{ duration: 0.8, ease: "easeOut" }}
             />
           </div>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             잔여 한도: {isGuest ? "₩•••••••" : formatMan(account.annualLimit - account.annualDeposited)}
           </p>
         </div>
@@ -642,11 +642,11 @@ const PensionView = () => {
         {/* Tax deduction */}
         {account.taxDeduction > 0 && (
           <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">
-            <p className="text-[10px] text-muted-foreground">세액공제 예상 금액</p>
+            <p className="text-[11px] text-muted-foreground">세액공제 예상 금액</p>
             <p className="text-sm font-mono font-bold text-primary mt-0.5">
               {isGuest ? maskAmount(account.taxDeduction) : `${formatKRW(account.taxDeduction)}원`}
             </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               (납입액 x {(TAX_DEDUCTION_RATES[selectedAccount].rate * 100).toFixed(1)}%, 최대{" "}
               {formatMan(TAX_DEDUCTION_RATES[selectedAccount].maxBase)} 기준)
             </p>
@@ -674,7 +674,7 @@ const PensionView = () => {
             {/* Employer contribution inputs */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-muted/30 rounded-lg p-3">
-                <label className="text-[10px] text-muted-foreground mb-1.5 block">
+                <label className="text-[11px] text-muted-foreground mb-1.5 block">
                   월 회사 납입액
                 </label>
                 <div className="flex items-center gap-1">
@@ -689,11 +689,11 @@ const PensionView = () => {
                     readOnly={isGuest}
                     className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
-                  <span className="text-[10px] text-muted-foreground flex-shrink-0">원</span>
+                  <span className="text-[11px] text-muted-foreground flex-shrink-0">원</span>
                 </div>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
-                <label className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
+                <label className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   납입 시작일
                 </label>
@@ -705,7 +705,7 @@ const PensionView = () => {
                 />
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
-                <label className="text-[10px] text-muted-foreground mb-1.5 block">
+                <label className="text-[11px] text-muted-foreground mb-1.5 block">
                   누적 납입액
                 </label>
                 <div className="flex items-center gap-1">
@@ -720,11 +720,11 @@ const PensionView = () => {
                     readOnly={isGuest}
                     className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
-                  <span className="text-[10px] text-muted-foreground flex-shrink-0">원</span>
+                  <span className="text-[11px] text-muted-foreground flex-shrink-0">원</span>
                 </div>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
-                <label className="text-[10px] text-muted-foreground mb-1.5 block">
+                <label className="text-[11px] text-muted-foreground mb-1.5 block">
                   현재 DC 운용 잔고
                 </label>
                 <div className="flex items-center gap-1">
@@ -739,7 +739,7 @@ const PensionView = () => {
                     readOnly={isGuest}
                     className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
-                  <span className="text-[10px] text-muted-foreground flex-shrink-0">원</span>
+                  <span className="text-[11px] text-muted-foreground flex-shrink-0">원</span>
                 </div>
               </div>
             </div>
@@ -751,7 +751,7 @@ const PensionView = () => {
               ) : (
                 <TrendingDown className="h-3.5 w-3.5 text-destructive" />
               )}
-              <span className="text-[10px] text-muted-foreground">DC 수익률</span>
+              <span className="text-[11px] text-muted-foreground">DC 수익률</span>
               <span
                 className={`text-sm font-mono font-bold ml-auto ${
                   isDcProfit ? "text-primary" : "text-destructive"
@@ -760,7 +760,7 @@ const PensionView = () => {
                 {isDcProfit ? "+" : ""}
                 {dcReturnRate}%
               </span>
-              <span className="text-[10px] font-mono text-muted-foreground">
+              <span className="text-[11px] font-mono text-muted-foreground">
                 ({isGuest ? "₩•••" : `${isDcProfit ? "+" : ""}${formatKRW(dcInfo.currentBalance - dcInfo.cumulativeDeposited)}원`})
               </span>
             </div>
@@ -777,7 +777,7 @@ const PensionView = () => {
                     setShowDcForm(!showDcForm);
                     setEditingDcId(null);
                   }}
-                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                  className="relative after:absolute after:-inset-3 after:content-[''] flex items-center gap-1 whitespace-nowrap text-xs text-primary hover:text-primary/80 transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   추가
@@ -945,11 +945,11 @@ const PensionView = () => {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-medium truncate">{fund.name}</span>
-                                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                                   {fund.weight}%
                                 </span>
                               </div>
-                              <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground font-mono">
+                              <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground font-mono">
                                 <span>{fund.quantity}좌</span>
                                 <span>매수 {isGuest ? "₩•••" : formatKRW(fund.buyPrice)}</span>
                                 <span>현재 {isGuest ? "₩•••" : formatKRW(fund.currentPrice)}</span>
@@ -960,7 +960,7 @@ const PensionView = () => {
                                 {isGuest ? maskAmount(totalValue) : `${formatKRW(totalValue)}원`}
                               </p>
                               <p
-                                className={`text-[10px] font-mono tabular-nums ${
+                                className={`text-[11px] font-mono tabular-nums ${
                                   isUp ? "text-primary" : "text-destructive"
                                 }`}
                               >
@@ -1013,7 +1013,7 @@ const PensionView = () => {
               setShowForm(!showForm);
               setEditingId(null);
             }}
-            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+            className="relative after:absolute after:-inset-3 after:content-[''] flex items-center gap-1 whitespace-nowrap text-xs text-primary hover:text-primary/80 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             추가
@@ -1193,11 +1193,11 @@ const PensionView = () => {
                           <span className="text-xs font-medium truncate">
                             {fund.name}
                           </span>
-                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                             {fund.weight}%
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground font-mono">
+                        <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground font-mono">
                           <span>{fund.quantity}좌</span>
                           <span>매수 {isGuest ? "₩•••" : formatKRW(fund.buyPrice)}</span>
                           <span>현재 {isGuest ? "₩•••" : formatKRW(fund.currentPrice)}</span>
@@ -1208,7 +1208,7 @@ const PensionView = () => {
                           {isGuest ? maskAmount(totalValue) : `${formatKRW(totalValue)}원`}
                         </p>
                         <p
-                          className={`text-[10px] font-mono tabular-nums ${
+                          className={`text-[11px] font-mono tabular-nums ${
                             isUp ? "text-primary" : "text-destructive"
                           }`}
                         >
@@ -1296,8 +1296,8 @@ const PensionView = () => {
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-[10px] flex-1">{item.name}</span>
-                  <span className="text-[10px] font-mono text-muted-foreground">
+                  <span className="text-[11px] flex-1">{item.name}</span>
+                  <span className="text-[11px] font-mono text-muted-foreground">
                     {item.value}%
                   </span>
                 </div>
@@ -1346,8 +1346,8 @@ const PensionView = () => {
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-[10px] flex-1">{item.name}</span>
-                  <span className="text-[10px] font-mono text-primary font-medium">
+                  <span className="text-[11px] flex-1">{item.name}</span>
+                  <span className="text-[11px] font-mono text-primary font-medium">
                     {item.value}%
                   </span>
                 </div>
@@ -1362,7 +1362,7 @@ const PensionView = () => {
             <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-xs font-medium text-yellow-500">리밸런싱 필요</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 현재 자산 배분이 목표와 5%p 이상 차이가 있습니다. 리밸런싱을 권장합니다.
               </p>
               <div className="mt-2 space-y-1">
@@ -1372,7 +1372,7 @@ const PensionView = () => {
                   const diff = curr.value - target.value;
                   if (Math.abs(diff) <= 2) return null;
                   return (
-                    <p key={curr.name} className="text-[10px] font-mono">
+                    <p key={curr.name} className="text-[11px] font-mono">
                       <span>{curr.name}</span>:{" "}
                       <span className={diff > 0 ? "text-destructive" : "text-primary"}>
                         {curr.value}% → {target.value}% ({diff > 0 ? "▼" : "▲"}
@@ -1404,7 +1404,7 @@ const PensionView = () => {
         {/* Inputs */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-[10px] text-muted-foreground mb-1 block">
+            <label className="text-[11px] text-muted-foreground mb-1 block">
               현재 잔고 (원)
             </label>
             <input
@@ -1415,7 +1415,7 @@ const PensionView = () => {
             />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground mb-1 block">
+            <label className="text-[11px] text-muted-foreground mb-1 block">
               월 납입액 (원)
             </label>
             <input
@@ -1426,7 +1426,7 @@ const PensionView = () => {
             />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground mb-1 block">
+            <label className="text-[11px] text-muted-foreground mb-1 block">
               예상 연 수익률 (%)
             </label>
             <input
@@ -1437,7 +1437,7 @@ const PensionView = () => {
             />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground mb-1 block">
+            <label className="text-[11px] text-muted-foreground mb-1 block">
               물가상승률 (%)
             </label>
             <input
@@ -1448,7 +1448,7 @@ const PensionView = () => {
             />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground mb-1 block">
+            <label className="text-[11px] text-muted-foreground mb-1 block">
               목표 은퇴 자금 (원)
             </label>
             <input
@@ -1459,7 +1459,7 @@ const PensionView = () => {
             />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground mb-1 block">
+            <label className="text-[11px] text-muted-foreground mb-1 block">
               월 생활비 (원)
             </label>
             <input
@@ -1474,7 +1474,7 @@ const PensionView = () => {
         {/* Target reach */}
         {yearsToTarget && (
           <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-center">
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               목표 금액 {isGuest ? maskAmount(targetAmount) : `${formatKRW(targetAmount)}원`} 도달 예상
             </p>
             <p className="text-lg font-mono font-bold text-primary mt-0.5">
@@ -1493,13 +1493,13 @@ const PensionView = () => {
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" opacity={0.3} />
               <XAxis
                 dataKey="year"
-                tick={{ fontSize: 9 }}
+                tick={{ fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 interval={4}
               />
               <YAxis
-                tick={{ fontSize: 9 }}
+                tick={{ fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) => isGuest ? "•••" : `${(v / 100000000).toFixed(1)}억`}
@@ -1554,7 +1554,7 @@ const PensionView = () => {
                 verticalAlign="top"
                 height={24}
                 iconSize={8}
-                wrapperStyle={{ fontSize: 10 }}
+                wrapperStyle={{ fontSize: 11 }}
                 formatter={(value: string) =>
                   value === "value" ? "명목 금액" : value === "realValue" ? "실질 가치" : "목표"
                 }
@@ -1565,7 +1565,7 @@ const PensionView = () => {
 
         {/* Chart legend note */}
         {inflation > 0 && (
-          <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-4 text-[11px] text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <div className="w-4 h-0.5 bg-[#4ECDC4] rounded" />
               <span>명목 금액 (실제 잔고)</span>
@@ -1588,14 +1588,14 @@ const PensionView = () => {
             const realVal = data[data.length - 1]?.realValue;
             return (
               <div key={label} className="bg-muted/30 rounded-lg p-2 text-center">
-                <p className="text-[10px] text-muted-foreground">{label}</p>
+                <p className="text-[11px] text-muted-foreground">{label}</p>
                 <p className="text-xs font-mono font-bold mt-0.5">
                   {isGuest ? "₩•••••••" : val >= 100000000
                     ? `${(val / 100000000).toFixed(1)}억`
                     : formatMan(val)}
                 </p>
                 {realVal !== undefined && (
-                  <p className="text-[9px] font-mono text-[#FFB347] mt-0.5">
+                  <p className="text-[11px] font-mono text-[#FFB347] mt-0.5">
                     실질 {isGuest ? "₩•••••••" : realVal >= 100000000
                       ? `${(realVal / 100000000).toFixed(1)}억`
                       : formatMan(realVal)}
@@ -1619,7 +1619,7 @@ const PensionView = () => {
             {/* Nominal coverage */}
             <div className="bg-muted/30 rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">현재 기준</span>
+                <span className="text-[11px] text-muted-foreground">현재 기준</span>
                 <span className="text-sm font-mono font-bold text-primary">
                   {nominalCoverageYears}년 {nominalCoverageRemMonths}개월 보장
                 </span>
@@ -1633,7 +1633,7 @@ const PensionView = () => {
                   transition={{ duration: 0.8, ease: "easeOut" }}
                 />
               </div>
-              <div className="flex justify-between text-[9px] text-muted-foreground font-mono">
+              <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
                 <span>0년</span>
                 <span>10년</span>
                 <span>20년</span>
@@ -1646,7 +1646,7 @@ const PensionView = () => {
             {inflation > 0 && (
               <div className="bg-[#FFB347]/5 border border-[#FFB347]/15 rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground">물가상승률 반영 시</span>
+                  <span className="text-[11px] text-muted-foreground">물가상승률 반영 시</span>
                   <span className="text-sm font-mono font-bold text-[#FFB347]">
                     {realCoverageYears}년 {realCoverageRemMonths}개월 보장
                   </span>
@@ -1660,7 +1660,7 @@ const PensionView = () => {
                     transition={{ duration: 0.8, ease: "easeOut" }}
                   />
                 </div>
-                <div className="flex justify-between text-[9px] text-muted-foreground font-mono">
+                <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
                   <span>0년</span>
                   <span>10년</span>
                   <span>20년</span>
@@ -1684,27 +1684,27 @@ const PensionView = () => {
 
             <div className="grid grid-cols-1 gap-2">
               <div className="bg-muted/30 rounded-lg p-3">
-                <p className="text-[10px] text-muted-foreground">30년 후 연금 잔고의 현재 가치</p>
+                <p className="text-[11px] text-muted-foreground">30년 후 연금 잔고의 현재 가치</p>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-sm font-mono font-bold">
                     {isGuest ? maskAmount(finalReal) : finalReal >= 100000000
                       ? `${(finalReal / 100000000).toFixed(1)}억원`
                       : `${formatKRW(finalReal)}원`}
                   </p>
-                  <span className="text-[10px] font-mono text-destructive">
+                  <span className="text-[11px] font-mono text-destructive">
                     ({purchasingPowerLoss30.toFixed(1)}% 감소)
                   </span>
                 </div>
               </div>
 
               <div className="bg-muted/30 rounded-lg p-3">
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground">
                   30년 후 300만원의 현재 가치
                 </p>
                 <p className="text-sm font-mono font-bold mt-1">
                   {isGuest ? maskAmount(Math.round(currentValueOf300After30)) : `~${formatKRW(Math.round(currentValueOf300After30))}원`}
                 </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
+                <p className="text-[11px] text-muted-foreground mt-0.5">
                   물가상승률 {inflation}% 기준, 매년 화폐 가치가 줄어듭니다
                 </p>
               </div>
@@ -1727,7 +1727,7 @@ const PensionView = () => {
           <h3 className="text-sm font-medium">헷징 전략 (연금용)</h3>
         </div>
 
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-[11px] text-muted-foreground">
           연금은 중장기 투자이므로 단기 변동은 무시하고, 구조적 변화에만 대응합니다.
           AI가 연금 포트폴리오와 시장 상황을 분석하여 리밸런싱을 추천합니다.
         </p>

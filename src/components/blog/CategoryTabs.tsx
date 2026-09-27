@@ -9,6 +9,8 @@ interface CategoryTabsProps {
   lockedCategories?: string[];
   unlockedCategories?: Set<string>;
   onUnlock?: (cat: string) => void;
+  /** 실제 글이 있는 카테고리 — 설정 목록에서 빠져도 탭이 사라지지 않게 합침 */
+  postCategories?: string[];
 }
 
 const CategoryTabs = ({
@@ -17,14 +19,18 @@ const CategoryTabs = ({
   lockedCategories = [],
   unlockedCategories = new Set(),
   onUnlock,
+  postCategories = [],
 }: CategoryTabsProps) => {
   const categories = useMemo(() => {
+    let configured: string[] = defaultCategories.filter((c) => c !== "전체");
     try {
       const stored = localStorage.getItem("sophia-blog-categories");
-      if (stored) return ["전체", ...JSON.parse(stored)];
+      if (stored) configured = JSON.parse(stored);
     } catch { /* ignore */ }
-    return defaultCategories;
-  }, []);
+    const merged = [...configured];
+    for (const c of postCategories) if (c && !merged.includes(c)) merged.push(c);
+    return ["전체", ...merged];
+  }, [postCategories]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -127,7 +133,10 @@ const CategoryTabs = ({
                 }`}
               >
                 {showLocked ? (
-                  <Lock className="h-4 w-4" />
+                  <span className="inline-flex items-center gap-1">
+                    <Lock className="h-3.5 w-3.5" />
+                    {cat}
+                  </span>
                 ) : (
                   cat
                 )}

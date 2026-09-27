@@ -227,7 +227,7 @@ const CalendarTab = () => {
         <button
           onClick={() => handleAddEvent(forDate)}
           disabled={!newTitle.trim()}
-          className="w-full py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+          className="w-full min-h-[40px] py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
         >
           추가
         </button>
@@ -249,13 +249,13 @@ const CalendarTab = () => {
     <div className="space-y-4">
       {/* Month navigation */}
       <div className="flex items-center justify-between">
-        <button onClick={prevMonth} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+        <button onClick={prevMonth} className="relative after:absolute after:-inset-2 after:content-[''] p-1.5 hover:bg-muted rounded-lg transition-colors">
           <ChevronLeft className="h-4 w-4" />
         </button>
         <h3 className="text-base font-semibold">
           {year}년 {month + 1}월
         </h3>
-        <button onClick={nextMonth} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+        <button onClick={nextMonth} className="relative after:absolute after:-inset-2 after:content-[''] p-1.5 hover:bg-muted rounded-lg transition-colors">
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
@@ -349,7 +349,7 @@ const CalendarTab = () => {
                     <button
                       onClick={() => handleDeleteEvent(e.id)}
                       aria-label="삭제"
-                      className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2.5 -m-2 sm:p-0.5 sm:m-0"
+                      className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all flex h-10 w-10 -m-3 items-center justify-center sm:h-auto sm:w-auto sm:p-0.5 sm:m-0"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -397,7 +397,7 @@ const CalendarTab = () => {
                       setSelectedDate(ds);
                       startAdding(ds);
                     }}
-                    className="text-[11px] text-primary hover:underline font-medium flex items-center gap-0.5"
+                    className="relative after:absolute after:-inset-3 after:content-[''] text-[11px] text-primary hover:underline font-medium flex items-center gap-0.5"
                   >
                     <Plus className="h-3 w-3" />
                     추가
@@ -416,7 +416,7 @@ const CalendarTab = () => {
                     <button
                       onClick={() => handleDeleteEvent(e.id)}
                       aria-label="삭제"
-                      className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2.5 -m-2 sm:p-0.5 sm:m-0"
+                      className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all flex h-10 w-10 -m-3 items-center justify-center sm:h-auto sm:w-auto sm:p-0.5 sm:m-0"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>

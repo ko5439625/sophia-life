@@ -1,0 +1,15 @@
+name = "sophia-cheongyak-alert"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# 매일 KST 08:00, 12:00, 18:00 (UTC 23, 03, 09)
+[triggers]
+crons = ["0 23 * * *", "0 3 * * *", "0 9 * * *"]
+
+[vars]
+NTFY_TOPICS = "qajj-223034603634-degul,qajj-223034603634-muyo"
+DEFAULT_REGIONS = "경기"
+
+[[kv_namespaces]]
+binding = "SEEN"
+id = "bbd9d40964a941a38131e00a86637e60"

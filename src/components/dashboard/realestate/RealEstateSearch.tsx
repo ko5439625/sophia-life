@@ -440,10 +440,10 @@ const StatCard = ({ label, value, sub, icon, color }: {
   <div className="bg-card rounded-xl p-3 border border-border/50">
     <div className="flex items-center gap-1.5 mb-1">
       <div className={color}>{icon}</div>
-      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
     </div>
     <p className="text-sm font-bold font-mono">{value}</p>
-    {sub && <p className="text-[10px] text-muted-foreground truncate">{sub}</p>}
+    {sub && <p className="text-[11px] text-muted-foreground truncate">{sub}</p>}
   </div>
 );
 
@@ -479,7 +479,7 @@ const AnomalyCard = ({ item, onRegionClick }: { item: AnomalyItem; onRegionClick
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-bold">{item.description}</span>
-              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${sev.className}`}>
+              <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${sev.className}`}>
                 {sev.label}
               </span>
             </div>
@@ -492,7 +492,7 @@ const AnomalyCard = ({ item, onRegionClick }: { item: AnomalyItem; onRegionClick
           </span>
           <button
             onClick={() => onRegionClick(item.regionCode, item.region)}
-            className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+            className="text-[11px] text-primary hover:text-primary/80 transition-colors"
           >
             상세 보기
           </button>
@@ -631,7 +631,7 @@ const RealEstateSearch = () => {
         <div className="flex items-center gap-2 mb-3">
           <Building2 className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold">실거래가 검색</h3>
-          <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">국토교통부 공공데이터</span>
+          <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">국토교통부 공공데이터</span>
         </div>
 
         {/* 드롭다운 검색 */}
@@ -649,7 +649,7 @@ const RealEstateSearch = () => {
           <button
             onClick={() => handleSearch()}
             disabled={!regionCode || loading}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+            className="min-h-[40px] px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             검색
@@ -662,7 +662,7 @@ const RealEstateSearch = () => {
             <button
               key={cat.id}
               onClick={() => handleCategoryChange(cat.id)}
-              className={`relative px-2.5 py-1.5 text-[11px] font-medium rounded-md transition-colors flex-shrink-0 ${
+              className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] px-2.5 py-1.5 text-[11px] font-medium rounded-md transition-colors flex-shrink-0 ${
                 activeCategory === cat.id
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -691,7 +691,7 @@ const RealEstateSearch = () => {
                 key={r.code}
                 onClick={() => handleSearch(r.code, r.label)}
                 disabled={loading}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
                   regionCode === r.code && searched
                     ? "bg-primary/15 text-primary border border-primary/30"
                     : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
@@ -705,7 +705,7 @@ const RealEstateSearch = () => {
         )}
 
         {!localStorage.getItem("sophia-api-data") && (
-          <p className="text-[10px] text-amber-500 mt-2">{"설정 > 공공데이터포털 API 키를 입력해주세요"}</p>
+          <p className="text-[11px] text-amber-500 mt-2">{"설정 > 공공데이터포털 API 키를 입력해주세요"}</p>
         )}
       </div>
 
@@ -715,7 +715,7 @@ const RealEstateSearch = () => {
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             <h3 className="text-sm font-bold">시장 이상 변동 감지</h3>
-            <span className="text-[10px] text-muted-foreground">최근 3개월 기준</span>
+            <span className="text-[11px] text-muted-foreground">최근 3개월 기준</span>
           </div>
           <p className="text-xs text-muted-foreground">
             주요 12개 지역의 최근 실거래 데이터를 분석하여 가격 급등/급락, 거래량 이상 변동을 자동으로 감지합니다.
@@ -741,23 +741,23 @@ const RealEstateSearch = () => {
               {/* 요약 */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                 <div className="bg-card rounded-lg p-2.5 border border-border/50 text-center">
-                  <p className="text-[10px] text-muted-foreground">총 감지</p>
+                  <p className="text-[11px] text-muted-foreground">총 감지</p>
                   <p className="text-lg font-bold font-mono">{anomalies.length}</p>
                 </div>
                 <div className="bg-red-500/5 rounded-lg p-2.5 border border-red-500/10 text-center">
-                  <p className="text-[10px] text-red-500">가격 상승</p>
+                  <p className="text-[11px] text-red-500">가격 상승</p>
                   <p className="text-lg font-bold font-mono text-red-500">
                     {anomalies.filter((a) => a.type === "spike").length}
                   </p>
                 </div>
                 <div className="bg-blue-500/5 rounded-lg p-2.5 border border-blue-500/10 text-center">
-                  <p className="text-[10px] text-blue-500">가격 하락</p>
+                  <p className="text-[11px] text-blue-500">가격 하락</p>
                   <p className="text-lg font-bold font-mono text-blue-500">
                     {anomalies.filter((a) => a.type === "drop").length}
                   </p>
                 </div>
                 <div className="bg-amber-500/5 rounded-lg p-2.5 border border-amber-500/10 text-center">
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400">거래량 변동</p>
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400">거래량 변동</p>
                   <p className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">
                     {anomalies.filter((a) => a.type === "volume_surge" || a.type === "volume_drop").length}
                   </p>
@@ -776,7 +776,7 @@ const RealEstateSearch = () => {
                 </motion.div>
               ))}
 
-              <p className="text-[10px] text-muted-foreground/50 text-center pt-2">
+              <p className="text-[11px] text-muted-foreground/50 text-center pt-2">
                 * 이상 변동 기준: 가격 5% 이상 변동, 거래량 50% 이상 변동
               </p>
             </div>
@@ -788,14 +788,14 @@ const RealEstateSearch = () => {
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-bold">지역별 추세 분석</h3>
-                <span className="text-[10px] text-muted-foreground">최근 3개월</span>
+                <span className="text-[11px] text-muted-foreground">최근 3개월</span>
               </div>
               <p className="text-xs text-muted-foreground">
                 12개 주요 지역의 평균 매매가와 거래량 변동을 한눈에 비교합니다.
               </p>
               <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
                 {/* 테이블 헤더 */}
-                <div className="grid grid-cols-[1fr_80px_60px_60px_56px] gap-1 px-3 py-2 bg-muted/50 border-b border-border/50 text-[10px] font-medium text-muted-foreground">
+                <div className="grid grid-cols-[1fr_80px_60px_60px_56px] gap-1 px-3 py-2 bg-muted/50 border-b border-border/50 text-[11px] font-medium text-muted-foreground">
                   <span>지역</span>
                   <span className="text-right">평균가</span>
                   <span className="text-right">가격변동</span>
@@ -820,12 +820,12 @@ const RealEstateSearch = () => {
                       <span className="text-xs text-muted-foreground text-right font-mono">
                         {t.latestCount}건
                         {t.volumeChangePct !== 0 && (
-                          <span className={`text-[9px] ml-0.5 ${t.volumeChangePct > 0 ? "text-amber-500" : "text-purple-500"}`}>
+                          <span className={`text-[11px] ml-0.5 ${t.volumeChangePct > 0 ? "text-amber-500" : "text-purple-500"}`}>
                             {t.volumeChangePct > 0 ? "+" : ""}{t.volumeChangePct}%
                           </span>
                         )}
                       </span>
-                      <span className={`text-[10px] text-center font-medium flex items-center justify-center gap-0.5 ${trendIcon}`}>
+                      <span className={`text-[11px] text-center font-medium flex items-center justify-center gap-0.5 ${trendIcon}`}>
                         {t.trend3m === "up" && <TrendingUp className="h-3 w-3" />}
                         {t.trend3m === "down" && <TrendingDown className="h-3 w-3" />}
                         {t.trend3m === "flat" && <Minus className="h-3 w-3" />}
@@ -835,7 +835,7 @@ const RealEstateSearch = () => {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-muted-foreground/50 text-center">
+              <p className="text-[11px] text-muted-foreground/50 text-center">
                 * 지역명 클릭 시 해당 지역 실거래 상세 조회 | 3개월 추세: ±3% 이상 변동 시 상승/하락 판정
               </p>
             </div>
@@ -860,7 +860,7 @@ const RealEstateSearch = () => {
                   <MapPin className="h-3 w-3 text-muted-foreground" />
                   {r.label}
                   {r.count > 1 && (
-                    <span className="text-[9px] text-muted-foreground font-mono">({r.count})</span>
+                    <span className="text-[11px] text-muted-foreground font-mono">({r.count})</span>
                   )}
                 </button>
                 <button
@@ -920,7 +920,7 @@ const RealEstateSearch = () => {
 
           {/* 차트 토글 */}
           <button onClick={() => setShowChart(!showChart)}
-            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors">
+            className="relative after:absolute after:-inset-3 after:content-[''] flex items-center gap-1.5 whitespace-nowrap text-xs text-primary hover:text-primary/80 transition-colors">
             <BarChart3 className="h-3.5 w-3.5" />
             {showChart ? "차트 접기" : "차트 보기"}
           </button>
@@ -938,9 +938,9 @@ const RealEstateSearch = () => {
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={stats.monthlyAvg}>
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                            <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                               tickFormatter={(v) => v.substring(5)} />
-                            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                            <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                               tickFormatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(0)}억` : `${v}`} width={45} />
                             <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
                               formatter={(value: number) => [formatPrice(value), "평균가"]} labelFormatter={(label) => `${label}`} />
@@ -957,8 +957,8 @@ const RealEstateSearch = () => {
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={stats.priceDistribution.filter((d) => d.count > 0)}>
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis dataKey="range" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={30} />
+                          <XAxis dataKey="range" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                          <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={30} />
                           <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
                             formatter={(value: number) => [`${value}건`, "거래"]} />
                           <Bar dataKey="count" radius={[4, 4, 0, 0]}>
@@ -981,7 +981,7 @@ const RealEstateSearch = () => {
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-muted-foreground" />
                 <h3 className="text-sm font-bold">아파트별 실거래 정보</h3>
-                <span className="text-[10px] text-muted-foreground font-mono">{results.length}개 아파트</span>
+                <span className="text-[11px] text-muted-foreground font-mono">{results.length}개 아파트</span>
               </div>
               <div className="flex flex-wrap items-center gap-1 bg-muted rounded-lg p-0.5">
                 {([
@@ -993,7 +993,7 @@ const RealEstateSearch = () => {
                   { key: "changeDown", label: "하락률순" },
                 ] as { key: SortKey; label: string }[]).map(({ key, label }) => (
                   <button key={key} onClick={() => { setSortKey(key); setPage(1); }}
-                    className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                    className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
                       sortKey === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                     }`}>
                     {label}
@@ -1004,7 +1004,7 @@ const RealEstateSearch = () => {
 
             {/* 페이지 정보 */}
             {totalPages > 1 && (
-              <p className="text-[10px] text-muted-foreground mb-2">
+              <p className="text-[11px] text-muted-foreground mb-2">
                 {(page - 1) * PAGE_SIZE + 1}~{Math.min(page * PAGE_SIZE, sortedResults.length)}개 표시 / 총 {sortedResults.length}개
               </p>
             )}
@@ -1031,23 +1031,23 @@ const RealEstateSearch = () => {
                           : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />}
                         <div className="min-w-0">
                           <span className="text-sm font-bold">{apt.aptName}</span>
-                          <span className="text-[10px] text-muted-foreground ml-2">{apt.address}</span>
+                          <span className="text-[11px] text-muted-foreground ml-2">{apt.address}</span>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-3">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-mono font-bold">{formatPrice(apt.recentPrice)}</span>
                           {priceChange !== 0 && (
-                            <span className={`text-[10px] font-mono ${priceChange > 0 ? "text-red-500" : "text-blue-500"}`}>
+                            <span className={`text-[11px] font-mono ${priceChange > 0 ? "text-red-500" : "text-blue-500"}`}>
                               {changePct > 0 ? "+" : ""}{changePct.toFixed(1)}%
-                              <span className="text-[9px] ml-0.5 opacity-70">({priceChange > 0 ? "+" : ""}{formatPrice(Math.abs(priceChange))})</span>
+                              <span className="text-[11px] ml-0.5 opacity-70">({priceChange > 0 ? "+" : ""}{formatPrice(Math.abs(priceChange))})</span>
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-muted-foreground">{sqmToPyeong(apt.area)}평</span>
+                        <span className="text-[11px] text-muted-foreground">{sqmToPyeong(apt.area)}평</span>
                       </div>
                     </div>
-                    <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground ml-5">
+                    <div className="flex gap-3 mt-1 text-[11px] text-muted-foreground ml-5">
                       <span>최근: {apt.recentDate}</span>
                       <span>거래 {apt.transactions.length}건</span>
                       {apt.jeonseRate > 0 && <span>전세가율 {apt.jeonseRate}%</span>}
@@ -1062,9 +1062,9 @@ const RealEstateSearch = () => {
                             <div className="h-24 mb-2">
                               <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={txSorted}>
-                                  <XAxis dataKey="dealDate" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                                  <XAxis dataKey="dealDate" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                                     tickFormatter={(v) => v.substring(5)} />
-                                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                                     tickFormatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(0)}억` : `${v}`} width={35} />
                                   <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
                                     formatter={(value: number) => [formatPrice(value), "거래가"]} />
@@ -1074,7 +1074,7 @@ const RealEstateSearch = () => {
                               </ResponsiveContainer>
                             </div>
                           )}
-                          <p className="text-[10px] text-muted-foreground font-mono">거래 내역</p>
+                          <p className="text-[11px] text-muted-foreground font-mono">거래 내역</p>
                           {apt.transactions.slice(0, 15).map((tx) => (
                             <div key={tx.id} className="flex items-center justify-between text-xs py-1 border-b border-border/20 last:border-0">
                               <div className="flex gap-2 text-muted-foreground">
@@ -1087,7 +1087,7 @@ const RealEstateSearch = () => {
                             </div>
                           ))}
                           {apt.transactions.length > 15 && (
-                            <p className="text-[10px] text-muted-foreground text-center pt-1">
+                            <p className="text-[11px] text-muted-foreground text-center pt-1">
                               +{apt.transactions.length - 15}건 더
                             </p>
                           )}
@@ -1106,7 +1106,7 @@ const RealEstateSearch = () => {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                className="min-h-[40px] px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
               >
                 이전
               </button>
@@ -1137,7 +1137,7 @@ const RealEstateSearch = () => {
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                className="min-h-[40px] px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
               >
                 다음
               </button>

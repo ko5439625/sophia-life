@@ -459,18 +459,18 @@ const DashboardHome = ({ onNavigate, onQuickExpense, onSmartInbox }: DashboardHo
           {weddingDday && (
             <button
               onClick={() => onNavigate?.("couple")}
-              className="inline-flex items-center gap-1 rounded-full bg-pink-500/10 px-2.5 py-1 text-xs text-pink-500 dark:text-pink-400"
+              className="relative after:absolute after:-inset-2 after:content-[''] inline-flex items-center gap-1 rounded-full bg-pink-500/10 px-2.5 py-1 text-xs text-pink-500 dark:text-pink-400"
             >
               💍 결혼 {ddayLabel(weddingDday.diff)}
             </button>
           )}
           {metDays !== null && (
-            <button onClick={() => onNavigate?.("couple")} className={chipClass}>
+            <button onClick={() => onNavigate?.("couple")} className={`relative after:absolute after:-inset-2 after:content-[''] ${chipClass}`}>
               💖 만난 지 {metDays.toLocaleString("ko-KR")}일
             </button>
           )}
           {!weddingDday && metDays === null && ddays.length > 0 && (
-            <button onClick={() => onNavigate?.("couple")} className={chipClass}>
+            <button onClick={() => onNavigate?.("couple")} className={`relative after:absolute after:-inset-2 after:content-[''] ${chipClass}`}>
               🎉 기념일 <ChevronRight className="h-3 w-3" />
             </button>
           )}

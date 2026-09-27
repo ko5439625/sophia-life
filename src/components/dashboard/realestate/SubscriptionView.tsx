@@ -379,7 +379,7 @@ const SubscriptionView = () => {
           <button
             key={key}
             onClick={() => setStatusFilter(key)}
-            className={`relative flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
+            className={`relative min-h-[40px] flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
               statusFilter === key
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -394,7 +394,7 @@ const SubscriptionView = () => {
             )}
             <span className="relative z-10">
               {label}
-              <span className="ml-1 text-[9px] font-mono opacity-60">{count}</span>
+              <span className="ml-1 text-[11px] font-mono opacity-60">{count}</span>
             </span>
           </button>
         ))}
@@ -405,12 +405,12 @@ const SubscriptionView = () => {
         <p className="text-sm text-muted-foreground font-mono">
           {filtered.length}건의 분양 정보
           {isMockData && (
-            <span className="text-[9px] text-amber-500 ml-2">샘플 데이터</span>
+            <span className="text-[11px] text-amber-500 ml-2">샘플 데이터</span>
           )}
         </p>
         <button
           onClick={() => setShowFilter(!showFilter)}
-          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+          className="relative after:absolute after:-inset-3 after:content-[''] flex items-center gap-1.5 whitespace-nowrap text-xs text-primary hover:text-primary/80 transition-colors"
         >
           <Filter className="h-3.5 w-3.5" />
           지역 필터
@@ -430,7 +430,7 @@ const SubscriptionView = () => {
                 <button
                   key={region}
                   onClick={() => setSelectedRegion(region)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     selectedRegion === region
                       ? "bg-primary/15 text-primary border border-primary/30"
                       : "bg-muted text-muted-foreground border border-transparent hover:text-foreground"
@@ -475,7 +475,7 @@ const SubscriptionView = () => {
                       <h4 className="font-sans font-semibold text-sm truncate">
                         {item.houseName}
                       </h4>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${config.className}`}>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${config.className}`}>
                         {config.label}
                       </span>
                     </div>
@@ -498,21 +498,21 @@ const SubscriptionView = () => {
                 {/* Summary row */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
                   <div>
-                    <p className="text-[10px] text-muted-foreground">공급세대수</p>
+                    <p className="text-[11px] text-muted-foreground">공급세대수</p>
                     <p className="text-sm font-mono font-bold flex items-center gap-1">
                       <Users className="h-3 w-3 text-muted-foreground" />
                       {item.totalSupply.toLocaleString()}세대
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground">청약기간</p>
+                    <p className="text-[11px] text-muted-foreground">청약기간</p>
                     <p className="text-xs font-mono flex items-center gap-1">
                       <Calendar className="h-3 w-3 text-muted-foreground" />
                       {formatDate(item.applyStartDate)} ~ {formatDate(item.applyEndDate)}
                     </p>
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <p className="text-[10px] text-muted-foreground">입주예정</p>
+                    <p className="text-[11px] text-muted-foreground">입주예정</p>
                     <p className="text-xs font-mono">{item.moveInDate || "-"}</p>
                   </div>
                 </div>
@@ -532,19 +532,19 @@ const SubscriptionView = () => {
                       {/* Detail grid */}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <p className="text-[10px] text-muted-foreground mb-0.5">시공사</p>
+                          <p className="text-[11px] text-muted-foreground mb-0.5">시공사</p>
                           <p className="text-xs font-medium flex items-center gap-1">
                             <Wrench className="h-3 w-3 text-muted-foreground" />
                             {item.constructorName || "-"}
                           </p>
                         </div>
                         <div>
-                          <p className="text-[10px] text-muted-foreground mb-0.5">당첨자 발표</p>
+                          <p className="text-[11px] text-muted-foreground mb-0.5">당첨자 발표</p>
                           <p className="text-xs font-mono">{formatDate(item.announcementDate)}</p>
                         </div>
                         {item.priceRange && (
                           <div className="col-span-2">
-                            <p className="text-[10px] text-muted-foreground mb-0.5">분양가 범위</p>
+                            <p className="text-[11px] text-muted-foreground mb-0.5">분양가 범위</p>
                             <p className="text-sm font-mono font-bold text-primary">{item.priceRange}</p>
                           </div>
                         )}
@@ -684,7 +684,7 @@ const SubscriptionView = () => {
                                       </p>
                                     </div>
 
-                                    <p className="text-[10px] text-muted-foreground/50 text-right font-mono">
+                                    <p className="text-[11px] text-muted-foreground/50 text-right font-mono">
                                       생성: {new Date(report.generatedAt).toLocaleString("ko-KR")}
                                     </p>
                                   </>

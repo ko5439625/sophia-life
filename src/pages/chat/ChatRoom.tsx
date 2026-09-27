@@ -271,7 +271,7 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
             <div className="text-sm font-bold text-[#e6e9ee]">
               {SENDER_LABELS[peer]}
             </div>
-            <div className="text-[10px] text-[#7d8590]">
+            <div className="text-[11px] text-[#7d8590]">
               {peerTyping
                 ? "입력 중..."
                 : peerOnline
@@ -300,7 +300,7 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
           onClick={() => setMenuId(null)}
         >
           {/* 오늘 구분선 */}
-          <div className="text-center text-[10px] text-[#5d646e] py-2">
+          <div className="text-center text-[11px] text-[#5d646e] py-2">
             ── 오늘 ──
           </div>
 

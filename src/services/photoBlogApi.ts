@@ -31,10 +31,14 @@ export interface PhotoBlogSection {
   photoIndex: number;
   heading: string;
   body: string;
+  /** 이 문단에서 뽑은 인용용 한 줄 (25자 이내, 본문에 있는 내용만) */
+  highlight: string;
 }
 
 export interface PhotoBlogResult {
   title: string;
+  /** 글 전체를 한 줄로 요약 (제목 아래 부제처럼 쓰임) */
+  summary: string;
   intro: string;
   sections: PhotoBlogSection[];
   outro: string;
@@ -68,7 +72,8 @@ const WRITING_RULES = `# 작성 규칙
 - 1인칭, "~했어요" 체. 문단마다 이모지는 최대 1개.
 - '대박', '역대급', '미쳤다', '인생 맛집' 같은 과장된 표현은 쓰지 마세요.
 - 연속된 사진 사이에는 자연스럽게 이어지는 짧은 연결 문장(예: "그다음엔", "조금 걸어가니")을 문단 첫머리에 넣어주세요.
-- heading은 12자 안팎의 짧은 소제목.`;
+- heading은 12자 안팎의 짧은 소제목.
+- highlight는 그 문단 body에서 가장 인상적인 한 줄을 25자 이내로 다듬은 인용구예요. body에 없는 새 사실·감정은 넣지 말고, 따옴표·이모지 없이 써주세요.`;
 
 function buildGeneratePrompt(req: PhotoBlogRequest): string {
   return `당신은 개인 일상 블로그를 대신 써주는 작가예요. 아래 사진들을 보고 블로그 글 초안을 만들어주세요.
@@ -77,6 +82,7 @@ function buildGeneratePrompt(req: PhotoBlogRequest): string {
 ${contextLines(req)}
 
 ${WRITING_RULES}
+- summary는 글 전체를 한 줄(30자 안팎)로 요약한 부제예요. 사진과 메모에 있는 내용만, 이모지 없이.
 - intro(도입)는 2문장, outro(마무리)는 2문장.
 - tags는 3~6개, '#' 없이 짧은 명사로.
 - sections는 사진 1장당 정확히 1개, 사진 순서대로. photoIndex는 사진 번호(1부터 시작)예요.
@@ -106,16 +112,17 @@ const RESULT_SCHEMA = {
           photoIndex: { type: "INTEGER" },
           heading: { type: "STRING" },
           body: { type: "STRING" },
+          highlight: { type: "STRING" },
         },
-        required: ["photoIndex", "heading", "body"],
-        propertyOrdering: ["photoIndex", "heading", "body"],
+        required: ["photoIndex", "heading", "body", "highlight"],
+        propertyOrdering: ["photoIndex", "heading", "body", "highlight"],
       },
     },
     outro: { type: "STRING" },
     tags: { type: "ARRAY", items: { type: "STRING" } },
   },
-  required: ["title", "intro", "sections", "outro", "tags"],
-  propertyOrdering: ["title", "intro", "sections", "outro", "tags"],
+  required: ["title", "summary", "intro", "sections", "outro", "tags"],
+  propertyOrdering: ["title", "summary", "intro", "sections", "outro", "tags"],
 };
 
 const SECTION_SCHEMA = {
@@ -123,9 +130,10 @@ const SECTION_SCHEMA = {
   properties: {
     heading: { type: "STRING" },
     body: { type: "STRING" },
+    highlight: { type: "STRING" },
   },
-  required: ["heading", "body"],
-  propertyOrdering: ["heading", "body"],
+  required: ["heading", "body", "highlight"],
+  propertyOrdering: ["heading", "body", "highlight"],
 };
 
 function photoParts(photo: PhotoBlogPhoto, index: number): Part[] {
@@ -210,6 +218,14 @@ function validateRequest(req: PhotoBlogRequest) {
 
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
+/** 인용구 정리: 감싼 따옴표 제거 + 너무 길면 자르기 (본문 요약이라 짧게 유지) */
+const HIGHLIGHT_MAX = 25;
+function cleanHighlight(v: unknown): string {
+  const t = str(v).replace(/^["'“”‘’「『]+|["'“”‘’」』]+$/g, "").trim();
+  if (t.length <= HIGHLIGHT_MAX + 5) return t;
+  return `${t.slice(0, HIGHLIGHT_MAX).trimEnd()}…`;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -230,14 +246,20 @@ export async function generatePhotoBlog(req: PhotoBlogRequest): Promise<PhotoBlo
     let idx = Number.isInteger(n) ? n - 1 : order;
     if (idx < 0 || idx >= req.photos.length || bySlot.has(idx)) idx = order;
     if (idx < 0 || idx >= req.photos.length || bySlot.has(idx)) return;
-    bySlot.set(idx, { photoIndex: idx, heading: str(s?.heading), body: str(s?.body) });
+    bySlot.set(idx, {
+      photoIndex: idx,
+      heading: str(s?.heading),
+      body: str(s?.body),
+      highlight: cleanHighlight(s?.highlight),
+    });
   });
   const sections = req.photos.map(
-    (_, i) => bySlot.get(i) ?? { photoIndex: i, heading: "", body: "" }
+    (_, i) => bySlot.get(i) ?? { photoIndex: i, heading: "", body: "", highlight: "" }
   );
 
   return {
     title: str(raw.title) || req.topic.trim(),
+    summary: str(raw.summary),
     intro: str(raw.intro),
     sections,
     outro: str(raw.outro),
@@ -256,7 +278,7 @@ export async function generatePhotoBlog(req: PhotoBlogRequest): Promise<PhotoBlo
 export async function regenerateSection(
   req: PhotoBlogRequest & { draft: PhotoBlogResult },
   photoIndex: number
-): Promise<{ heading: string; body: string }> {
+): Promise<{ heading: string; body: string; highlight: string }> {
   validateRequest(req);
   const photo = req.photos[photoIndex];
   if (!photo) throw new Error("다시 쓸 사진을 찾지 못했어요.");
@@ -278,6 +300,9 @@ ${WRITING_RULES}
 # 글 제목
 ${req.draft.title}
 
+# 한 줄 요약
+${req.draft.summary || "(없음)"}
+
 # 도입
 ${req.draft.intro}
 
@@ -288,13 +313,16 @@ ${others || "(없음)"}
 ${current ? `${current.heading}\n${current.body}` : "(없음)"}
 
 # 출력
-{ "heading": 소제목, "body": 2~4문장 본문 } JSON만 답하세요.
+{ "heading": 소제목, "body": 2~4문장 본문, "highlight": body에서 뽑은 25자 이내 인용 한 줄 } JSON만 답하세요.
 
 # 사진 ${photoIndex + 1}`;
 
   const parts: Part[] = [{ text: prompt }, ...photoParts(photo, photoIndex)];
-  const raw = await callGeminiJson<{ heading?: unknown; body?: unknown }>(parts, SECTION_SCHEMA);
+  const raw = await callGeminiJson<{ heading?: unknown; body?: unknown; highlight?: unknown }>(
+    parts,
+    SECTION_SCHEMA
+  );
   const body = str(raw.body);
   if (!body) throw new Error("AI가 빈 문단을 보냈어요. 다시 시도해주세요.");
-  return { heading: str(raw.heading), body };
+  return { heading: str(raw.heading), body, highlight: cleanHighlight(raw.highlight) };
 }

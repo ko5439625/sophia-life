@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { enhanceBlogContent } from "../../../services/openaiApi";
 import { useGuestMode } from "../../../hooks/useGuestMode";
@@ -6,6 +7,8 @@ import { toast } from "sonner";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import PhotoBlogWizard, { type PhotoBlogInsertPayload } from "./PhotoBlogWizard";
 import { uploadBlogImage } from "./blogImageUpload";
+import BlogPreviewDialog from "./BlogPreviewDialog";
+import type { BlogPostArticleData } from "./BlogPostArticle";
 import { loadPosts as loadPostsFromDB, savePost as savePostToDB, deletePost as deletePostFromDB, saveBlogSettings } from "../../../services/supabaseSync";
 import {
   Plus,
@@ -42,6 +45,9 @@ import {
   AlignRight,
   Camera,
   Undo2,
+  Eye,
+  ExternalLink,
+  ArrowRight,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -188,7 +194,7 @@ const BlogSettings = ({
                   value={subtitle}
                   onChange={(e) => onSubtitleChange(e.target.value)}
                   placeholder="일상의 작은 순간들을 기록합니다"
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+                  className="w-full min-h-[40px] bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
                 />
                 <p className="text-[11px] text-muted-foreground/60 mt-1">
                   블로그 로고 아래 표시되는 텍스트
@@ -204,13 +210,13 @@ const BlogSettings = ({
                   {categories.map((cat) => (
                     <span
                       key={cat}
-                      className="inline-flex items-center gap-1 bg-muted px-2.5 py-1 rounded-lg text-xs font-medium text-foreground/80 group"
+                      className="inline-flex items-center gap-1 bg-muted pl-3 pr-2 min-h-[36px] rounded-lg text-xs font-medium text-foreground/80 group"
                     >
                       {cat}
                       <button
                         onClick={() => onRemoveCategory(cat)}
                         aria-label="카테고리 삭제"
-                        className="p-2.5 -m-2 sm:p-0 sm:m-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:text-destructive"
+                        className="h-8 w-8 -my-1 -mr-2 flex items-center justify-center rounded-md opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:text-destructive"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -224,11 +230,11 @@ const BlogSettings = ({
                     onChange={(e) => setNewCat(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAdd()}
                     placeholder="새 카테고리"
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+                    className="flex-1 min-w-0 min-h-[40px] bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
                   />
                   <button
                     onClick={handleAdd}
-                    className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
+                    className="min-h-[40px] px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
                   >
                     추가
                   </button>
@@ -260,15 +266,17 @@ const PostListItem = ({
     initial={{ opacity: 0, y: 8 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.04 }}
-    className="bg-card rounded-xl px-5 py-4 group"
+    className="bg-card rounded-xl pl-4 pr-2 sm:px-5 py-3 group"
   >
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex items-center justify-between gap-2 sm:gap-4">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-1 mb-0.5">
           <h3 className="text-sm font-medium truncate">{post.title}</h3>
           <button
             onClick={onToggleVisibility}
             title={post.isPublic ? "공개" : "비공개"}
+            aria-label={post.isPublic ? "공개 글 (눌러서 비공개로)" : "비공개 글 (눌러서 공개로)"}
+            className="h-10 w-10 -my-1.5 flex-shrink-0 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
           >
             {post.isPublic ? (
               <Globe className="h-3.5 w-3.5 text-primary flex-shrink-0" />
@@ -277,9 +285,9 @@ const PostListItem = ({
             )}
           </button>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono min-w-0">
           <span className="bg-muted px-2 py-0.5 rounded">{post.category}</span>
-          <span>{post.createdAt}</span>
+          <span className="tabular-nums flex-shrink-0">{post.createdAt?.slice(0, 10)}</span>
           {post.tags.length > 0 && (
             <span className="hidden sm:inline truncate">
               {post.tags.map((t) => `#${t}`).join(" ")}
@@ -287,18 +295,18 @@ const PostListItem = ({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
+      <div className="flex items-center gap-0.5 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity flex-shrink-0">
         <button
           onClick={onEdit}
           aria-label="수정"
-          className="p-2 sm:p-1.5 hover:bg-muted rounded-lg transition-colors"
+          className="h-10 w-10 flex items-center justify-center hover:bg-muted rounded-lg transition-colors"
         >
           <Edit3 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
         </button>
         <button
           onClick={onDelete}
           aria-label="삭제"
-          className="p-2 sm:p-1.5 hover:bg-muted rounded-lg transition-colors"
+          className="h-10 w-10 flex items-center justify-center hover:bg-muted rounded-lg transition-colors"
         >
           <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
         </button>
@@ -314,6 +322,8 @@ const PostEditor = ({
   initialCategory,
   initialTags,
   initialIsPublic,
+  initialDate,
+  initialImages,
   categories,
   isEditing,
   onSave,
@@ -325,6 +335,10 @@ const PostEditor = ({
   initialCategory: string;
   initialTags: string;
   initialIsPublic: boolean;
+  /** 미리보기에 표시할 날짜 (수정 시 원래 작성일) */
+  initialDate: string;
+  /** 미리보기 커버 갤러리 (공개 페이지와 동일하게 post.images 사용) */
+  initialImages: string[];
   categories: string[];
   isEditing: boolean;
   /** 홈 "블로그" 바로가기 등으로 진입 시 사진으로 글쓰기 창을 바로 연다 */
@@ -353,6 +367,9 @@ const PostEditor = ({
   const [aiToast, setAiToast] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showPhotoWizard, setShowPhotoWizard] = useState(autoOpenPhotoWizard);
+  // "사진 글을 에디터에 넣었어요" 안내 — 이 에디터 인스턴스에서만 보이고 6초/첫 수정/발행 시 사라짐
+  const [insertHint, setInsertHint] = useState(false);
+  const [previewPost, setPreviewPost] = useState<BlogPostArticleData | null>(null);
   // AI 다듬기 직전 본문 (되돌리기용)
   const [aiUndoHtml, setAiUndoHtml] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -623,8 +640,32 @@ const PostEditor = ({
         return Array.from(new Set([...existing, ...payload.tags])).join(", ");
       });
     }
-    toast.success("사진 글을 에디터에 넣었어요. 확인 후 발행해주세요.");
+    setInsertHint(true);
   }, []);
+
+  useEffect(() => {
+    if (!insertHint) return;
+    const t = window.setTimeout(() => setInsertHint(false), 6000);
+    return () => window.clearTimeout(t);
+  }, [insertHint]);
+
+  const parseTags = () =>
+    tagsInput
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+  const openPreview = () => {
+    setInsertHint(false);
+    setPreviewPost({
+      title: title.trim(),
+      content: getContentAsHtml(),
+      category,
+      date: initialDate,
+      tags: parseTags(),
+      images: initialImages,
+    });
+  };
 
   // Handle file input for inline image insertion → upload to Supabase Storage
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -650,10 +691,9 @@ const PostEditor = ({
 
   const handleSave = () => {
     if (!title.trim()) return;
-    const tags = tagsInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+    setInsertHint(false);
+    setPreviewPost(null);
+    const tags = parseTags();
     onSave({
       title: title.trim(),
       content: getContentAsHtml(),
@@ -672,19 +712,19 @@ const PostEditor = ({
       className="space-y-0"
     >
       {/* Top bar */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
         <button
           onClick={onCancel}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="min-h-[40px] -ml-1 px-1 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>돌아가기</span>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           {/* Visibility toggle */}
           <button
             onClick={() => setIsPublic(!isPublic)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`min-h-[40px] flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
               isPublic
                 ? "bg-primary/10 text-primary"
                 : "bg-muted text-muted-foreground"
@@ -697,11 +737,20 @@ const PostEditor = ({
             )}
             {isPublic ? "공개" : "비공개"}
           </button>
+          {/* Preview */}
+          <button
+            onClick={openPreview}
+            className="min-h-[40px] flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium bg-muted text-foreground hover:bg-muted/80 transition-colors flex-shrink-0"
+            title="공개 블로그에 보이는 모습 미리보기"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            미리보기
+          </button>
           {/* Save */}
           <button
             onClick={handleSave}
             disabled={!title.trim()}
-            className="px-4 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="min-h-[40px] px-4 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-40 flex-shrink-0"
           >
             {isEditing ? "수정" : "발행"}
           </button>
@@ -765,102 +814,102 @@ const PostEditor = ({
                 <button
                   key={cmd}
                   onClick={() => execFormat(cmd)}
-                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                  className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                   title={title}
                 >
                   <Icon className="h-4 w-4" />
                 </button>
               ))}
 
-              <div className="w-px h-4 bg-border mx-1" />
+              <div className="w-px h-4 bg-border mx-1 flex-shrink-0" />
 
               {/* Heading buttons */}
               <button
                 onClick={() => execFormat("formatBlock", "h2")}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="제목 (H2)"
               >
                 <Heading1 className="h-4 w-4" />
               </button>
               <button
                 onClick={() => execFormat("formatBlock", "h3")}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="소제목 (H3)"
               >
                 <Heading2 className="h-4 w-4" />
               </button>
 
-              <div className="w-px h-4 bg-border mx-1" />
+              <div className="w-px h-4 bg-border mx-1 flex-shrink-0" />
 
               {/* List buttons */}
               <button
                 onClick={() => execFormat("insertUnorderedList")}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="글머리 목록"
               >
                 <List className="h-4 w-4" />
               </button>
               <button
                 onClick={() => execFormat("insertOrderedList")}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="번호 목록"
               >
                 <ListOrdered className="h-4 w-4" />
               </button>
               <button
                 onClick={() => execFormat("formatBlock", "blockquote")}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="인용"
               >
                 <Quote className="h-4 w-4" />
               </button>
               <button
                 onClick={insertToggle}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="접힘 (토글)"
               >
                 <ChevronsDownUp className="h-4 w-4" />
               </button>
               <button
                 onClick={insertHR}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="구분선"
               >
                 <Minus className="h-4 w-4" />
               </button>
 
-              <div className="w-px h-4 bg-border mx-1" />
+              <div className="w-px h-4 bg-border mx-1 flex-shrink-0" />
 
               {/* Alignment buttons */}
               <button
                 onClick={() => execFormat("justifyLeft")}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="왼쪽 정렬"
               >
                 <AlignLeft className="h-4 w-4" />
               </button>
               <button
                 onClick={() => execFormat("justifyCenter")}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="가운데 정렬"
               >
                 <AlignCenter className="h-4 w-4" />
               </button>
               <button
                 onClick={() => execFormat("justifyRight")}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 title="오른쪽 정렬"
               >
                 <AlignRight className="h-4 w-4" />
               </button>
 
-              <div className="w-px h-4 bg-border mx-1" />
+              <div className="w-px h-4 bg-border mx-1 flex-shrink-0" />
 
               {/* Image */}
               <button
                 onClick={handleImageClick}
                 disabled={uploadingImage}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors disabled:opacity-50"
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
                 title="이미지 삽입 (여러 장 선택 가능, Ctrl+V로도 가능)"
               >
                 {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
@@ -869,7 +918,7 @@ const PostEditor = ({
               {/* Category/Tags */}
               <button
                 onClick={() => setShowMeta(!showMeta)}
-                className={`p-1.5 rounded transition-colors ${
+                className={`h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg transition-colors ${
                   showMeta ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
                 title="카테고리 / 태그"
@@ -884,7 +933,7 @@ const PostEditor = ({
               <div className="relative" ref={fontPickerRef}>
                 <button
                   onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowFontPicker(!showFontPicker); setShowFontSizePicker(false); setShowColorPicker(false); }}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors border border-border/50"
+                  className="h-10 flex items-center gap-1 px-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors border border-border/50 flex-shrink-0"
                   title="글꼴 (텍스트 선택 후 적용)"
                 >
                   <Type className="h-3.5 w-3.5" />
@@ -897,7 +946,7 @@ const PostEditor = ({
                       <button
                         key={f.value}
                         onMouseDown={(e) => { e.preventDefault(); applyFontFamily(f.value); }}
-                        className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors ${
+                        className={`w-full text-left px-3 py-2.5 text-sm hover:bg-muted transition-colors ${
                           fontFamily === f.value ? "text-primary font-medium bg-primary/5" : "text-foreground"
                         }`}
                         style={{ fontFamily: f.value }}
@@ -913,7 +962,7 @@ const PostEditor = ({
               <div className="relative" ref={fontSizePickerRef}>
                 <button
                   onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowFontSizePicker(!showFontSizePicker); setShowFontPicker(false); setShowColorPicker(false); }}
-                  className="flex items-center gap-0.5 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors border border-border/50"
+                  className="h-10 flex items-center gap-0.5 px-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors border border-border/50 flex-shrink-0"
                   title="글자 크기 (텍스트 선택 후 적용)"
                 >
                   <ALargeSmall className="h-3.5 w-3.5" />
@@ -921,12 +970,12 @@ const PostEditor = ({
                   <ChevronDown className="h-3 w-3" />
                 </button>
                 {showFontSizePicker && (
-                  <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-xl py-1 w-20">
+                  <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-xl py-1 w-24 max-h-64 overflow-y-auto">
                     {FONT_SIZE_PRESETS.map((s) => (
                       <button
                         key={s.value}
                         onMouseDown={(e) => { e.preventDefault(); applyFontSize(s.value); }}
-                        className={`w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-muted transition-colors ${
+                        className={`w-full text-left px-3 py-2.5 text-sm font-mono hover:bg-muted transition-colors ${
                           fontSizeInput === s.label ? "text-primary font-medium bg-primary/5" : "text-foreground"
                         }`}
                       >
@@ -941,14 +990,14 @@ const PostEditor = ({
               <div className="relative" ref={colorPickerRef}>
                 <button
                   onMouseDown={(e) => { e.preventDefault(); saveSelection(); setShowColorPicker(!showColorPicker); setShowFontPicker(false); setShowFontSizePicker(false); }}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors border border-border/50"
+                  className="h-10 flex items-center gap-1 px-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors border border-border/50 flex-shrink-0"
                   title="텍스트 색상 (텍스트 선택 후 적용)"
                 >
                   <Palette className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline text-[11px]">색상</span>
                 </button>
                 {showColorPicker && (
-                  <div className="fixed z-[9999] bg-popover border border-border rounded-lg shadow-xl p-2.5" style={{ width: "170px" }}
+                  <div className="fixed z-[9999] bg-popover border border-border rounded-lg shadow-xl p-2.5" style={{ width: "236px" }}
                     ref={(el) => {
                       if (!el) return;
                       const btn = el.parentElement?.querySelector("button");
@@ -963,7 +1012,7 @@ const PostEditor = ({
                         <button
                           key={c.label}
                           onMouseDown={(e) => { e.preventDefault(); applyTextColor(c.value); }}
-                          className="w-6 h-6 rounded border border-border/50 hover:scale-110 transition-transform flex items-center justify-center"
+                          className="w-8 h-8 rounded-md border border-border/50 hover:scale-110 transition-transform flex items-center justify-center"
                           style={{ backgroundColor: c.value || "transparent" }}
                           title={c.label}
                         >
@@ -985,13 +1034,13 @@ const PostEditor = ({
                 )}
               </div>
 
-              <div className="w-px h-4 bg-border mx-1" />
+              <div className="w-px h-4 bg-border mx-1 flex-shrink-0" />
 
               {/* AI Enhance button */}
               <button
                 onClick={handleAiEnhance}
                 disabled={aiLoading}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-all disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
+                className="h-10 flex items-center gap-1 px-3 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-all disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
                 title="AI로 글 다듬기 (이미지 유지)"
               >
                 {aiLoading ? (
@@ -1004,7 +1053,7 @@ const PostEditor = ({
               {aiUndoHtml !== null && !aiLoading && (
                 <button
                   onClick={handleAiUndo}
-                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors border border-border/50 flex-shrink-0"
+                  className="h-10 flex items-center gap-1 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors border border-border/50 flex-shrink-0"
                   title="AI 다듬기 전 본문으로 되돌리기"
                 >
                   <Undo2 className="h-3.5 w-3.5" />
@@ -1015,7 +1064,7 @@ const PostEditor = ({
               {/* 사진으로 글쓰기 */}
               <button
                 onClick={() => setShowPhotoWizard(true)}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-lg transition-all flex-shrink-0"
+                className="h-10 flex items-center gap-1 px-3 text-xs font-medium bg-primary/15 text-primary hover:bg-primary/25 rounded-lg transition-all flex-shrink-0"
                 title="사진 여러 장으로 AI 블로그 초안 만들기"
               >
                 <Camera className="h-3.5 w-3.5" />
@@ -1054,7 +1103,7 @@ const PostEditor = ({
                         <button
                           key={cat}
                           onClick={() => setCategory(cat)}
-                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          className={`min-h-[40px] px-3.5 rounded-lg text-xs font-medium transition-colors ${
                             category === cat
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted text-muted-foreground hover:text-foreground"
@@ -1076,7 +1125,7 @@ const PostEditor = ({
                       value={tagsInput}
                       onChange={(e) => setTagsInput(e.target.value)}
                       placeholder="태그1, 태그2, 태그3"
-                      className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40"
+                      className="w-full min-h-[40px] bg-background border border-border rounded-lg px-3 py-1.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40"
                     />
                   </div>
                 </div>
@@ -1084,21 +1133,55 @@ const PostEditor = ({
             )}
           </AnimatePresence>
 
-          {/* Content area -- contentEditable div for true inline editing */}
+          {/* 사진 글 삽입 안내 — 인라인, 6초 뒤/첫 수정/발행 시 자동으로 사라짐 */}
+          <AnimatePresence>
+            {insertHint && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                transition={{ duration: 0.2 }}
+                role="status"
+                className="mb-4 flex items-center gap-2 rounded-lg bg-primary/10 pl-3 pr-1 text-sm text-foreground overflow-hidden"
+              >
+                <Check className="h-4 w-4 flex-shrink-0 text-primary" />
+                <p className="flex-1 min-w-0 py-2.5 break-keep leading-snug">
+                  사진 글을 넣었어요. 확인하고 <button type="button" onClick={openPreview} className="inline-flex items-center min-h-[32px] -my-1.5 font-medium text-foreground underline underline-offset-4 decoration-[#d9668a] dark:decoration-[#f4a7b9]">미리보기</button> 후 발행해주세요.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setInsertHint(false)}
+                  aria-label="안내 닫기"
+                  className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Content area -- contentEditable div for true inline editing (공개 글과 같은 .blog-content 스타일) */}
           <div
             ref={contentRef}
             contentEditable
             suppressContentEditableWarning
             onPaste={handlePaste}
+            onInput={insertHint ? () => setInsertHint(false) : undefined}
             data-placeholder="여기에 글을 작성하세요... (텍스트 선택 후 글꼴/크기/색상 적용)"
-            className="w-full bg-transparent leading-relaxed focus:outline-none border-none min-h-[300px] sm:min-h-[500px] whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/30"
-            style={{
-              lineHeight: "1.8",
-              fontSize: "16px",
-            }}
+            className="blog-content w-full bg-transparent focus:outline-none border-none min-h-[300px] sm:min-h-[500px] whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/30"
           />
         </div>
       </div>
+
+      {/* 미리보기 (공개 페이지와 같은 렌더러) */}
+      <BlogPreviewDialog
+        open={previewPost !== null}
+        onOpenChange={(o) => { if (!o) setPreviewPost(null); }}
+        post={previewPost}
+        publishLabel={isEditing ? "수정" : "발행"}
+        canPublish={!!title.trim()}
+        onPublish={handleSave}
+      />
 
       {/* 사진으로 글쓰기 위저드 */}
       <PhotoBlogWizard
@@ -1118,6 +1201,14 @@ const BLOG_CATEGORIES_KEY = "sophia-blog-categories";
 
 const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void } = {}) => {
   const { isGuest } = useGuestMode();
+  const navigate = useNavigate();
+  // 발행/수정 직후 "글 보러 가기" 안내
+  const [published, setPublished] = useState<{ id: string; title: string; isNew: boolean; isPublic: boolean } | null>(null);
+  useEffect(() => {
+    if (!published) return;
+    const t = window.setTimeout(() => setPublished(null), 10000);
+    return () => window.clearTimeout(t);
+  }, [published]);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<string[]>(() => {
     try {
@@ -1134,6 +1225,10 @@ const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null;
   const syncedCategoriesJson = useRef<string | null>(null);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const editorCategories = useMemo(
+    () => Array.from(new Set([...categories, ...posts.map((p) => p.category).filter(Boolean)])),
+    [categories, posts]
+  );
   const [autoPhotoWizard, setAutoPhotoWizard] = useState(false);
 
   // "blog:photo"로 진입 → 새 글 + 사진으로 글쓰기 바로 열기 (모바일 바로 작성)
@@ -1241,10 +1336,13 @@ const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null;
     tags: string[];
     isPublic: boolean;
   }) => {
+    let saved: Promise<void>;
+    let target: { id: string; title: string; isNew: boolean; isPublic: boolean };
     if (editingPost) {
       const updated = { ...editingPost, ...data };
       setPosts(posts.map((p) => (p.id === editingPost.id ? updated : p)));
-      savePostToDB({ id: updated.id, title: updated.title, content: updated.content, category: updated.category, tags: updated.tags, is_public: updated.isPublic, created_at: updated.createdAt, images: updated.images });
+      saved = savePostToDB({ id: updated.id, title: updated.title, content: updated.content, category: updated.category, tags: updated.tags, is_public: updated.isPublic, created_at: updated.createdAt, images: updated.images });
+      target = { id: updated.id, title: updated.title, isNew: false, isPublic: updated.isPublic };
     } else {
       const newPost: BlogPost = {
         id: crypto.randomUUID(),
@@ -1253,9 +1351,12 @@ const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null;
         images: [],
       };
       setPosts([newPost, ...posts]);
-      savePostToDB({ id: newPost.id, title: newPost.title, content: newPost.content, category: newPost.category, tags: newPost.tags, is_public: newPost.isPublic, created_at: newPost.createdAt, images: newPost.images });
+      saved = savePostToDB({ id: newPost.id, title: newPost.title, content: newPost.content, category: newPost.category, tags: newPost.tags, is_public: newPost.isPublic, created_at: newPost.createdAt, images: newPost.images });
+      target = { id: newPost.id, title: newPost.title, isNew: true, isPublic: newPost.isPublic };
     }
     cancelEditor();
+    // 저장이 끝난 뒤에 "글 보러 가기" 제공 (먼저 이동하면 공개 페이지에서 글을 못 찾음)
+    saved.then(() => setPublished(target));
   };
 
   const deletePost = async (id: string) => {
@@ -1302,7 +1403,9 @@ const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null;
             initialCategory={editingPost?.category ?? categories[0] ?? "일상"}
             initialTags={editingPost?.tags.join(", ") ?? ""}
             initialIsPublic={editingPost?.isPublic ?? true}
-            categories={categories}
+            initialDate={editingPost?.createdAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)}
+            initialImages={editingPost?.images ?? []}
+            categories={editorCategories}
             isEditing={!!editingPost}
             autoOpenPhotoWizard={autoPhotoWizard}
             onSave={savePost}
@@ -1317,28 +1420,73 @@ const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null;
             className="space-y-5"
           >
             {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-xl sm:text-2xl font-bold">블로그 관리</h2>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <h2 className="text-xl sm:text-2xl font-bold truncate">블로그 관리</h2>
+                {/* 공개 블로그 메인 (사이드바 로고와 같은 주소) */}
+                <button
+                  onClick={() => navigate("/?blog=true")}
+                  className="ml-auto sm:ml-1 flex-shrink-0 flex items-center gap-1 rounded-lg px-2.5 min-h-[40px] text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  title="공개 블로그 메인으로 이동"
+                >
+                  <span>블로그 보기</span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </button>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                 <button
                   onClick={startPhotoCreate}
-                  className="flex items-center gap-1.5 bg-muted text-foreground rounded-lg px-3 min-h-[40px] text-sm font-medium hover:bg-muted/80 transition-colors"
+                  className="flex items-center justify-center gap-1.5 bg-muted text-foreground rounded-lg px-3 min-h-[44px] sm:min-h-[40px] text-sm font-medium hover:bg-muted/80 transition-colors"
                 >
-                  <Camera className="h-4 w-4" />
-                  <span>사진으로</span>
+                  <Camera className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">사진으로 글쓰기</span>
                 </button>
                 <button
                   onClick={startCreate}
-                  className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 min-h-[40px] text-sm font-medium hover:opacity-90 transition-opacity"
+                  className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 min-h-[44px] sm:min-h-[40px] text-sm font-medium hover:opacity-90 transition-opacity"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4 flex-shrink-0" />
                   <span>새 글</span>
                 </button>
               </div>
             </div>
+
+            {/* 발행 직후 바로가기 */}
+            <AnimatePresence>
+              {published && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  role="status"
+                  className="flex items-center gap-2 rounded-xl bg-card border border-border pl-4 pr-1 py-1"
+                >
+                  <Check className="h-4 w-4 flex-shrink-0 text-primary" />
+                  <p className="flex-1 min-w-0 text-sm py-2">
+                    <span className="block truncate font-medium">{published.title}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {published.isNew ? "발행했어요" : "수정했어요"}
+                      {!published.isPublic && " · 비공개 글"}
+                    </span>
+                  </p>
+                  <button
+                    onClick={() => navigate(`/post/${published.id}`)}
+                    className="flex-shrink-0 flex items-center gap-1 rounded-lg px-3 min-h-[40px] text-sm font-medium text-foreground bg-muted hover:bg-muted/80 transition-colors"
+                  >
+                    글 보러 가기
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setPublished(null)}
+                    aria-label="닫기"
+                    className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Blog Settings */}
             <BlogSettings

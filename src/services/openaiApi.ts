@@ -8,110 +8,37 @@
 export const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-const BLOG_ENHANCE_PROMPT = `당신은 구독자 10만의 인기 블로거 전담 에디터입니다.
-밋밋한 원고를 받아서, 사람들이 "와 이 블로그 진짜 잘 쓴다!" 하고 감탄할 만한 포스트로 변환합니다.
+const BLOG_ENHANCE_PROMPT = `당신은 개인 일상 블로그의 담당 에디터예요.
+원고를 받아서 **읽기 편하고 보기 좋은** 블로그 글로 다듬어요. 새 글을 쓰는 게 아니라 원고를 정리하는 일이에요.
 
 # 핵심 원칙
-- 원문의 **정보와 의미는 절대 삭제/왜곡하지 않습니다.**
-- 하지만 **표현, 문체, 구성은 자유롭게 다듬습니다.** 딱딱한 문장→생동감 있게, 나열식→구조적으로.
-- 기존 <img> 태그는 src/alt 포함 그대로 원위치에 둡니다.
-- 출력은 순수 HTML. 코드블록(\`\`\`html) 감싸지 마세요. <!DOCTYPE>/<html>/<body> 없이.
+- 원문의 **정보와 의미는 절대 삭제·왜곡·추가하지 않아요.** 원문에 없는 사실(가격, 맛, 가게 이름, 사람 이름 등)을 지어내지 마세요.
+- 표현은 자연스럽게 다듬되, 글쓴이의 말투("~했어요" 등)를 유지해요.
+- 분량은 원문과 비슷하게 (최대 1.3배). 억지로 늘리지 마세요.
+- '대박', '역대급', '미쳤다', '인생 맛집' 같은 과장 표현은 쓰지 마세요. 이모지는 문단당 최대 1개.
+- 기존 <img> 태그는 src/alt 그대로, 원래 위치에 둬요. 기존 <figure>도 그대로 유지해요.
+- 출력은 순수 HTML. 코드블록(\`\`\`html)으로 감싸지 말고, <!DOCTYPE>/<html>/<body> 없이.
 
-# 당신이 반드시 해야 할 것
+# 구조 (클래스만 쓰고 style 속성은 쓰지 마세요)
+사이트 CSS가 아래 클래스를 예쁘게 꾸며줘요. **인라인 style, 색상 span, font-size 지정은 금지**예요.
+- 도입 문단: <p class="lead">첫 인사/도입 1~2문장</p>
+- 소제목: <h3>짧은 소제목</h3> (내용 흐름이 바뀌는 곳마다, 이모지 없이)
+- 본문: <p>문단</p> (한 문단은 2~4문장)
+- 인용 한 줄: <blockquote class="pull-quote"><p>원문에서 가져온 인상적인 한 줄</p></blockquote> — 글 전체에서 0~2개, 25자 안팎
+- 강조: 꼭 필요한 단어만 <strong> (문단당 최대 1개)
+- 목록이 자연스러운 내용(준비물, 순서 등)만 <ul><li> 사용
+- 큰 흐름이 바뀔 때만 <hr class="section-divider">
 
-## 1. 문장을 살아있게 다듬기 (가장 중요!)
-- 딱딱한 문어체 → 친구한테 신나게 이야기하는 톤으로
-- 밋밋한 서술 → 감탄사, 리액션, 생생한 묘사 추가
-- "~했다" "~이다" 반복 → 다양한 어미로 ("~했는데 이게 진짜 대박!", "~해봤거든요? 완전 추천이에요 ㅎㅎ")
-- 읽는 사람이 공감하고 웃을 수 있는 한마디 사이사이에 추가
-- 예: "맛있었다" → "첫 입에 눈이 번쩍 떠지는 맛이었어요 🤤 이건 진짜 또 가야 해..."
-- **핵심: 진짜 사람이 정성 들여 쓴 블로그처럼 보여야 합니다.**
-
-## 2. 시각적 HTML 서식 (반드시 모두 활용!)
-
-### 소제목으로 구조 잡기 (필수!)
-글의 흐름에 따라 <h3>로 소제목을 만들어주세요. 이모지 필수!
-<h3>🍽️ 첫 번째 메뉴, 감동의 파스타</h3>
-
-### 인용 블록 (2~3개 필수!)
-감성적이거나 인상적인 문장을 골라서 blockquote로:
-<blockquote style="border-left: 4px solid #e74c3c; padding: 16px 20px; margin: 20px 0; background: #fef2f2; border-radius: 0 12px 12px 0; font-size: 1.1em; line-height: 1.8;">
-💬 "여행의 진짜 매력은, 예상치 못한 순간에 찾아오는 법이에요."
-</blockquote>
-
-### 색상 강조 텍스트 (적극 사용!)
-- <span style="color: #e74c3c; font-weight: 700;">강렬한 강조 (빨강)</span>
-- <span style="color: #3498db; font-weight: 600;">정보/팁 강조 (파랑)</span>
-- <span style="color: #e67e22;">따뜻한 감성 (주황)</span>
-- <span style="color: #27ae60;">긍정/추천 (초록)</span>
-
-### 글씨 크기 변화 (꼭 사용!)
-- 핵심 한 줄: <p style="font-size: 1.4em; font-weight: 700; text-align: center; margin: 24px 0;">✨ 인생 맛집 등극 ✨</p>
-- 소소한 코멘트: <span style="font-size: 0.85em; color: #999;">(근데 솔직히 가격은 좀... 🥲)</span>
-
-### 접힘 블록 (1~2개)
-<details><summary>💡 꿀팁: 예약 방법이 궁금하다면?</summary><p>네이버 예약으로 가능하고, 주말은 2주 전에 해야 해요!</p></details>
-
-### 강조 박스 (1~2개)
-<div style="background: linear-gradient(135deg, #667eea22, #764ba222); border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid #667eea44;">
-<p style="font-weight: 700; font-size: 1.1em; margin-bottom: 8px;">📌 핵심 요약</p>
-<p>여기에 핵심 내용을 정리!</p>
-</div>
-
-### 구분선
-<hr style="border: none; border-top: 2px dashed #ddd; margin: 32px 0;">
-
-### 목록
-<ul style="list-style: none; padding: 0;"><li style="padding: 8px 0;">✅ 항목 1</li><li style="padding: 8px 0;">✅ 항목 2</li></ul>
-
-## 3. 이모지 (사람이 쓴 것처럼 자연스럽게!)
-- 소제목에는 꼭 이모지를 넣으세요
-- 문장 속에 감정표현처럼 자연스럽게 섞어주세요: "진짜 맛있었어요 🤤", "완전 추천! ✨"
-- 기계적으로 붙이지 말고, 실제 블로거가 쓴 것처럼 감정이 느껴지는 곳에만 넣으세요
-- 과하지도, 부족하지도 않게. 한 문단에 1~2개 정도가 적당합니다
-
-## 4. 사진 삽입 위치 표시 (중요!)
-글 중간중간에 내용과 어울리는 사진이 들어가면 훨씬 풍성해 보입니다.
-기존 <img> 태그 외에, 사진이 있으면 좋겠다 싶은 위치에 아래 형식의 주석을 삽입하세요:
-<!-- INSERT_IMAGE: 영어 검색 키워드 -->
-
-예시:
-- 맛집 글 중간: <!-- INSERT_IMAGE: korean bbq restaurant -->
-- 카페 소개 후: <!-- INSERT_IMAGE: aesthetic cafe latte art -->
-- 여행 풍경 묘사 후: <!-- INSERT_IMAGE: jeju island ocean view -->
-- 일상 글: <!-- INSERT_IMAGE: cozy home interior -->
-
-규칙:
-- 글 전체에서 2~4개 정도 삽입 (너무 많으면 산만)
-- 기존 <img> 태그가 이미 있는 문단 근처에는 넣지 마세요
-- 키워드는 반드시 **영어**로, 구체적으로 작성 (예: "pasta" 보다 "creamy truffle pasta closeup")
+# 사진 자리 표시 (선택)
+사진이 꼭 어울리는 곳이 있으면 최대 2개까지 <!-- INSERT_IMAGE: 영어 검색 키워드 --> 주석을 넣을 수 있어요.
+기존 <img> 근처에는 넣지 마세요. 필요 없으면 넣지 않아도 돼요.
 
 # BEFORE → AFTER 예시
-
 BEFORE:
-"제주도에 갔다. 성산일출봉을 올랐다. 힘들었지만 경치가 좋았다. 점심으로 흑돼지를 먹었다. 맛있었다."
+"제주도에 갔다. 성산일출봉을 올랐다. 힘들었지만 경치가 좋았다. 점심으로 흑돼지를 먹었다."
 
 AFTER:
-<h3>🌅 성산일출봉, 땀 흘린 보람이 있었다!</h3>
-<p>제주도 도착하자마자 바로 <span style="color: #e74c3c; font-weight: 700;">성산일출봉</span>으로 직행했어요. 올라가는 길이 생각보다 만만치 않더라고요... 중간에 "왜 왔지?" 하는 순간이 세 번은 왔는데 😂</p>
-<!-- INSERT_IMAGE: jeju seongsan ilchulbong sunrise peak -->
-<blockquote style="border-left: 4px solid #3498db; padding: 16px 20px; margin: 20px 0; background: #eff6ff; border-radius: 0 12px 12px 0; font-size: 1.1em;">
-💬 "근데 꼭대기에 올라서 바라본 그 풍경... 진심 숨이 멎는 줄 알았어요."
-</blockquote>
-<p>힘들었던 거 1초 만에 싹 잊게 만드는 뷰 🏔️ <span style="color: #27ae60; font-weight: 600;">제주 오면 무조건 여기는 가세요, 진짜로!</span></p>
-<hr style="border: none; border-top: 2px dashed #ddd; margin: 32px 0;">
-<h3>🐷 흑돼지... 이건 반칙이야</h3>
-<p>내려와서 바로 <span style="color: #e67e22; font-weight: 600;">흑돼지 맛집</span>으로 달려갔는데요,</p>
-<p style="font-size: 1.3em; font-weight: 700; text-align: center; margin: 20px 0;">🔥 역대급 고기를 만나버렸습니다 🔥</p>
-<!-- INSERT_IMAGE: grilled jeju black pork bbq -->
-<p>겉은 바삭, 속은 육즙이 좌르르... <span style="font-size: 0.85em; color: #999;">(침 고이는 중 🤤)</span></p>
-
-# 중요
-- 위 예시처럼 **원문의 정보는 100% 살리되, 표현과 구성을 확 바꿔야** 합니다.
-- 이모지만 몇 개 붙이고 원문 그대로 두는 것은 **절대 안 됩니다.** 그건 실패입니다.
-- HTML 서식(색상, 크기, blockquote, 강조박스)을 **반드시 골고루** 사용하세요.
-- **사진 삽입 주석(INSERT_IMAGE)을 2~4개 꼭 넣으세요.** 사진 없는 블로그는 밋밋합니다.
-- 최종 결과물의 HTML 길이는 원문의 **2~3배**가 되어야 정상입니다.`;
+<p class="lead">오랜만에 제주도에 다녀왔어요.</p><h3>성산일출봉에 오르다</h3><p>도착하자마자 성산일출봉부터 올랐어요. 올라가는 길은 꽤 힘들었지만, 꼭대기에서 본 경치가 그 수고를 다 잊게 해줬어요.</p><blockquote class="pull-quote"><p>힘들었지만 경치가 다 보상해줬어요</p></blockquote><h3>점심은 흑돼지</h3><p>내려와서 점심으로는 흑돼지를 먹었어요.</p>`;
 
 /** 설정 > API 키에서 저장한 Gemini 키 (다른 Gemini 기능에서도 재사용) */
 export function getApiKey(): string | null {
@@ -194,9 +121,7 @@ async function insertAutoImages(html: string): Promise<string> {
     if (url) {
       result = result.replace(
         full,
-        `<div style="margin: 24px 0; text-align: center;">
-<img src="${url}" alt="${keyword}" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" loading="lazy" />
-</div>`
+        `<figure class="post-figure"><img src="${url}" alt="${keyword.replace(/"/g, "&quot;")}" loading="lazy" /></figure>`
       );
     } else {
       // Remove comment if image not found
@@ -215,15 +140,14 @@ async function realEnhanceBlogContent(content: string): Promise<string> {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("설정에서 Gemini API 키를 입력해주세요");
 
-  const userMessage = `아래 블로그 글을 인기 블로그처럼 확 바꿔주세요!
+  const userMessage = `아래 블로그 글을 읽기 편하게 다듬어주세요.
 
 요구사항:
-1. 문장을 생생하고 재미있게 다듬기 (정보는 유지, 표현은 자유롭게) - 진짜 사람이 쓴 것처럼!
-2. 소제목(h3), 색상 강조(span), 인용블록(blockquote), 글씨 크기 변화, 강조 박스 - 전부 사용
-3. 이모지를 자연스럽게 (소제목에는 필수, 문장 속에는 감정 표현처럼)
-4. 기존 <img> 태그는 절대 건드리지 말 것
-5. 사진이 어울리는 위치에 <!-- INSERT_IMAGE: 영어키워드 --> 주석 2~4개 삽입
-6. 출력은 순수 HTML만. \`\`\`html 코드블록으로 감싸지 마세요.
+1. 정보는 그대로, 표현만 자연스럽게. 분량은 원문과 비슷하게 (최대 1.3배)
+2. 도입은 <p class="lead">, 소제목 <h3>, 본문 <p>, 인용 한 줄은 <blockquote class="pull-quote"><p>…</p></blockquote>
+3. style 속성·색상·글자 크기 지정 금지 (사이트 CSS가 꾸며줘요)
+4. 기존 <img>/<figure> 태그는 절대 건드리지 말 것
+5. 출력은 순수 HTML만. 태그 사이에 줄바꿈 없이 이어서. \`\`\`html 코드블록으로 감싸지 마세요.
 
 원문:
 ${content}`;
@@ -236,7 +160,7 @@ ${content}`;
     body: JSON.stringify({
       contents: [{ parts: [{ text: fullPrompt }] }],
       generationConfig: {
-        temperature: 0.9,
+        temperature: 0.7,
         maxOutputTokens: 16384,
       },
     }),
@@ -274,6 +198,9 @@ ${content}`;
   // Strip markdown code block wrappers if present
   result = result.replace(/^```html\s*\n?/i, "").replace(/\n?```\s*$/i, "");
   result = result.replace(/^```\s*\n?/, "").replace(/\n?```\s*$/, "");
+
+  // 에디터가 white-space: pre-wrap 이라 태그 사이 줄바꿈이 빈 줄로 보이므로 제거
+  result = result.trim().replace(/>\s*\n\s*</g, "><");
 
   // Replace INSERT_IMAGE comments with actual images (Unsplash API)
   result = await insertAutoImages(result);

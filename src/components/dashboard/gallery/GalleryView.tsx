@@ -87,7 +87,7 @@ const GalleryView = () => {
         {!selectedAlbum && (
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
-            className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
+            className="flex min-h-[40px] items-center gap-1.5 whitespace-nowrap bg-primary text-primary-foreground rounded-lg px-3 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <Plus className="h-4 w-4" />
             <span>새 앨범</span>
