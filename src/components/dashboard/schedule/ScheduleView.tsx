@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import ChecklistTab from "./ChecklistTab";
 import CalendarTab from "./CalendarTab";
 import PlannerTab from "./PlannerTab";
+import ScheduleDesktop from "../desktop/ScheduleDesktop";
+import { useIsDesktop } from "../desktop/useMediaQuery";
 
 const tabs = [
   { id: "checklist", label: "주간 계획" },
@@ -10,7 +12,14 @@ const tabs = [
   { id: "planner", label: "플래너" },
 ];
 
-const ScheduleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void } = {}) => {
+const ScheduleView = (props: { initialTab?: string | null; onTabUsed?: () => void } = {}) => {
+  const isDesktop = useIsDesktop();
+  // 데스크톱: 하위 탭 대신 캘린더 + 오늘/이번 주/D-day 동시 표시
+  if (isDesktop) return <ScheduleDesktop initialTab={props.initialTab} onTabUsed={props.onTabUsed} />;
+  return <ScheduleTabs {...props} />;
+};
+
+const ScheduleTabs = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void }) => {
   const [activeTab, setActiveTab] = useState(initialTab || "checklist");
 
   useEffect(() => {
@@ -19,7 +28,8 @@ const ScheduleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; o
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl sm:text-2xl font-sans font-bold">일정 관리</h2>
+      {/* 태블릿 이상은 상단 헤더에 탭 이름이 크게 보이므로 숨김 */}
+      <h2 className="text-xl sm:text-2xl font-sans font-bold md:hidden">일정 관리</h2>
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-muted rounded-lg p-1 overflow-x-auto">

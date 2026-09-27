@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Check, Heart, MapPin, Gift, Sparkles, Trash2, Search, Loader2, Send, User, Smile, Pin, Lock } from "lucide-react";
+import { Plus, Check, Heart, MapPin, Gift, Sparkles, Trash2, Search, Loader2, Send, User, Smile, Pin, Lock, CalendarHeart, MessageSquareHeart, BookHeart, Image as ImageIcon } from "lucide-react";
+import { useIsDesktop } from "../desktop/useMediaQuery";
 import GalleryView from "../gallery/GalleryView";
 
 import { searchPlaces } from "../../../services/kakaoApi";
@@ -44,6 +45,7 @@ const categoryIcons = {
 
 const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void } = {}) => {
   const { isGuest, maskText } = useGuestMode();
+  const isDesktop = useIsDesktop();
   const [activeTab, setActiveTab] = useState(initialTab || "dday");
 
   useEffect(() => {
@@ -228,62 +230,14 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
 
   const emojiOptions = ["\u2764\uFE0F", "\u{1F496}", "\u{1F48D}", "\u{1F382}", "\u2708\uFE0F", "\u{1F3E0}", "\u{1F31F}", "\u{1F389}", "\u{1F37D}\uFE0F", "\u{1F3B5}"];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Heart className="h-5 w-5 text-pink-400" />
-        <h2 className="text-xl sm:text-2xl font-bold">부부 공간</h2>
-      </div>
-
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-muted rounded-lg p-1 overflow-x-auto">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 relative px-2 sm:px-4 py-2.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[60px] min-h-[40px] flex-shrink-0 ${
-              activeTab === tab.id
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {activeTab === tab.id && (
-              <motion.div
-                layoutId="couple-tab"
-                className="absolute inset-0 bg-card rounded-md shadow-sm"
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-            )}
-            <span className="relative z-10">{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.3 }}
-        >
-          {isGuest && (
-            <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
-              <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
-            </div>
-          )}
-
-          {!isGuest && activeTab === "dday" && (
+  const ddayPanel = (
             <div className="space-y-4">
               {/* Add D-day form */}
               <div className="bg-card rounded-xl p-5 space-y-3">
                 <h3 className="text-sm font-mono text-muted-foreground">
                   새 D-day 추가
                 </h3>
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className={`flex flex-col gap-2 ${isDesktop ? "" : "sm:flex-row"}`}>
                   <input
                     type="text"
                     placeholder="기념일 이름"
@@ -325,7 +279,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground font-mono">
+                  <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground font-mono">
                     이모지:
                   </span>
                   <div className="flex gap-1 flex-wrap">
@@ -380,7 +334,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                         <span
                           className={`text-sm font-mono font-bold ${
                             getDday(dday.date) === "D-Day"
-                              ? "text-pink-400"
+                              ? "text-love"
                               : getDday(dday.date).startsWith("D+")
                               ? "text-muted-foreground"
                               : "text-primary"
@@ -400,13 +354,9 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                   ))}
               </div>
             </div>
-          )}
+  );
 
-          {!isGuest && activeTab === "gallery" && (
-            <GalleryView />
-          )}
-
-          {!isGuest && activeTab === "memo" && (
+  const memoPanel = (
             <div className="space-y-4">
               {/* Add memo form */}
               <div className="bg-card rounded-xl p-4 space-y-3">
@@ -417,7 +367,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                       onClick={() => setNewMemoAuthor("sophia")}
                       className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                         newMemoAuthor === "sophia"
-                          ? "bg-pink-500/15 text-pink-400 ring-1 ring-pink-400/30"
+                          ? "bg-love/10 text-love ring-1 ring-love/30"
                           : "bg-muted text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -428,7 +378,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                       onClick={() => setNewMemoAuthor("partner")}
                       className={`relative min-w-[40px] after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                         newMemoAuthor === "partner"
-                          ? "bg-blue-500/15 text-blue-400 ring-1 ring-blue-400/30"
+                          ? "bg-foreground/10 text-foreground ring-1 ring-border"
                           : "bg-muted text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -478,20 +428,20 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                       <div
                         className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm relative ${
                           isSophia
-                            ? "bg-pink-500/10 border border-pink-500/20 rounded-br-md"
-                            : "bg-blue-500/10 border border-blue-500/20 rounded-bl-md"
+                            ? "bg-love/10 border border-love/20 rounded-br-md"
+                            : "bg-muted border border-border rounded-bl-md"
                         }`}
                         style={{ transform: `rotate(${isSophia ? "0.3" : "-0.3"}deg)` }}
                       >
                         <div className="flex items-center gap-1.5 mb-1">
                           {isSophia ? (
-                            <Smile className="h-3 w-3 text-pink-400" />
+                            <Smile className="h-3 w-3 text-love" />
                           ) : (
-                            <User className="h-3 w-3 text-blue-400" />
+                            <User className="h-3 w-3 text-muted-foreground" />
                           )}
                           <span
                             className={`text-[11px] font-medium ${
-                              isSophia ? "text-pink-400" : "text-blue-400"
+                              isSophia ? "text-love" : "text-foreground"
                             }`}
                           >
                             {isSophia ? "데굴" : "무요"}
@@ -504,7 +454,7 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                               onClick={() => toggleMemoPin(memo.id)}
                               className={`flex min-h-[40px] items-center gap-1 whitespace-nowrap text-[11px] font-medium transition-colors rounded-full px-2 -my-2 ${
                                 memo.pinned
-                                  ? "text-amber-500 bg-amber-500/10"
+                                  ? "text-foreground bg-foreground/10"
                                   : "text-muted-foreground/50 hover:text-muted-foreground"
                               }`}
                               title={memo.pinned ? "공지 해제" : "공지 등록"}
@@ -542,9 +492,9 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                 )}
               </div>
             </div>
-          )}
+  );
 
-          {!isGuest && activeTab === "wishlist" && (
+  const wishPanel = (
             <div className="space-y-4">
               {/* Add wish form */}
               <div className="bg-card rounded-xl p-5 space-y-3">
@@ -722,7 +672,114 @@ const CoupleView = ({ initialTab, onTabUsed }: { initialTab?: string | null; onT
                 })}
               </div>
             </div>
-          )}
+  );
+
+  const guestLock = (
+    <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+      <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+      <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+      <p className="text-xs text-muted-foreground/60 mt-1">게스트 모드에서는 열람할 수 없습니다</p>
+    </div>
+  );
+
+  // 데스크톱: 기념일 · 속닥속닥 · 위시리스트를 한 화면에 3열로 (갤러리는 따로)
+  if (isDesktop) {
+    const columns = [
+      { id: "dday", title: "기념일 D-day", icon: CalendarHeart, body: ddayPanel, count: ddays.length },
+      { id: "memo", title: "속닥속닥", icon: MessageSquareHeart, body: memoPanel, count: memos.length },
+      { id: "wishlist", title: "위시리스트", icon: Gift, body: wishPanel, count: wishes.filter((w) => !w.isDone).length },
+    ];
+    return (
+      <div className="space-y-4" data-testid="couple-desktop">
+        <nav className="flex w-fit gap-0.5 rounded-lg border border-border bg-card p-0.5" aria-label="기록 화면">
+          {[
+            { id: "records", label: "기록", icon: BookHeart },
+            { id: "gallery", label: "갤러리", icon: ImageIcon },
+          ].map((v) => {
+            const active = (activeTab === "gallery") === (v.id === "gallery");
+            return (
+              <button
+                key={v.id}
+                onClick={() => setActiveTab(v.id === "gallery" ? "gallery" : "dday")}
+                aria-current={active ? "page" : undefined}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] transition-colors ${
+                  active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <v.icon className="h-3.5 w-3.5" />
+                {v.label}
+              </button>
+            );
+          })}
+        </nav>
+        {isGuest ? (
+          guestLock
+        ) : activeTab === "gallery" ? (
+          <GalleryView />
+        ) : (
+          <div className="grid grid-cols-3 items-start gap-4">
+            {columns.map((c) => (
+              <section key={c.id} className="min-w-0 rounded-2xl border border-border bg-card/40">
+                <header className="flex min-h-[48px] items-center gap-2 border-b border-border px-4">
+                  <c.icon className={`h-4 w-4 ${c.id === "dday" ? "text-love" : "text-muted-foreground"}`} />
+                  <h3 className="text-[13px] font-semibold">{c.title}</h3>
+                  <span className="ml-auto font-mono text-xs text-muted-foreground">{c.count}</span>
+                </header>
+                {/* 열마다 따로 스크롤 — 메모가 많아도 세 열이 한 화면에 */}
+                <div className="max-h-[calc(100vh-13rem)] overflow-y-auto overscroll-contain p-3">{c.body}</div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 md:hidden">
+        <Heart className="h-5 w-5 text-love" />
+        <h2 className="text-xl sm:text-2xl font-bold">부부 공간</h2>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 bg-muted rounded-lg p-1 overflow-x-auto">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 relative px-2 sm:px-4 py-2.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[60px] min-h-[40px] flex-shrink-0 ${
+              activeTab === tab.id
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {activeTab === tab.id && (
+              <motion.div
+                layoutId="couple-tab"
+                className="absolute inset-0 bg-card rounded-md shadow-sm"
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+            )}
+            <span className="relative z-10">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.3 }}
+        >
+          {isGuest && guestLock}
+          {!isGuest && activeTab === "dday" && ddayPanel}
+          {!isGuest && activeTab === "gallery" && <GalleryView />}
+          {!isGuest && activeTab === "memo" && memoPanel}
+          {!isGuest && activeTab === "wishlist" && wishPanel}
         </motion.div>
       </AnimatePresence>
     </div>

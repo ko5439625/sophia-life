@@ -640,7 +640,7 @@ const PhotoBlogWizard = ({
                       className={`${inputCls} py-2 leading-relaxed resize-y`}
                     />
                     <div className="flex items-start gap-2 min-w-0">
-                      <Quote className="h-4 w-4 mt-3 flex-shrink-0 text-[#d9668a] dark:text-[#f4a7b9]" aria-hidden />
+                      <Quote className="h-4 w-4 mt-3 flex-shrink-0 text-love" aria-hidden />
                       <input
                         type="text"
                         value={s.highlight}

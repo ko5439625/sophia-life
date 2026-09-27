@@ -86,8 +86,8 @@ export default function WeddingView({ initialTab, onTabUsed }: WeddingViewProps)
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <Heart className="h-5 w-5 text-pink-400" />
+      <div className="flex items-center gap-2 md:hidden">
+        <Heart className="h-5 w-5 text-love" />
         <h2 className="text-xl sm:text-2xl font-bold">웨딩 준비</h2>
       </div>
 
@@ -302,7 +302,7 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
           <p className="text-[11px] text-muted-foreground/60 font-mono">진행률</p>
           <p className="text-lg font-bold font-mono mt-1">{cTotal > 0 ? cPct : progressPct}%</p>
           <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mt-1.5">
-            <div className="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-500" style={{ width: `${cTotal > 0 ? cPct : progressPct}%` }} />
+            <div className="h-full bg-love rounded-full transition-all duration-500" style={{ width: `${cTotal > 0 ? cPct : progressPct}%` }} />
           </div>
           <p className="text-[11px] text-muted-foreground/50 font-mono mt-1">{doneCount}/{totalCount} 체크</p>
         </div>
@@ -315,11 +315,11 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
         </div>
         <div className="bg-card rounded-xl border border-border p-3">
           <p className="text-[11px] text-muted-foreground/60 font-mono">결제 완료</p>
-          <p className="text-lg font-bold font-mono mt-1 text-emerald-400">{cPaid > 0 ? `${formatAmount(cPaid)}원` : "-"}</p>
+          <p className="text-lg font-bold font-mono mt-1 text-foreground">{cPaid > 0 ? `${formatAmount(cPaid)}원` : "-"}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-3">
           <p className="text-[11px] text-muted-foreground/60 font-mono">잔여</p>
-          <p className="text-lg font-bold font-mono mt-1 text-amber-400">{cRemaining > 0 ? `${formatAmount(cRemaining)}원` : "-"}</p>
+          <p className="text-lg font-bold font-mono mt-1 text-warn">{cRemaining > 0 ? `${formatAmount(cRemaining)}원` : "-"}</p>
         </div>
       </div>
 
@@ -397,18 +397,18 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
           <div>
             <button
               onClick={() => toggleCollapse("__settlement__")}
-              className="w-full grid grid-cols-[28px_1fr_80px_80px_36px_36px] sm:grid-cols-[28px_100px_100px_1fr_100px_36px_36px] gap-0 bg-pink-50/50 dark:bg-pink-950/20 hover:bg-pink-50 dark:hover:bg-pink-950/30 border-b border-border/50 transition-colors"
+              className="w-full grid grid-cols-[28px_1fr_80px_80px_36px_36px] sm:grid-cols-[28px_100px_100px_1fr_100px_36px_36px] gap-0 bg-love/5 hover:bg-love/10 border-b border-border/50 transition-colors"
             >
               <div className="p-2 flex items-center justify-center">
-                {collapsedCats.has("__settlement__") ? <ChevronRight className="h-3 w-3 text-pink-400/60" /> : <ChevronDown className="h-3 w-3 text-pink-400/60" />}
+                {collapsedCats.has("__settlement__") ? <ChevronRight className="h-3 w-3 text-love/60" /> : <ChevronDown className="h-3 w-3 text-love/60" />}
               </div>
               <div className="p-2 col-span-2 sm:col-span-4 min-w-0 text-left flex items-center gap-1.5">
-                <Banknote className="h-3.5 w-3.5 shrink-0 text-pink-400" />
-                <span className="text-xs font-medium text-pink-600 dark:text-pink-300">정산 연동</span>
+                <Banknote className="h-3.5 w-3.5 shrink-0 text-love" />
+                <span className="text-xs font-medium text-love">정산 연동</span>
                 <span className="text-[11px] text-muted-foreground/50 font-mono">{sVendors.length}개 업체</span>
               </div>
               {/* 금액이 좁은 36px 칸에 들어가 넘치던 문제 → 남은 칸을 모두 사용 */}
-              <div className="p-2 col-span-3 sm:col-span-2 whitespace-nowrap text-right text-[11px] font-mono text-pink-600/70 dark:text-pink-300/70">
+              <div className="p-2 col-span-3 sm:col-span-2 whitespace-nowrap text-right text-[11px] font-mono text-love/70">
                 {formatAmount(sStats.totalAmount)}원
               </div>
             </button>
@@ -429,13 +429,13 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
                 >
                   {/* Check indicator */}
                   <div className="p-2 flex items-center justify-center">
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isPaid ? "bg-emerald-500 border-emerald-500" : "border-pink-300 dark:border-pink-700"}`}>
-                      {isPaid && <Check className="h-4 w-4 text-white" />}
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isPaid ? "bg-foreground border-foreground" : "border-love/40"}`}>
+                      {isPaid && <Check className="h-4 w-4 text-background" />}
                     </div>
                   </div>
                   {/* Category (desktop) */}
                   <div className="p-2 hidden sm:flex items-center">
-                    <span className="text-[11px] text-pink-400/60 truncate">정산</span>
+                    <span className="text-[11px] text-love/60 truncate">정산</span>
                   </div>
                   {/* Sub-category (desktop) */}
                   <div className="p-2 hidden sm:flex items-center">
@@ -451,12 +451,12 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
                       </p>
                       <p className="text-[11px] text-muted-foreground/50 truncate">
                         {isPaid ? (
-                          <span className="text-emerald-500">결제 완료</span>
+                          <span className="text-foreground">결제 완료</span>
                         ) : (
                           <>
-                            <span className="text-emerald-500">{formatAmount(stats.paid)}원 완료</span>
+                            <span className="text-foreground">{formatAmount(stats.paid)}원 완료</span>
                             <span className="mx-1">·</span>
-                            <span className="text-amber-500">{formatAmount(remaining)}원 잔여</span>
+                            <span className="text-warn">{formatAmount(remaining)}원 잔여</span>
                             {daysLeft !== null && daysLeft >= 0 && (
                               <>
                                 <span className="mx-1">·</span>
@@ -551,7 +551,7 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
                       <button
                         onClick={() => setCommentOpenId(commentOpenId === item.id ? null : item.id)}
                         aria-label="메모"
-                        className={`p-2.5 -m-2 sm:p-0.5 sm:m-0 rounded transition-colors ${item.memo ? "text-blue-400" : "text-muted-foreground/30 hover:text-muted-foreground/60 opacity-60 sm:opacity-0 sm:group-hover:opacity-100"}`}
+                        className={`p-2.5 -m-2 sm:p-0.5 sm:m-0 rounded transition-colors ${item.memo ? "text-foreground" : "text-muted-foreground/30 hover:text-muted-foreground/60 opacity-60 sm:opacity-0 sm:group-hover:opacity-100"}`}
                       >
                         <MessageSquare className="h-3.5 w-3.5" />
                       </button>
@@ -570,7 +570,7 @@ function WeddingChecklist({ settlementStore }: { settlementStore: ReturnType<typ
                   {commentOpenId === item.id && (
                     <div className="border-b border-border/30 bg-muted/10 px-4 py-2">
                       <div className="flex items-start gap-2">
-                        <MessageSquare className="h-3.5 w-3.5 text-blue-400/60 mt-1 flex-shrink-0" />
+                        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground/60 mt-1 flex-shrink-0" />
                         <textarea
                           value={item.memo}
                           onChange={(e) => setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, memo: e.target.value } : i)))}

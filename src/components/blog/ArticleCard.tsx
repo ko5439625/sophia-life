@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Heart } from "lucide-react";
+import { Heart, Lock } from "lucide-react";
 import { BlogPost } from "@/lib/mockData";
 import { useNavigate } from "react-router-dom";
 import defaultBlogImg from "@/assets/default-blog.png";
@@ -70,15 +70,15 @@ const ArticleCard = ({ post, index, onTagClick, activeTag, likeCount }: ArticleC
           </span>
           {(likeCount ?? 0) > 0 && (
             <span className="text-[10px] text-muted-foreground font-mono tabular-nums flex items-center gap-0.5 ml-auto">
-              <Heart className="h-2.5 w-2.5 fill-red-400 text-red-400" />
+              <Heart className="h-2.5 w-2.5 fill-love text-love" />
               {likeCount}
             </span>
           )}
         </div>
         <h3 className="text-sm font-sans font-semibold leading-snug mb-1.5 group-hover:translate-x-0.5 transition-transform duration-300 line-clamp-2">
           {post.isPublic === false && (
-            <span className="mr-1.5 inline-flex items-center rounded bg-muted px-1.5 py-0.5 align-middle text-[11px] font-medium text-muted-foreground">
-              🔒 비공개
+            <span className="mr-1.5 inline-flex items-center rounded bg-muted px-1.5 py-0.5 align-middle gap-1 text-[11px] font-medium text-muted-foreground">
+              <Lock className="h-3 w-3" aria-hidden /> 비공개
             </span>
           )}
           {post.title}

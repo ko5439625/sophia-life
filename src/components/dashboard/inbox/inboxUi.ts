@@ -2,11 +2,11 @@
 import type { InboxItem } from "@/services/smartInboxApi";
 
 export const TYPE_STYLE: Record<InboxItem["type"], string> = {
-  expense: "bg-rose-500/15 text-rose-600 dark:text-rose-300",
-  todo: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  event: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  memo: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  wedding: "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300",
+  expense: "bg-foreground/10 text-foreground",
+  todo: "bg-muted text-foreground",
+  event: "bg-transparent text-foreground ring-1 ring-inset ring-border",
+  memo: "bg-muted text-muted-foreground",
+  wedding: "bg-love/10 text-love",
 };
 
 /** 카드 한 줄 요약 (제외된 카드, 최종 확인 목록에서 사용) */

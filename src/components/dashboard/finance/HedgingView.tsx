@@ -46,10 +46,10 @@ import { useGuestMode } from "../../../hooks/useGuestMode";
 // ---------------------------------------------------------------------------
 
 const cyclePhases = [
-  { id: "recovery", label: "회복기", color: "#45B7D1", angle: 225 },
-  { id: "expansion", label: "확장기", color: "#4ECDC4", angle: 315 },
-  { id: "peak", label: "정점", color: "#FFB347", angle: 45 },
-  { id: "contraction", label: "수축기", color: "#FF6B6B", angle: 135 },
+  { id: "recovery", label: "회복기", color: "#F4A7B9", angle: 225 },
+  { id: "expansion", label: "확장기", color: "#A3A3A3", angle: 315 },
+  { id: "peak", label: "정점", color: "#FBBF24", angle: 45 },
+  { id: "contraction", label: "수축기", color: "#C2587A", angle: 135 },
 ];
 
 const currentPhase = "expansion";
@@ -125,7 +125,7 @@ const cycleStrategies: CycleStrategy[] = [
     label: "회복기",
     labelEn: "Recovery",
     icon: Sunrise,
-    color: "#45B7D1",
+    color: "#F4A7B9",
     strategies: [
       "주식 비중 확대 (경기민감주, 소형주)",
       "부동산 매수 적기",
@@ -133,11 +133,11 @@ const cycleStrategies: CycleStrategy[] = [
       "원자재/금 비중 유지",
     ],
     allocation: [
-      { name: "주식", value: 50, color: "#4ECDC4" },
-      { name: "채권", value: 15, color: "#F7DC6F" },
-      { name: "부동산", value: 20, color: "#FF6B6B" },
-      { name: "금/원자재", value: 10, color: "#FFB347" },
-      { name: "현금", value: 5, color: "#BB8FCE" },
+      { name: "주식", value: 50, color: "#A3A3A3" },
+      { name: "채권", value: 15, color: "#737373" },
+      { name: "부동산", value: 20, color: "#C2587A" },
+      { name: "금/원자재", value: 10, color: "#FBBF24" },
+      { name: "현금", value: 5, color: "#525252" },
     ],
   },
   {
@@ -145,7 +145,7 @@ const cycleStrategies: CycleStrategy[] = [
     label: "확장기",
     labelEn: "Expansion",
     icon: Zap,
-    color: "#4ECDC4",
+    color: "#A3A3A3",
     strategies: [
       "주식 유지하되 대형주/배당주로 전환",
       "금리 인상 대비 단기 채권 선호",
@@ -153,11 +153,11 @@ const cycleStrategies: CycleStrategy[] = [
       "인플레이션 헷징 (원자재, TIPS)",
     ],
     allocation: [
-      { name: "주식", value: 40, color: "#4ECDC4" },
-      { name: "채권", value: 20, color: "#F7DC6F" },
-      { name: "부동산", value: 15, color: "#FF6B6B" },
-      { name: "금/원자재", value: 15, color: "#FFB347" },
-      { name: "현금", value: 10, color: "#BB8FCE" },
+      { name: "주식", value: 40, color: "#A3A3A3" },
+      { name: "채권", value: 20, color: "#737373" },
+      { name: "부동산", value: 15, color: "#C2587A" },
+      { name: "금/원자재", value: 15, color: "#FBBF24" },
+      { name: "현금", value: 10, color: "#525252" },
     ],
   },
   {
@@ -165,7 +165,7 @@ const cycleStrategies: CycleStrategy[] = [
     label: "정점",
     labelEn: "Peak",
     icon: Mountain,
-    color: "#FFB347",
+    color: "#FBBF24",
     strategies: [
       "주식 비중 축소 시작",
       "채권 비중 확대 (장기채)",
@@ -173,11 +173,11 @@ const cycleStrategies: CycleStrategy[] = [
       "방어적 섹터 (필수소비재, 헬스케어)",
     ],
     allocation: [
-      { name: "주식", value: 25, color: "#4ECDC4" },
-      { name: "채권", value: 30, color: "#F7DC6F" },
-      { name: "부동산", value: 10, color: "#FF6B6B" },
-      { name: "금/원자재", value: 10, color: "#FFB347" },
-      { name: "현금", value: 25, color: "#BB8FCE" },
+      { name: "주식", value: 25, color: "#A3A3A3" },
+      { name: "채권", value: 30, color: "#737373" },
+      { name: "부동산", value: 10, color: "#C2587A" },
+      { name: "금/원자재", value: 10, color: "#FBBF24" },
+      { name: "현금", value: 25, color: "#525252" },
     ],
   },
   {
@@ -185,7 +185,7 @@ const cycleStrategies: CycleStrategy[] = [
     label: "수축기",
     labelEn: "Contraction",
     icon: CloudRain,
-    color: "#FF6B6B",
+    color: "#C2587A",
     strategies: [
       "주식 최소화, 채권 확대",
       "현금/금 비중 극대화",
@@ -193,11 +193,11 @@ const cycleStrategies: CycleStrategy[] = [
       "저점 매수 기회 대기",
     ],
     allocation: [
-      { name: "주식", value: 15, color: "#4ECDC4" },
-      { name: "채권", value: 35, color: "#F7DC6F" },
-      { name: "부동산", value: 5, color: "#FF6B6B" },
-      { name: "금/원자재", value: 15, color: "#FFB347" },
-      { name: "현금", value: 30, color: "#BB8FCE" },
+      { name: "주식", value: 15, color: "#A3A3A3" },
+      { name: "채권", value: 35, color: "#737373" },
+      { name: "부동산", value: 5, color: "#C2587A" },
+      { name: "금/원자재", value: 15, color: "#FBBF24" },
+      { name: "현금", value: 30, color: "#525252" },
     ],
   },
 ];
@@ -208,52 +208,52 @@ const correlationPatterns = [
     trigger: "부동산 가격 급등기",
     description: "서울 아파트 가격이 30% 이상 급등한 시기 (2020-2021)",
     data: [
-      { name: "부동산", value: 30, color: "#FF6B6B" },
-      { name: "주식", value: 15, color: "#4ECDC4" },
-      { name: "채권", value: -5, color: "#F7DC6F" },
-      { name: "금", value: 8, color: "#FFB347" },
-      { name: "암호화폐", value: 120, color: "#BB8FCE" },
+      { name: "부동산", value: 30, color: "#C2587A" },
+      { name: "주식", value: 15, color: "#A3A3A3" },
+      { name: "채권", value: -5, color: "#737373" },
+      { name: "금", value: 8, color: "#FBBF24" },
+      { name: "암호화폐", value: 120, color: "#525252" },
     ],
   },
   {
     trigger: "금리 인상기",
     description: "한국은행 기준금리 0.5% → 3.5% 인상기 (2021-2023)",
     data: [
-      { name: "부동산", value: -15, color: "#FF6B6B" },
-      { name: "주식", value: -20, color: "#4ECDC4" },
-      { name: "채권", value: -12, color: "#F7DC6F" },
-      { name: "금", value: 5, color: "#FFB347" },
-      { name: "암호화폐", value: -65, color: "#BB8FCE" },
+      { name: "부동산", value: -15, color: "#C2587A" },
+      { name: "주식", value: -20, color: "#A3A3A3" },
+      { name: "채권", value: -12, color: "#737373" },
+      { name: "금", value: 5, color: "#FBBF24" },
+      { name: "암호화폐", value: -65, color: "#525252" },
     ],
   },
   {
     trigger: "규제 충격 (한국)",
     description: "가상자산 과세, 대출 규제, 공매도 금지 등 정책 변화",
     data: [
-      { name: "부동산", value: -8, color: "#FF6B6B" },
-      { name: "주식", value: -12, color: "#4ECDC4" },
-      { name: "채권", value: 3, color: "#F7DC6F" },
-      { name: "금", value: 2, color: "#FFB347" },
-      { name: "암호화폐", value: -30, color: "#BB8FCE" },
+      { name: "부동산", value: -8, color: "#C2587A" },
+      { name: "주식", value: -12, color: "#A3A3A3" },
+      { name: "채권", value: 3, color: "#737373" },
+      { name: "금", value: 2, color: "#FBBF24" },
+      { name: "암호화폐", value: -30, color: "#525252" },
     ],
   },
 ];
 
 // Allocation data
 const currentAllocation = [
-  { name: "주식", value: 60, color: "#4ECDC4" },
-  { name: "채권", value: 10, color: "#F7DC6F" },
-  { name: "현금", value: 20, color: "#BB8FCE" },
-  { name: "금", value: 5, color: "#FFB347" },
-  { name: "암호화폐", value: 5, color: "#FF6B6B" },
+  { name: "주식", value: 60, color: "#A3A3A3" },
+  { name: "채권", value: 10, color: "#737373" },
+  { name: "현금", value: 20, color: "#525252" },
+  { name: "금", value: 5, color: "#FBBF24" },
+  { name: "암호화폐", value: 5, color: "#C2587A" },
 ];
 
 const recommendedAllocation = [
-  { name: "주식", value: 45, color: "#4ECDC4" },
-  { name: "채권", value: 25, color: "#F7DC6F" },
-  { name: "현금", value: 15, color: "#BB8FCE" },
-  { name: "금", value: 10, color: "#FFB347" },
-  { name: "암호화폐", value: 5, color: "#FF6B6B" },
+  { name: "주식", value: 45, color: "#A3A3A3" },
+  { name: "채권", value: 25, color: "#737373" },
+  { name: "현금", value: 15, color: "#525252" },
+  { name: "금", value: 10, color: "#FBBF24" },
+  { name: "암호화폐", value: 5, color: "#C2587A" },
 ];
 
 const allocationChanges = [
@@ -277,11 +277,12 @@ const getFearGreedLabel = (value: number) => {
 };
 
 const getFearGreedColor = (value: number) => {
-  if (value <= 20) return "#FF6B6B";
-  if (value <= 40) return "#FF9F43";
-  if (value <= 60) return "#F7DC6F";
-  if (value <= 80) return "#4ECDC4";
-  return "#45B7D1";
+  // 한국식: 공포(식음) = 파랑, 탐욕(과열) = 빨강, 중립 = 회색
+  if (value <= 20) return "#3B82F6";
+  if (value <= 40) return "#60A5FA";
+  if (value <= 60) return "#8F8F8F";
+  if (value <= 80) return "#F87171";
+  return "#EF4444";
 };
 
 // ---------------------------------------------------------------------------
@@ -574,11 +575,11 @@ const HEDGING_CATEGORY_MAP: Record<string, string> = {
 };
 
 const HEDGING_CATEGORY_COLORS: Record<string, string> = {
-  "주식": "#4ECDC4",
-  "채권": "#F7DC6F",
-  "현금": "#BB8FCE",
-  "금": "#FFB347",
-  "암호화폐": "#FF6B6B",
+  "주식": "#A3A3A3",
+  "채권": "#737373",
+  "현금": "#525252",
+  "금": "#FBBF24",
+  "암호화폐": "#C2587A",
   "기타": "#999",
 };
 
@@ -842,9 +843,9 @@ ${personalSituation}
         animate={{ opacity: 1, y: 0 }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <Activity className="h-4 w-4" style={{ color: "#45B7D1" }} />
+          <Activity className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">경기 사이클</h3>
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-[#45B7D1]/30 to-transparent ml-1" />
+          <div className="flex-1 h-[1px] bg-gradient-to-r from-border to-transparent ml-1" />
         </div>
 
         <CycleDiagram />
@@ -919,9 +920,9 @@ ${personalSituation}
         transition={{ delay: 0.05 }}
       >
         <div className="flex items-center gap-2">
-          <Target className="h-4 w-4" style={{ color: "#4ECDC4" }} />
+          <Target className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">경기 사이클별 투자 전략</h3>
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-[#4ECDC4]/30 to-transparent ml-1" />
+          <div className="flex-1 h-[1px] bg-gradient-to-r from-border to-transparent ml-1" />
         </div>
 
         <div className="space-y-3">
@@ -1059,7 +1060,7 @@ ${personalSituation}
         transition={{ delay: 0.1 }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <Target className="h-4 w-4 text-amber-500" />
+          <Target className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">Fear & Greed Index</h3>
           <span className="text-[11px] text-muted-foreground ml-auto font-mono">{dataTimestamp}</span>
         </div>
@@ -1079,10 +1080,10 @@ ${personalSituation}
                 {/* Mini gauge */}
                 <div className="relative w-24 h-12 mx-auto mb-1">
                   <svg viewBox="0 0 200 100" className="w-full h-full">
-                    <path d="M 20 90 A 80 80 0 0 1 52 30" fill="none" stroke="#FF6B6B" strokeWidth="10" strokeLinecap="round" opacity={0.3} />
-                    <path d="M 52 30 A 80 80 0 0 1 100 10" fill="none" stroke="#FF9F43" strokeWidth="10" opacity={0.3} />
-                    <path d="M 100 10 A 80 80 0 0 1 148 30" fill="none" stroke="#F7DC6F" strokeWidth="10" opacity={0.3} />
-                    <path d="M 148 30 A 80 80 0 0 1 180 90" fill="none" stroke="#4ECDC4" strokeWidth="10" strokeLinecap="round" opacity={0.3} />
+                    <path d="M 20 90 A 80 80 0 0 1 52 30" fill="none" stroke="#3B82F6" strokeWidth="10" strokeLinecap="round" opacity={0.3} />
+                    <path d="M 52 30 A 80 80 0 0 1 100 10" fill="none" stroke="#60A5FA" strokeWidth="10" opacity={0.3} />
+                    <path d="M 100 10 A 80 80 0 0 1 148 30" fill="none" stroke="#8F8F8F" strokeWidth="10" opacity={0.3} />
+                    <path d="M 148 30 A 80 80 0 0 1 180 90" fill="none" stroke="#EF4444" strokeWidth="10" strokeLinecap="round" opacity={0.3} />
                     {val !== null && (
                       <>
                         <line
@@ -1108,9 +1109,9 @@ ${personalSituation}
         </div>
 
         <div className="flex justify-between w-full mt-3 text-[11px] text-muted-foreground font-mono border-t border-border pt-2">
-          <span className="text-red-400">0 극단공포</span>
-          <span className="text-yellow-500">50 중립</span>
-          <span className="text-green-400">100 극단탐욕</span>
+          <span className="text-blue-400">0 극단공포</span>
+          <span className="text-muted-foreground">50 중립</span>
+          <span className="text-red-400">100 극단탐욕</span>
         </div>
       </motion.div>
 
@@ -1121,9 +1122,9 @@ ${personalSituation}
         transition={{ delay: 0.2 }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <BarChart3 className="h-4 w-4" style={{ color: "#45B7D1" }} />
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">주요 지수 (12개월)</h3>
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-[#45B7D1]/30 to-transparent ml-1" />
+          <div className="flex-1 h-[1px] bg-gradient-to-r from-border to-transparent ml-1" />
           {dataTimestamp && (
             <span className="text-[11px] text-muted-foreground/50 font-mono flex-shrink-0">
               {dataTimestamp}
@@ -1141,7 +1142,7 @@ ${personalSituation}
               <MiniChart
                 title="NASDAQ"
                 data={nasdaqData}
-                color="#45B7D1"
+                color="#F4A7B9"
                 currentValue={nasdaqQuote.value}
                 change={nasdaqQuote.change}
                 isPositive={nasdaqQuote.isPositive}
@@ -1149,7 +1150,7 @@ ${personalSituation}
               <MiniChart
                 title="KOSPI"
                 data={kospiData}
-                color="#4ECDC4"
+                color="#A3A3A3"
                 currentValue={kospiQuote.value}
                 change={kospiQuote.change}
                 isPositive={kospiQuote.isPositive}
@@ -1157,7 +1158,7 @@ ${personalSituation}
               <MiniChart
                 title="KOSDAQ"
                 data={kosdaqData}
-                color="#FFB347"
+                color="#FBBF24"
                 currentValue={kosdaqQuote.value}
                 change={kosdaqQuote.change}
                 isPositive={kosdaqQuote.isPositive}
@@ -1165,7 +1166,7 @@ ${personalSituation}
               <MiniChart
                 title="BTC"
                 data={btcData}
-                color="#FF6B6B"
+                color="#C2587A"
                 currentValue={`${btcQuote.value}원`}
                 change={btcQuote.change}
                 isPositive={btcQuote.isPositive}
@@ -1186,9 +1187,9 @@ ${personalSituation}
         transition={{ delay: 0.3 }}
       >
         <div className="flex items-center gap-2">
-          <Lightbulb className="h-4 w-4" style={{ color: "#F7DC6F" }} />
+          <Lightbulb className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">과거 유사 패턴 분석</h3>
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-[#F7DC6F]/30 to-transparent ml-1" />
+          <div className="flex-1 h-[1px] bg-gradient-to-r from-border to-transparent ml-1" />
         </div>
 
         <div className="space-y-3">
@@ -1253,7 +1254,7 @@ ${personalSituation}
                               {pattern.data.map((entry, j) => (
                                 <Cell
                                   key={j}
-                                  fill={entry.value >= 0 ? "#4ECDC4" : "#FF6B6B"}
+                                  fill={entry.value >= 0 ? "#EF4444" : "#3B82F6"}
                                   opacity={0.8}
                                 />
                               ))}
@@ -1409,15 +1410,15 @@ ${personalSituation}
           {allocationChanges.map((change) => {
             const diff = change.to - change.from;
             const borderColor = diff > 0
-              ? "border-l-[3px] border-l-emerald-500/60"
+              ? "border-l-[3px] border-l-foreground/60"
               : diff < 0
-              ? "border-l-[3px] border-l-red-400/60"
-              : "border-l-[3px] border-l-blue-400/60";
+              ? "border-l-[3px] border-l-muted-foreground/40"
+              : "border-l-[3px] border-l-border";
             const badgeClass = diff > 0
-              ? "bg-emerald-500/10 text-emerald-400"
+              ? "bg-foreground/10 text-foreground"
               : diff < 0
-              ? "bg-red-500/10 text-red-400"
-              : "bg-blue-500/10 text-blue-400";
+              ? "bg-muted text-muted-foreground"
+              : "bg-muted text-muted-foreground";
             const badgeLabel = diff > 0 ? "확대" : diff < 0 ? "축소" : "유지";
             return (
               <div key={change.name} className={`bg-muted/30 rounded-lg p-3 hover:bg-muted/50 transition-colors group/change ${borderColor}`}>
@@ -1431,7 +1432,7 @@ ${personalSituation}
                   {diff !== 0 && (
                     <span
                       className={`text-xs font-mono font-bold ${
-                        diff > 0 ? "text-emerald-400" : "text-red-400"
+                        diff > 0 ? "text-foreground" : "text-muted-foreground"
                       }`}
                     >
                       {change.from}% → {change.to}% ({diff > 0 ? "▲" : "▼"}
@@ -1439,7 +1440,7 @@ ${personalSituation}
                     </span>
                   )}
                   {diff === 0 && (
-                    <span className="text-xs font-mono text-blue-400">
+                    <span className="text-xs font-mono text-muted-foreground">
                       {change.from}% (유지)
                     </span>
                   )}
@@ -1472,9 +1473,9 @@ ${personalSituation}
         transition={{ delay: 0.5 }}
       >
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" style={{ color: "#BB8FCE" }} />
+          <Sparkles className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">AI 심층 분석</h3>
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-[#BB8FCE]/30 to-transparent ml-1" />
+          <div className="flex-1 h-[1px] bg-gradient-to-r from-border to-transparent ml-1" />
         </div>
 
         {!aiAnalysisTriggered ? (
@@ -1511,9 +1512,9 @@ ${personalSituation}
                 <div
                   className={`w-2 h-2 rounded-full ${
                     hedgingResult.riskLevel === "low"
-                      ? "bg-green-400"
+                      ? "bg-muted-foreground"
                       : hedgingResult.riskLevel === "medium"
-                      ? "bg-yellow-400"
+                      ? "bg-warn"
                       : hedgingResult.riskLevel === "high"
                       ? "bg-orange-400"
                       : "bg-red-400"

@@ -117,13 +117,13 @@ const BlogPost = () => {
               <Heart
                 className={`h-8 w-8 transition-colors duration-300 ${
                   liked
-                    ? "fill-red-500 text-red-500"
-                    : "text-muted-foreground group-hover:text-red-400"
+                    ? "fill-love text-love"
+                    : "text-muted-foreground group-hover:text-love"
                 }`}
               />
             </motion.div>
             <span className={`text-sm font-mono tabular-nums transition-colors ${
-              liked ? "text-red-500" : "text-muted-foreground"
+              liked ? "text-love" : "text-muted-foreground"
             }`}>
               {likeCount}
             </span>

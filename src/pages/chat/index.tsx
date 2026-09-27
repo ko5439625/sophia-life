@@ -26,8 +26,8 @@ export default function ChatPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0b0e]">
-        <div className="w-6 h-6 border-2 border-[#5b9a78] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-[#0b0b0b]">
+        <div className="w-6 h-6 border-2 border-[#ededed] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

@@ -142,9 +142,9 @@ export async function fetchSubscriptions(): Promise<SubscriptionInfo[]> {
     }
   }
 
-  // 3. Mock fallback (API 키 미설정 시)
-  console.warn("[subscriptionApi] Using mock data - set API key or configure DATA_GO_KR_API_KEY in Supabase secrets");
-  return getMockSubscriptions();
+  // 가짜(mock) 공고로 대체하지 않음 — 키가 없거나 실패하면 빈 목록
+  console.warn("[subscriptionApi] no data (API key missing or request failed)");
+  return [];
 }
 
 // ---------------------------------------------------------------------------

@@ -138,7 +138,7 @@ export default function WeddingSettlement() {
         <span className="text-border">|</span>
         <span>
           <span className="text-muted-foreground">잔금 </span>
-          <span className="font-semibold text-amber-500">
+          <span className="font-semibold text-warn">
             {formatWon(globalStats.remaining)}
           </span>
         </span>
@@ -199,9 +199,9 @@ export default function WeddingSettlement() {
                             <span
                               className={`text-[11px] font-medium ${
                                 statusLabel === "완납"
-                                  ? "text-emerald-500"
+                                  ? "text-foreground"
                                   : statusLabel === "일부"
-                                    ? "text-amber-500"
+                                    ? "text-warn"
                                     : "text-muted-foreground/40"
                               }`}
                             >
@@ -237,7 +237,7 @@ export default function WeddingSettlement() {
                     {stats && stats.total > 0 && (
                       <div className="mt-2 w-full h-1 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-500"
+                          className="h-full bg-love rounded-full transition-all duration-500"
                           style={{ width: `${Math.min(100, Math.round((stats.paid / stats.total) * 100))}%` }}
                         />
                       </div>
@@ -329,9 +329,9 @@ export default function WeddingSettlement() {
                             <span
                               className={
                                 statusLabel === "완납"
-                                  ? "text-emerald-500"
+                                  ? "text-foreground"
                                   : statusLabel === "일부"
-                                    ? "text-amber-500"
+                                    ? "text-warn"
                                     : "text-muted-foreground/40"
                               }
                             >

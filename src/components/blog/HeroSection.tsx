@@ -29,13 +29,13 @@ const HeroSection = ({ post }: HeroSectionProps) => {
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-          <span className="inline-block text-xs font-mono uppercase tracking-widest text-primary-foreground/80 mb-2">
+          <span className="inline-block text-xs font-mono uppercase tracking-widest text-white/80 mb-2">
             {post.category}
           </span>
-          <h1 className="text-2xl md:text-4xl font-sans font-bold text-primary-foreground mb-2 leading-tight">
+          <h1 className="text-2xl md:text-4xl font-sans font-bold text-white mb-2 leading-tight">
             {post.title}
           </h1>
-          <p className="text-sm text-primary-foreground/70 font-mono tabular-nums">
+          <p className="text-sm text-white/70 font-mono tabular-nums">
             {post.date}
           </p>
         </div>

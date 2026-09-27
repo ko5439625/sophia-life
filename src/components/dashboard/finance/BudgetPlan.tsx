@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Wallet, PiggyBank, TrendingUp, ChevronLeft, ChevronRight, Calendar, History, ShieldCheck, Copy, Check } from "lucide-react";
+import { Users, Wallet, PiggyBank, TrendingUp, ChevronLeft, ChevronRight, Calendar, History, ShieldCheck, Copy, Check, AlertTriangle, CheckCircle2, Ban } from "lucide-react";
 import {
   type BudgetCategory,
   type MonthlyBudget,
@@ -8,6 +8,7 @@ import {
   formatMonthLabel,
   getNextMonth,
   formatKRW,
+  categoryColor,
 } from "./budgetData";
 import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
@@ -363,7 +364,7 @@ const BudgetPlan = () => {
               <motion.div
                 key={b.id}
                 className="h-full"
-                style={{ backgroundColor: b.color }}
+                style={{ backgroundColor: categoryColor(b) }}
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
@@ -405,7 +406,7 @@ const BudgetPlan = () => {
                       <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
                         <motion.div
                           className="h-full rounded-full"
-                          style={{ backgroundColor: b.color }}
+                          style={{ backgroundColor: categoryColor(b) }}
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.6 }}
@@ -426,13 +427,13 @@ const BudgetPlan = () => {
         <div className="pt-3 border-t border-border space-y-3">
           {remaining > 0 && (
             <motion.div
-              className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3"
+              className="flex items-start gap-2 bg-warn/10 border border-warn/20 rounded-lg p-3"
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <span className="text-lg leading-none mt-0.5">⚠️</span>
+              <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0 text-warn" aria-hidden />
               <div className="flex-1">
-                <p className="text-sm font-medium text-yellow-500">
+                <p className="text-sm font-medium text-warn">
                   {isGuest ? maskAmount(remaining) : `${formatKRW(remaining)}원`}이 미배분 상태입니다.
                 </p>
                 <div className="flex gap-2 mt-2">
@@ -444,7 +445,7 @@ const BudgetPlan = () => {
                         )
                       );
                     }}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 font-medium transition-colors"
+                    className="text-xs px-3 py-1.5 rounded-lg bg-warn/15 hover:bg-warn/25 text-warn font-medium transition-colors"
                   >
                     비상금에 추가
                   </button>
@@ -456,7 +457,7 @@ const BudgetPlan = () => {
                         )
                       );
                     }}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 font-medium transition-colors"
+                    className="text-xs px-3 py-1.5 rounded-lg bg-warn/15 hover:bg-warn/25 text-warn font-medium transition-colors"
                   >
                     기타에 추가
                   </button>
@@ -466,22 +467,22 @@ const BudgetPlan = () => {
           )}
           {remaining === 0 && (
             <motion.div
-              className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg p-3"
+              className="flex items-center gap-2 bg-muted border border-border rounded-lg p-3"
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <span className="text-lg leading-none">✅</span>
-              <p className="text-sm font-medium text-green-500">완벽하게 배분되었습니다!</p>
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-foreground" aria-hidden />
+              <p className="text-sm font-medium text-foreground">완벽하게 배분되었습니다!</p>
             </motion.div>
           )}
           {remaining < 0 && (
             <motion.div
-              className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg p-3"
+              className="flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-lg p-3"
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <span className="text-lg leading-none">🚫</span>
-              <p className="text-sm font-medium text-red-500">
+              <Ban className="h-5 w-5 shrink-0 text-destructive" aria-hidden />
+              <p className="text-sm font-medium text-destructive">
                 예산이 {isGuest ? maskAmount(Math.abs(remaining)) : `${formatKRW(Math.abs(remaining))}원`} 초과되었습니다.
               </p>
             </motion.div>
@@ -489,7 +490,7 @@ const BudgetPlan = () => {
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">배분 후 잔여</span>
             <span className={`text-lg font-mono font-bold ${
-              remaining === 0 ? "text-green-500" : remaining > 0 ? "text-yellow-500" : "text-red-500"
+              remaining === 0 ? "text-foreground" : remaining > 0 ? "text-warn" : "text-destructive"
             }`}>
               {isGuest ? maskAmount(remaining) : `${remaining >= 0 ? "+" : ""}${formatKRW(remaining)}원`}
             </span>
@@ -514,9 +515,9 @@ const BudgetPlan = () => {
           </p>
         </div>
         <div className="bg-card rounded-xl p-4 text-center">
-          <ShieldCheck className="h-5 w-5 text-yellow-500 mx-auto mb-2" />
+          <ShieldCheck className="h-5 w-5 text-warn mx-auto mb-2" />
           <p className="text-[11px] text-muted-foreground mb-1">비상금</p>
-          <p className="text-base font-mono font-bold text-yellow-500">
+          <p className="text-base font-mono font-bold text-warn">
             {isGuest ? maskAmount(budget.find((b) => b.id === "emergency")?.amount || 0) : `${formatKRW(budget.find((b) => b.id === "emergency")?.amount || 0)}원`}
           </p>
         </div>

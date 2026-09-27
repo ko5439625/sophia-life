@@ -30,18 +30,18 @@ import { useGuestMode } from "../../../hooks/useGuestMode";
 // ---------------------------------------------------------------------------
 
 const CATEGORY_COLORS: Record<string, string> = {
-  "주식": "#4ECDC4",
-  "ETF": "#45B7D1",
-  "채권": "#F7DC6F",
-  "암호화폐": "#FF6B6B",
-  "금": "#FFB347",
-  "기타": "#BB8FCE",
-  "stock": "#4ECDC4",
-  "etf": "#45B7D1",
-  "bond": "#F7DC6F",
-  "crypto": "#FF6B6B",
-  "gold": "#FFB347",
-  "other": "#BB8FCE",
+  "주식": "#A3A3A3",
+  "ETF": "#F4A7B9",
+  "채권": "#737373",
+  "암호화폐": "#C2587A",
+  "금": "#FBBF24",
+  "기타": "#525252",
+  "stock": "#A3A3A3",
+  "etf": "#F4A7B9",
+  "bond": "#737373",
+  "crypto": "#C2587A",
+  "gold": "#FBBF24",
+  "other": "#525252",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -60,9 +60,9 @@ const PENSION_ACCOUNT_LABELS: Record<string, string> = {
 };
 
 const PENSION_CATEGORY_COLORS: Record<string, string> = {
-  "pension_savings": "#4ECDC4",
-  "irp": "#F7DC6F",
-  "dc": "#BB8FCE",
+  "pension_savings": "#A3A3A3",
+  "irp": "#737373",
+  "dc": "#525252",
 };
 
 const DESTINATION_LABELS: Record<string, string> = {
@@ -490,7 +490,8 @@ const InvestmentView = () => {
                   disabled={priceLoading}
                   className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
                 >
-                  {priceLoading ? "업데이트 중..." : "📊 현재가 업데이트"}
+                  <BarChart3 className="h-3 w-3" aria-hidden />
+                  {priceLoading ? "업데이트 중..." : "현재가 업데이트"}
                 </button>
               )}
             </div>
@@ -559,7 +560,7 @@ const InvestmentView = () => {
           transition={{ delay: 0.1 }}
         >
           <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-[#BB8FCE]" />
+            <Shield className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-medium">연금 포트폴리오</h3>
           </div>
 
@@ -1114,14 +1115,14 @@ const InvestmentView = () => {
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
                     isBuy
-                      ? "bg-[#45B7D1]/15"
+                      ? "bg-muted"
                       : isPnlProfit
                       ? "bg-primary/15"
                       : "bg-destructive/15"
                   }`}
                 >
                   {isBuy ? (
-                    <ArrowDownRight className="h-3 w-3 text-[#45B7D1]" />
+                    <ArrowDownRight className="h-3 w-3 text-muted-foreground" />
                   ) : isPnlProfit ? (
                     <ArrowUpRight className="h-3 w-3 text-primary" />
                   ) : (
@@ -1135,7 +1136,7 @@ const InvestmentView = () => {
                     <span
                       className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${
                         isBuy
-                          ? "bg-[#45B7D1]/10 text-[#45B7D1]"
+                          ? "bg-muted text-muted-foreground"
                           : isPnlProfit
                           ? "bg-primary/10 text-primary"
                           : "bg-destructive/10 text-destructive"

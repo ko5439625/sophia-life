@@ -542,8 +542,8 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <p className="min-w-0 break-keep text-[13px] leading-snug text-muted-foreground" data-testid="inbox-counts">
-            승인 <b className="text-emerald-600 dark:text-emerald-400">{approvedItems.length}</b> · 대기 {pendingReady.length} · 답변 필요{" "}
-            <b className={needAnswer.length ? "text-amber-600 dark:text-amber-400" : ""}>{needAnswer.length}</b>
+            승인 <b className="text-foreground">{approvedItems.length}</b> · 대기 {pendingReady.length} · 답변 필요{" "}
+            <b className={needAnswer.length ? "text-warn" : ""}>{needAnswer.length}</b>
           </p>
           {pendingReady.length > 0 && (
             <button type="button" onClick={approveAll} className="min-h-[44px] shrink-0 whitespace-nowrap px-2 text-[13px] text-primary">
@@ -629,7 +629,7 @@ function useInboxPanel({ onOpenChange, onNavigate }: Props) {
           return (
             <div key={it.id} className="flex items-start gap-2 rounded-xl border border-border p-3">
               {ok ? (
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground" />
               ) : (
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
               )}

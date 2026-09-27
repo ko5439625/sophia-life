@@ -61,7 +61,7 @@ const TradingView = () => {
   }, []);
 
   const fgLabel = (v: number | null) => v === null ? "--" : v <= 25 ? "극단공포" : v <= 45 ? "공포" : v <= 55 ? "중립" : v <= 75 ? "탐욕" : "극단탐욕";
-  const fgColor = (v: number | null) => v === null ? "text-muted-foreground" : v <= 25 ? "text-red-500" : v <= 45 ? "text-orange-500" : v <= 55 ? "text-yellow-500" : v <= 75 ? "text-lime-500" : "text-green-500";
+  const fgColor = (v: number | null) => v === null ? "text-muted-foreground" : v <= 25 ? "text-blue-500" : v <= 45 ? "text-blue-400" : v <= 55 ? "text-muted-foreground" : v <= 75 ? "text-red-400" : "text-red-500";
 
   // 퀀트 추천 Top 10 가져오기
   const [quantTop, setQuantTop] = useState<{ symbol: string; name: string; price: number; currency: string }[]>([]);
@@ -292,7 +292,7 @@ const TradingView = () => {
                     <button key={s.symbol} onClick={() => quickBuy(s)}
                       className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-muted/50 rounded text-xs transition-colors">
                       <div className="flex items-center gap-2">
-                        <span className="w-5 text-[11px] text-muted-foreground">{i < 3 ? ["🥇","🥈","🥉"][i] : `${i+1}`}</span>
+                        <span className={`w-5 text-[11px] font-mono ${i < 3 ? "font-bold text-foreground" : "text-muted-foreground"}`}>{i + 1}</span>
                         <span className="font-medium">{s.name}</span>
                       </div>
                       <span className="text-[11px] font-mono text-muted-foreground">{fmt(s.price, s.currency)}</span>
@@ -312,7 +312,7 @@ const TradingView = () => {
                     <button key={s.symbol} onClick={() => quickBuy(s)}
                       className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-muted/50 rounded text-xs transition-colors">
                       <div className="flex items-center gap-2">
-                        <span className="w-5 text-[11px] text-muted-foreground">{i < 3 ? ["🥇","🥈","🥉"][i] : `${i+1}`}</span>
+                        <span className={`w-5 text-[11px] font-mono ${i < 3 ? "font-bold text-foreground" : "text-muted-foreground"}`}>{i + 1}</span>
                         <span className="font-medium">{s.name}</span>
                       </div>
                       <span className="text-[11px] font-mono text-muted-foreground">{fmt(s.price, s.currency)}</span>

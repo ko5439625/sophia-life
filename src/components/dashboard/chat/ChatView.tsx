@@ -14,6 +14,7 @@ import {
   Monitor,
   RefreshCw,
   Reply,
+  MessageCircle,
 } from "lucide-react";
 import type { ChatMessage, ChatSender } from "@/types/chat";
 import { SENDER_LABELS, SENDER_EMOJI, AUTH_CODES } from "@/types/chat";
@@ -362,7 +363,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
         </div>
         <div className="flex items-center gap-1.5 sm:gap-3">
           <span className="flex items-center gap-1">
-            <span className={`w-2 h-2 rounded-full ${peerOnline ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,.5)]" : "bg-muted-foreground/30"}`} />
+            <span className={`w-2 h-2 rounded-full ${peerOnline ? "bg-foreground" : "bg-muted-foreground/30"}`} />
             <span className="text-muted-foreground text-[11px] sm:text-xs">
               {SENDER_LABELS[peer]} {peerTyping ? "입력 중..." : peerOnline ? "온라인" : "오프라인"}
             </span>
@@ -396,7 +397,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
 
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground/40">
-              <span className="text-4xl mb-3">💬</span>
+              <MessageCircle className="h-9 w-9 mb-3" strokeWidth={1.5} aria-hidden />
               <span className="text-sm">아직 메시지가 없어요</span>
               <span className="text-xs mt-1">첫 메시지를 보내보세요!</span>
             </div>
@@ -449,7 +450,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
                         msg.image_url ? (
                           <img src={msg.image_url} alt="사진" className="max-w-[180px] sm:max-w-[200px] rounded-lg cursor-pointer" onClick={() => setImagePreview(msg.image_url!)} />
                         ) : (
-                          <span className="text-xs opacity-60 border border-dashed border-current/30 rounded px-2 py-1">📷 [사진]</span>
+                          <span className="text-xs opacity-60 border border-dashed border-current/30 rounded px-2 py-1 inline-flex items-center gap-1"><ImageIcon className="h-3 w-3" aria-hidden /> [사진]</span>
                         )
                       ) : (
                         <span className="whitespace-pre-wrap break-words">{body}</span>
@@ -459,7 +460,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
                         {formatTime(msg.created_at)}
                         {isMe && (
                           <span className="ml-1">
-                            {msg.read ? <span className="opacity-60">읽음</span> : <span className="text-amber-400">1</span>}
+                            {msg.read ? <span className="opacity-60">읽음</span> : <span className="text-warn">1</span>}
                           </span>
                         )}
                       </span>

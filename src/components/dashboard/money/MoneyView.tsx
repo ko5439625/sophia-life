@@ -4,6 +4,8 @@ import { Newspaper, TrendingUp, Wallet } from "lucide-react";
 import FinanceView from "../finance/FinanceView";
 import InvestmentHub from "../investment/InvestmentHub";
 import NewsView from "../finance/NewsView";
+import MoneyDesktop from "../desktop/MoneyDesktop";
+import { useIsDesktop } from "../desktop/useMediaQuery";
 
 // 돈 탭 — 기존 자산 / 투자 / 뉴스 최상위 탭을 하나로 합침
 export type MoneySection = "finance" | "investment" | "news";
@@ -19,18 +21,27 @@ interface MoneyViewProps {
   onSectionChange: (s: MoneySection) => void;
   initialTab?: string | null;
   onTabUsed?: () => void;
+  /** 데스크톱 "최근 지출" 패널의 ＋ 지출 */
+  onQuickExpense?: () => void;
 }
 
-const MoneyView = ({ section, onSectionChange, initialTab, onTabUsed }: MoneyViewProps) => {
+const MoneyView = ({ section, onSectionChange, initialTab, onTabUsed, onQuickExpense }: MoneyViewProps) => {
+  const isDesktop = useIsDesktop();
   // 뉴스는 하위 탭이 없으므로 넘어온 하위 탭 지시는 바로 소비
   useEffect(() => {
-    if (section === "news" && initialTab) onTabUsed?.();
-  }, [section, initialTab, onTabUsed]);
+    if (!isDesktop && section === "news" && initialTab) onTabUsed?.();
+  }, [isDesktop, section, initialTab, onTabUsed]);
+
+  // 데스크톱: 자산/투자/뉴스 전환 대신 한 화면 대시보드
+  if (isDesktop) {
+    return <MoneyDesktop section={section} initialTab={initialTab} onTabUsed={onTabUsed} onQuickExpense={onQuickExpense} />;
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xl sm:text-2xl font-bold">돈</h2>
+      <div className="flex items-center justify-between gap-3 md:justify-end">
+        {/* 태블릿 이상은 상단 헤더에 탭 이름이 크게 보이므로 숨김 */}
+        <h2 className="text-xl sm:text-2xl font-bold md:hidden">돈</h2>
         <div className="flex gap-1 bg-muted rounded-full p-1">
           {sections.map((s) => (
             <button

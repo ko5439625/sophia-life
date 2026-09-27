@@ -103,13 +103,13 @@ type ApiStatus = "idle" | "testing" | "ok" | "fail" | "unconfigured";
 const statusIndicator = (status: ApiStatus) => {
   switch (status) {
     case "ok":
-      return { dot: "bg-green-500", label: "연결됨", color: "text-green-500" };
+      return { dot: "bg-foreground", label: "연결됨", color: "text-foreground" };
     case "fail":
-      return { dot: "bg-red-500", label: "실패", color: "text-red-500" };
+      return { dot: "bg-destructive", label: "실패", color: "text-destructive" };
     case "testing":
-      return { dot: "bg-yellow-400 animate-pulse", label: "테스트 중...", color: "text-yellow-500" };
+      return { dot: "bg-warn animate-pulse", label: "테스트 중...", color: "text-warn" };
     case "unconfigured":
-      return { dot: "bg-gray-400", label: "미설정", color: "text-gray-400" };
+      return { dot: "bg-muted-foreground/50", label: "미설정", color: "text-muted-foreground" };
     default:
       return { dot: "bg-gray-300", label: "대기", color: "text-gray-400" };
   }
@@ -768,7 +768,7 @@ const SettingsView = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl sm:text-2xl font-sans font-bold">설정</h2>
+      <h2 className="text-xl sm:text-2xl font-sans font-bold md:hidden">설정</h2>
 
       {/* 1. PIN Change */}
       <CollapsibleSection
@@ -1366,8 +1366,8 @@ const SettingsView = () => {
           </div>
 
           {/* 한국투자증권 Open API */}
-          <div className="bg-amber-500/5 border border-amber-500/15 rounded-lg p-3 space-y-3">
-            <p className="text-xs font-mono text-amber-500 font-medium">
+          <div className="bg-muted/40 border border-border rounded-lg p-3 space-y-3">
+            <p className="text-xs font-mono text-foreground font-medium">
               {"한국투자증권 Open API (퀀트 스크리닝)"}
             </p>
             <p className="text-[11px] text-muted-foreground">

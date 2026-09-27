@@ -29,9 +29,9 @@ export const PAYER_LABELS: Record<Payer, string> = {
 
 export const PAYER_COLORS: Record<Payer, string> = {
   unset: "bg-muted text-muted-foreground",
-  ahyun: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  jaejun: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
-  share: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  ahyun: "bg-love/10 text-love",
+  jaejun: "bg-foreground/10 text-foreground",
+  share: "bg-muted text-foreground",
 };
 
 export const METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -44,12 +44,12 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 export const METHOD_COLORS: Record<PaymentMethod, string> = {
-  unpaid: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  "credit-once": "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  "credit-installment": "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  check: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
-  "cash-receipt": "bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-300",
-  transfer: "bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-300",
+  unpaid: "bg-warn/10 text-warn",
+  "credit-once": "bg-foreground/10 text-foreground",
+  "credit-installment": "bg-foreground/10 text-foreground",
+  check: "bg-muted text-foreground",
+  "cash-receipt": "bg-muted text-muted-foreground",
+  transfer: "bg-muted text-muted-foreground",
 };
 
 export const STATUS_LABELS: Record<PaymentStatus, string> = {
@@ -61,9 +61,9 @@ export const STATUS_LABELS: Record<PaymentStatus, string> = {
 
 export const STATUS_COLORS: Record<PaymentStatus, string> = {
   unpaid: "bg-muted text-muted-foreground",
-  partial: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  paid: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  service: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
+  partial: "bg-warn/10 text-warn",
+  paid: "bg-foreground/10 text-foreground",
+  service: "bg-love/10 text-love",
 };
 
 export const CATEGORY_LABELS: Record<VendorCategory, string> = {

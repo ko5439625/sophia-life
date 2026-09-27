@@ -15,6 +15,8 @@ import {
   MoreHorizontal,
   X,
   Plus,
+  Receipt,
+  ClipboardPaste,
 } from "lucide-react";
 import ThemeToggle from "../ThemeToggle";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -33,6 +35,24 @@ import QuickExpenseSheet from "./home/QuickExpenseSheet";
 import SmartInboxSheet from "./inbox/SmartInboxSheet";
 import WeddingView from "./wedding/WeddingView";
 import ChatView from "./chat/ChatView";
+import { useIsDesktop } from "./desktop/useMediaQuery";
+import { FOCUS_INBOX_EVENT } from "./desktop/InboxComposer";
+
+// 넓게 펼쳐도 의미 없는 탭 (글쓰기·채팅·설정)은 좁은 폭 유지
+const NARROW_TABS = new Set(["blog", "chat", "settings"]);
+
+// 데스크톱 헤더 부제 — 탭이 무엇을 하는 곳인지 한 줄
+const TAB_SUBTITLE: Record<string, string> = {
+  home: "오늘 한눈에",
+  schedule: "캘린더 · 할 일 · D-day",
+  money: "생활비 · 자산 · 투자",
+  couple: "기념일 · 속닥속닥 · 위시리스트",
+  wedding: "결혼 준비",
+  blog: "글 · 사진 블로그",
+  realestate: "청약 · 매물 · 경매",
+  chat: "우리 둘 대화",
+  settings: "API 키 · 계정",
+};
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -114,6 +134,7 @@ const DashboardLayout = () => {
   const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const isDesktop = useIsDesktop();
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
@@ -191,6 +212,7 @@ const DashboardLayout = () => {
       case "money":
         return (
           <MoneyView
+            onQuickExpense={() => setQuickExpenseOpen(true)}
             section={moneySection}
             onSectionChange={(s) => goTo("money", s)}
             initialTab={subTabTarget}
@@ -220,17 +242,18 @@ const DashboardLayout = () => {
           setActiveTab(item.id);
           setSidebarOpen(false);
         }}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all relative ${
+        aria-current={activeTab === item.id ? "page" : undefined}
+        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors relative ${
           activeTab === item.id
-            ? "bg-sidebar-accent text-sidebar-primary font-medium"
-            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+            ? "text-foreground font-medium"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
         }`}
       >
         {activeTab === item.id && (
           <motion.div
             layoutId="sidebar-active"
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r"
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="absolute inset-0 rounded-lg bg-muted"
+            transition={{ type: "spring", stiffness: 400, damping: 35 }}
           />
         )}
         <span className="relative">
@@ -239,7 +262,7 @@ const DashboardLayout = () => {
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
           )}
         </span>
-        <span>{item.label}</span>
+        <span className="relative">{item.label}</span>
       </button>
     ));
 
@@ -252,10 +275,10 @@ const DashboardLayout = () => {
         >
           <div className="flex items-center gap-2">
             <span className="font-mono text-lg font-bold text-sidebar-foreground tracking-tight">
-              Sophia<span className="text-primary">.</span>life
+              Sophia<span className="text-love">.</span>life
             </span>
           </div>
-          <p className="text-[11px] text-sidebar-foreground/40 mt-1 tracking-wide">our life together ♡</p>
+          <p className="text-[11px] text-muted-foreground mt-1 tracking-wide">our life together</p>
         </button>
       </div>
 
@@ -269,7 +292,7 @@ const DashboardLayout = () => {
         <ThemeToggle />
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
         >
           <LogOut className="h-4 w-4" />
           <span>로그아웃</span>
@@ -322,11 +345,35 @@ const DashboardLayout = () => {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Desktop header */}
-        <header className="hidden md:flex h-12 border-b border-border items-center justify-between px-4 md:px-6 bg-background/80 backdrop-blur-sm">
-          <h2 className="text-xs font-mono text-muted-foreground/60 tracking-wider uppercase">
-            {currentLabel}
-          </h2>
-          <div className="w-10" />
+        <header className="hidden md:flex h-16 shrink-0 border-b border-border items-center justify-between gap-4 px-6 xl:px-8 bg-background/80 backdrop-blur-sm sticky top-0 z-20">
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold tracking-tight leading-tight">{currentLabel}</h1>
+            {TAB_SUBTITLE[activeTab] && (
+              <p className="text-xs text-muted-foreground truncate">{TAB_SUBTITLE[activeTab]}</p>
+            )}
+          </div>
+          {activeTab !== "chat" && activeTab !== "blog" && (
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={() => {
+                  // 데스크톱 홈은 가운데 작성기가 항상 떠 있으므로 그리로 포커스
+                  if (activeTab === "home" && isDesktop) window.dispatchEvent(new Event(FOCUS_INBOX_EVENT));
+                  else setInboxOpen(true);
+                }}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted transition-colors"
+              >
+                <ClipboardPaste className="h-4 w-4 text-muted-foreground" />
+                붙여넣기로 기록
+              </button>
+              <button
+                onClick={() => setQuickExpenseOpen(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+              >
+                <Plus className="h-4 w-4" />
+                지출
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Main content — 모바일: 하단 탭(+안전영역) 높이만큼, FAB가 있는 탭은 FAB 높이까지 더해 마지막 항목이 가려지지 않게 */}
@@ -337,7 +384,7 @@ const DashboardLayout = () => {
               : "pb-[calc(5rem+env(safe-area-inset-bottom))]"
           }`}
         >
-          <div className="max-w-4xl mx-auto">
+          <div className={`mx-auto max-w-4xl ${NARROW_TABS.has(activeTab) ? "" : "xl:max-w-[1400px]"}`}>
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 8 }}
@@ -353,14 +400,14 @@ const DashboardLayout = () => {
         {activeTab !== "chat" && activeTab !== "blog" && (
           <>
             {fabMenuOpen && (
-              <div className="fixed inset-0 z-30" onClick={() => setFabMenuOpen(false)} />
+              <div className="fixed inset-0 z-30 md:hidden" onClick={() => setFabMenuOpen(false)} />
             )}
-            <div className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-8 md:right-8 z-30 flex flex-col items-end gap-2">
+            <div className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 flex flex-col items-end gap-2 md:hidden">
               <AnimatePresence>
                 {fabMenuOpen &&
                   [
-                    { label: "📋 붙여넣기로 기록", onClick: () => setInboxOpen(true) },
-                    { label: "💸 지출 기록", onClick: () => setQuickExpenseOpen(true) },
+                    { label: "붙여넣기로 기록", icon: ClipboardPaste, onClick: () => setInboxOpen(true) },
+                    { label: "지출 기록", icon: Receipt, onClick: () => setQuickExpenseOpen(true) },
                   ].map((m, i) => (
                     <motion.button
                       key={m.label}
@@ -371,8 +418,9 @@ const DashboardLayout = () => {
                         setFabMenuOpen(false);
                         m.onClick();
                       }}
-                      className="rounded-full bg-card border border-border shadow-lg shadow-black/40 px-4 min-h-[44px] text-sm font-semibold whitespace-nowrap"
+                      className="inline-flex items-center gap-2 rounded-full bg-card border border-border shadow-lg shadow-black/40 px-4 min-h-[44px] text-sm font-semibold whitespace-nowrap"
                     >
+                      <m.icon className="h-4 w-4 text-muted-foreground" />
                       {m.label}
                     </motion.button>
                   ))}
@@ -434,7 +482,7 @@ const DashboardLayout = () => {
                             }}
                             className={`flex flex-col items-center gap-1 py-3 px-1 rounded-xl transition-colors ${
                               activeTab === item.id
-                                ? "bg-accent/10 text-accent"
+                                ? "bg-muted text-foreground"
                                 : "text-muted-foreground hover:bg-muted"
                             }`}
                           >
@@ -476,7 +524,7 @@ const DashboardLayout = () => {
                       }}
                       className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
                         isActive
-                          ? "text-accent"
+                          ? "text-foreground"
                           : "text-muted-foreground"
                       }`}
                     >

@@ -41,10 +41,10 @@ const categoryTabs = [
 ];
 
 const categoryColors: Record<string, string> = {
-  경제: "bg-blue-500/15 text-blue-400",
-  사회: "bg-green-500/15 text-green-400",
-  미국: "bg-purple-500/15 text-purple-400",
-  암호화폐: "bg-orange-500/15 text-orange-400",
+  경제: "bg-foreground/10 text-foreground",
+  사회: "bg-muted text-muted-foreground",
+  미국: "bg-transparent text-foreground ring-1 ring-inset ring-border",
+  암호화폐: "bg-warn/10 text-warn",
 };
 
 /** Return start-of-day Date for `daysAgo` days before now */
@@ -363,7 +363,7 @@ const NewsView = () => {
                           {item.category}
                         </span>
                         {item.isEnglish && (
-                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 flex items-center gap-1">
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground flex items-center gap-1">
                             <Globe className="h-2.5 w-2.5" />
                             EN
                           </span>

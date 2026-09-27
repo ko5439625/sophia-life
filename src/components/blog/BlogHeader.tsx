@@ -56,7 +56,7 @@ const BlogHeader = () => {
             <div className="relative w-44 h-36 md:w-56 md:h-44 mx-2 md:mx-3 flex-shrink-0">
               {videoLoading && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="h-4 w-4 animate-spin text-pink-300" />
+                  <Loader2 className="h-4 w-4 animate-spin text-love/70" />
                 </div>
               )}
               <svg width="0" height="0" className="absolute">
@@ -83,7 +83,7 @@ const BlogHeader = () => {
               >
                 <path
                   d="M120,40 C105,8 48,2 30,42 C8,90 50,130 120,172 C190,130 232,90 210,42 C192,2 135,8 120,40 Z"
-                  stroke="#f9a8d4"
+                  stroke="hsl(var(--love))"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -92,7 +92,7 @@ const BlogHeader = () => {
                 />
                 <path
                   d="M120,42 C106,10 50,4 32,43 C10,91 51,131 120,171 C189,131 230,91 208,43 C190,4 134,10 120,42 Z"
-                  stroke="#f9a8d4"
+                  stroke="hsl(var(--love))"
                   strokeWidth="1.8"
                   strokeLinecap="round"
                   strokeOpacity="0.4"
@@ -110,7 +110,7 @@ const BlogHeader = () => {
             {/* .life - right */}
             <span
               className="font-mono text-xl md:text-2xl font-normal self-end mb-2 md:mb-3 select-none"
-              style={{ color: "#e8a0bf", letterSpacing: "3px" }}
+              style={{ color: "hsl(var(--love))", letterSpacing: "3px" }}
             >
               .life
             </span>

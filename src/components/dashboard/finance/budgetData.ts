@@ -17,14 +17,32 @@ export interface MonthlyBudget {
 }
 
 export const defaultCategories: BudgetCategory[] = [
-  { id: "food", name: "식비", icon: "🍽️", amount: 500000, color: "#FF6B6B" },
-  { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#4ECDC4" },
-  { id: "allowance", name: "용돈", icon: "💸", amount: 300000, color: "#45B7D1" },
-  { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#00704A" },
-  { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#2563EB" },
-  { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#F7DC6F" },
-  { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#BB8FCE" },
+  { id: "food", name: "식비", icon: "🍽️", amount: 500000, color: "#F4A7B9" },
+  { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#A3A3A3" },
+  { id: "allowance", name: "용돈", icon: "💸", amount: 300000, color: "#FBBF24" },
+  { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#737373" },
+  { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#D4D4D4" },
+  { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#C2587A" },
+  { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#525252" },
 ];
+
+/**
+ * 모노 + 로즈 + 앰버 카테고리 팔레트 (id 기준). 저장된 예산 데이터에 예전 색(hex)이
+ * 남아 있어도 화면에서는 이 팔레트로 통일해서 보여준다. 모르는 id는 저장된 색을 그대로 쓴다.
+ */
+export const CATEGORY_PALETTE: Record<string, string> = {
+  food: "#F4A7B9",
+  fixed: "#A3A3A3",
+  allowance: "#FBBF24",
+  savings: "#737373",
+  investment: "#D4D4D4",
+  emergency: "#C2587A",
+  etc: "#525252",
+};
+
+export function categoryColor(c: Pick<BudgetCategory, "id" | "color">): string {
+  return CATEGORY_PALETTE[c.id] ?? c.color;
+}
 
 /** Mock history – each month is an independent budget plan */
 export const mockMonthlyBudgets: MonthlyBudget[] = [
@@ -33,13 +51,13 @@ export const mockMonthlyBudgets: MonthlyBudget[] = [
     salary1: 2400000,
     salary2: 2400000,
     categories: [
-      { id: "food", name: "식비", icon: "🍽️", amount: 450000, color: "#FF6B6B" },
-      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#4ECDC4" },
-      { id: "allowance", name: "용돈", icon: "💸", amount: 250000, color: "#45B7D1" },
-      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 600000, color: "#00704A" },
-      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#2563EB" },
-      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#F7DC6F" },
-      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#BB8FCE" },
+      { id: "food", name: "식비", icon: "🍽️", amount: 450000, color: "#F4A7B9" },
+      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#A3A3A3" },
+      { id: "allowance", name: "용돈", icon: "💸", amount: 250000, color: "#FBBF24" },
+      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 600000, color: "#737373" },
+      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#D4D4D4" },
+      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#C2587A" },
+      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#525252" },
     ],
   },
   {
@@ -47,13 +65,13 @@ export const mockMonthlyBudgets: MonthlyBudget[] = [
     salary1: 2400000,
     salary2: 2400000,
     categories: [
-      { id: "food", name: "식비", icon: "🍽️", amount: 480000, color: "#FF6B6B" },
-      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#4ECDC4" },
-      { id: "allowance", name: "용돈", icon: "💸", amount: 270000, color: "#45B7D1" },
-      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 650000, color: "#00704A" },
-      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#2563EB" },
-      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#F7DC6F" },
-      { id: "etc", name: "기타", icon: "📦", amount: 150000, color: "#BB8FCE" },
+      { id: "food", name: "식비", icon: "🍽️", amount: 480000, color: "#F4A7B9" },
+      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#A3A3A3" },
+      { id: "allowance", name: "용돈", icon: "💸", amount: 270000, color: "#FBBF24" },
+      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 650000, color: "#737373" },
+      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#D4D4D4" },
+      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#C2587A" },
+      { id: "etc", name: "기타", icon: "📦", amount: 150000, color: "#525252" },
     ],
   },
   {
@@ -61,13 +79,13 @@ export const mockMonthlyBudgets: MonthlyBudget[] = [
     salary1: 2500000,
     salary2: 2500000,
     categories: [
-      { id: "food", name: "식비", icon: "🍽️", amount: 500000, color: "#FF6B6B" },
-      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#4ECDC4" },
-      { id: "allowance", name: "용돈", icon: "💸", amount: 300000, color: "#45B7D1" },
-      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#00704A" },
-      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#2563EB" },
-      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#F7DC6F" },
-      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#BB8FCE" },
+      { id: "food", name: "식비", icon: "🍽️", amount: 500000, color: "#F4A7B9" },
+      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#A3A3A3" },
+      { id: "allowance", name: "용돈", icon: "💸", amount: 300000, color: "#FBBF24" },
+      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#737373" },
+      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#D4D4D4" },
+      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#C2587A" },
+      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#525252" },
     ],
   },
   {
@@ -75,13 +93,13 @@ export const mockMonthlyBudgets: MonthlyBudget[] = [
     salary1: 2500000,
     salary2: 2500000,
     categories: [
-      { id: "food", name: "식비", icon: "🍽️", amount: 500000, color: "#FF6B6B" },
-      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#4ECDC4" },
-      { id: "allowance", name: "용돈", icon: "💸", amount: 300000, color: "#45B7D1" },
-      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#00704A" },
-      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#2563EB" },
-      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#F7DC6F" },
-      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#BB8FCE" },
+      { id: "food", name: "식비", icon: "🍽️", amount: 500000, color: "#F4A7B9" },
+      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#A3A3A3" },
+      { id: "allowance", name: "용돈", icon: "💸", amount: 300000, color: "#FBBF24" },
+      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#737373" },
+      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#D4D4D4" },
+      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#C2587A" },
+      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#525252" },
     ],
   },
   {
@@ -89,13 +107,13 @@ export const mockMonthlyBudgets: MonthlyBudget[] = [
     salary1: 2500000,
     salary2: 2500000,
     categories: [
-      { id: "food", name: "식비", icon: "🍽️", amount: 520000, color: "#FF6B6B" },
-      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#4ECDC4" },
-      { id: "allowance", name: "용돈", icon: "💸", amount: 280000, color: "#45B7D1" },
-      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#00704A" },
-      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#2563EB" },
-      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#F7DC6F" },
-      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#BB8FCE" },
+      { id: "food", name: "식비", icon: "🍽️", amount: 520000, color: "#F4A7B9" },
+      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#A3A3A3" },
+      { id: "allowance", name: "용돈", icon: "💸", amount: 280000, color: "#FBBF24" },
+      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#737373" },
+      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#D4D4D4" },
+      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#C2587A" },
+      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#525252" },
     ],
   },
   {
@@ -103,13 +121,13 @@ export const mockMonthlyBudgets: MonthlyBudget[] = [
     salary1: 2500000,
     salary2: 2500000,
     categories: [
-      { id: "food", name: "식비", icon: "🍽️", amount: 500000, color: "#FF6B6B" },
-      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#4ECDC4" },
-      { id: "allowance", name: "용돈", icon: "💸", amount: 300000, color: "#45B7D1" },
-      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#00704A" },
-      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#2563EB" },
-      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#F7DC6F" },
-      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#BB8FCE" },
+      { id: "food", name: "식비", icon: "🍽️", amount: 500000, color: "#F4A7B9" },
+      { id: "fixed", name: "고정지출", icon: "🏠", amount: 800000, color: "#A3A3A3" },
+      { id: "allowance", name: "용돈", icon: "💸", amount: 300000, color: "#FBBF24" },
+      { id: "savings", name: "저축 (현금)", icon: "🏦", amount: 700000, color: "#737373" },
+      { id: "investment", name: "투자", icon: "📈", amount: 300000, color: "#D4D4D4" },
+      { id: "emergency", name: "비상금", icon: "🛡️", amount: 200000, color: "#C2587A" },
+      { id: "etc", name: "기타", icon: "📦", amount: 200000, color: "#525252" },
     ],
   },
 ];

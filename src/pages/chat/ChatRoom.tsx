@@ -9,6 +9,7 @@ import {
   Check,
   LogOut,
   Image as ImageIcon,
+  Monitor,
 } from "lucide-react";
 import type { ChatMessage, ChatSender } from "@/types/chat";
 import { SENDER_LABELS, SENDER_EMOJI } from "@/types/chat";
@@ -255,23 +256,23 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0b0e] px-4 py-6">
-      <div className="w-full max-w-md h-[calc(100vh-48px)] max-h-[700px] rounded-2xl overflow-hidden bg-[#15171c] border border-[#262a31] shadow-2xl flex flex-col">
+    <div className="min-h-screen flex items-center justify-center bg-[#0b0b0b] px-4 py-6">
+      <div className="w-full max-w-md h-[calc(100vh-48px)] max-h-[700px] rounded-2xl overflow-hidden bg-[#171717] border border-[#2a2a2a] shadow-2xl flex flex-col">
         {/* 설치 배너 */}
-        <div className="flex-shrink-0 flex items-center justify-center gap-1.5 bg-gradient-to-r from-[#2c4a3a] to-[#27407a] text-[#dff0e8] text-xs font-semibold py-2 cursor-pointer hover:brightness-110 transition">
-          💻 데스크탑 앱 설치 <span className="opacity-60">v2</span>
+        <div className="flex-shrink-0 flex items-center justify-center gap-1.5 bg-[#1a1a1a] border-b border-[#262626] text-[#ededed] text-xs font-semibold py-2 cursor-pointer hover:brightness-110 transition">
+          <Monitor size={13} aria-hidden /> 데스크탑 앱 설치 <span className="opacity-60">v2</span>
         </div>
 
         {/* 헤더 */}
-        <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-[#211f2b] to-[#1a1d24] border-b border-[#2a2e36]">
+        <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-[#141414] border-b border-[#2e2e2e]">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#e9a8b8] to-[#c98aa6] flex items-center justify-center text-lg">
             {SENDER_EMOJI[peer]}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold text-[#e6e9ee]">
+            <div className="text-sm font-bold text-[#e9e9e9]">
               {SENDER_LABELS[peer]}
             </div>
-            <div className="text-[11px] text-[#7d8590]">
+            <div className="text-[11px] text-[#848484]">
               {peerTyping
                 ? "입력 중..."
                 : peerOnline
@@ -281,11 +282,11 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
           </div>
           <div className="flex items-center gap-1.5">
             {peerOnline && (
-              <span className="w-2 h-2 rounded-full bg-[#5b9a78] shadow-[0_0_6px_#5b9a78]" />
+              <span className="w-2 h-2 rounded-full bg-[#ededed]" />
             )}
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded-lg text-[#7d8590] hover:text-[#e6e9ee] hover:bg-[#262b33] transition"
+              className="p-1.5 rounded-lg text-[#848484] hover:text-[#e9e9e9] hover:bg-[#2b2b2b] transition"
               title="로그아웃"
             >
               <LogOut size={16} />
@@ -300,7 +301,7 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
           onClick={() => setMenuId(null)}
         >
           {/* 오늘 구분선 */}
-          <div className="text-center text-[11px] text-[#5d646e] py-2">
+          <div className="text-center text-[11px] text-[#636363] py-2">
             ── 오늘 ──
           </div>
 
@@ -314,7 +315,7 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
                   key={msg.id}
                   className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                 >
-                  <div className="text-[11px] text-[#5d646e] italic py-1 px-2">
+                  <div className="text-[11px] text-[#636363] italic py-1 px-2">
                     삭제된 메시지
                   </div>
                 </div>
@@ -331,7 +332,7 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
                 {/* 말풍선 */}
                 <div className="relative group">
                   {isEditing ? (
-                    <div className="flex items-center gap-1 bg-[#1d2128] border border-[#5b9a78] rounded-xl px-3 py-2">
+                    <div className="flex items-center gap-1 bg-[#212121] border border-[#8f8f8f] rounded-xl px-3 py-2">
                       <input
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
@@ -339,18 +340,18 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
                           if (e.key === "Enter") confirmEdit();
                           if (e.key === "Escape") setEditingId(null);
                         }}
-                        className="bg-transparent text-[13px] text-[#e6e9ee] outline-none w-full"
+                        className="bg-transparent text-[13px] text-[#e9e9e9] outline-none w-full"
                         autoFocus
                       />
                       <button
                         onClick={confirmEdit}
-                        className="text-[#5b9a78] hover:text-[#7dc4a0]"
+                        className="text-[#ededed] hover:text-white"
                       >
                         <Check size={14} />
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="text-[#7d8590] hover:text-[#e6e9ee]"
+                        className="text-[#848484] hover:text-[#e9e9e9]"
                       >
                         <X size={14} />
                       </button>
@@ -359,8 +360,8 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
                     <div
                       className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${
                         isMe
-                          ? "bg-[#3a5e8c] text-white rounded-br-md"
-                          : "bg-[#22262e] text-[#dfe4ea] rounded-bl-md"
+                          ? "bg-[#ededed] text-[#0a0a0a] rounded-br-md"
+                          : "bg-[#262626] text-[#e3e3e3] rounded-bl-md"
                       }`}
                     >
                       {msg.kind === "image" ? (
@@ -372,8 +373,8 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
                             onClick={() => setImagePreview(msg.image_url!)}
                           />
                         ) : (
-                          <span className="text-xs text-[#9aa7b8] border border-dashed border-[#4a5159] rounded px-2 py-1">
-                            📷 [사진]
+                          <span className="text-xs text-[#a5a5a5] border border-dashed border-[#505050] rounded px-2 py-1 inline-flex items-center gap-1">
+                            <ImageIcon size={12} aria-hidden /> [사진]
                           </span>
                         )
                       ) : (
@@ -385,8 +386,8 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
                       <span
                         className={`block text-[9.5px] mt-1 ${
                           isMe
-                            ? "text-right text-white/40"
-                            : "text-right text-[#6b7280]"
+                            ? "text-right text-black/40"
+                            : "text-right text-[#727272]"
                         }`}
                       >
                         {msg.edited && "(수정됨) "}
@@ -394,7 +395,7 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
                         {isMe && (
                           <span className="ml-1">
                             {msg.read ? (
-                              <span className="text-[#6b727c]">읽음</span>
+                              <span className="text-black/40">읽음</span>
                             ) : (
                               <span className="text-[#d3b14a]">1</span>
                             )}
@@ -412,24 +413,24 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
                           e.stopPropagation();
                           setMenuId(menuId === msg.id ? null : msg.id);
                         }}
-                        className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-[#7d8590] hover:text-[#e6e9ee] transition-opacity"
+                        className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-[#848484] hover:text-[#e9e9e9] transition-opacity"
                       >
                         <MoreVertical size={14} />
                       </button>
 
                       {menuId === msg.id && (
-                        <div className="absolute -left-24 top-0 bg-[#1d2128] border border-[#2b303a] rounded-lg shadow-xl z-10 overflow-hidden">
+                        <div className="absolute -left-24 top-0 bg-[#212121] border border-[#303030] rounded-lg shadow-xl z-10 overflow-hidden">
                           {msg.kind === "text" && (
                             <button
                               onClick={() => startEdit(msg)}
-                              className="flex items-center gap-2 px-3 py-2 text-xs text-[#c7ccd4] hover:bg-[#262b33] w-full"
+                              className="flex items-center gap-2 px-3 py-2 text-xs text-[#cccccc] hover:bg-[#2b2b2b] w-full"
                             >
                               <Pencil size={12} /> 수정
                             </button>
                           )}
                           <button
                             onClick={() => handleDelete(msg.id)}
-                            className="flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-[#262b33] w-full"
+                            className="flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-[#2b2b2b] w-full"
                           >
                             <Trash2 size={12} /> 삭제
                           </button>
@@ -444,11 +445,11 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
 
           {/* 타이핑 인디케이터 */}
           {peerTyping && (
-            <div className="flex items-center gap-2 text-[11px] text-[#7d8590] italic pl-1">
+            <div className="flex items-center gap-2 text-[11px] text-[#848484] italic pl-1">
               <span className="flex gap-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#7d8590] animate-bounce [animation-delay:0ms]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-[#7d8590] animate-bounce [animation-delay:150ms]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-[#7d8590] animate-bounce [animation-delay:300ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#848484] animate-bounce [animation-delay:0ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#848484] animate-bounce [animation-delay:150ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#848484] animate-bounce [animation-delay:300ms]" />
               </span>
               {SENDER_LABELS[peer]}님이 입력 중...
             </div>
@@ -456,15 +457,15 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
         </div>
 
         {/* 입력창 */}
-        <div className="flex-shrink-0 flex items-center gap-2 px-3 py-3 border-t border-[#262a31] bg-[#13151a]">
+        <div className="flex-shrink-0 flex items-center gap-2 px-3 py-3 border-t border-[#2a2a2a] bg-[#151515]">
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="p-1.5 text-[#7d8590] hover:text-[#aab3bf] transition disabled:opacity-40"
+            className="p-1.5 text-[#848484] hover:text-[#b2b2b2] transition disabled:opacity-40"
             title="이미지 첨부"
           >
             {uploading ? (
-              <span className="w-5 h-5 border-2 border-[#7d8590] border-t-transparent rounded-full animate-spin inline-block" />
+              <span className="w-5 h-5 border-2 border-[#848484] border-t-transparent rounded-full animate-spin inline-block" />
             ) : (
               <Paperclip size={18} />
             )}
@@ -493,13 +494,13 @@ export default function ChatRoom({ sender, onLogout }: ChatRoomProps) {
               }
             }}
             placeholder="메시지 입력... (Ctrl+V 이미지)"
-            className="flex-1 bg-[#1d2128] border border-[#2b303a] rounded-full text-[#e6e9ee] text-sm py-2.5 px-4 outline-none focus:border-[#5b9a78] transition-colors placeholder:text-[#4a5060]"
+            className="flex-1 bg-[#212121] border border-[#303030] rounded-full text-[#e9e9e9] text-sm py-2.5 px-4 outline-none focus:border-[#8f8f8f] transition-colors placeholder:text-[#505050]"
           />
 
           <button
             onClick={handleSend}
             disabled={!input.trim()}
-            className="w-9 h-9 rounded-full bg-[#5b9a78] text-white flex items-center justify-center hover:bg-[#4d8a6a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-9 h-9 rounded-full bg-[#ededed] text-[#0a0a0a] flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <Send size={16} />
           </button>

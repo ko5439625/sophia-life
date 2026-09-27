@@ -134,7 +134,7 @@ const PriceChart = ({
         <LineChart data={chartData}>
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 11, fill: "#8B949E" }}
+            tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
             axisLine={false}
             tickLine={false}
           />
@@ -144,7 +144,7 @@ const PriceChart = ({
                 ? `${(v / 10000).toFixed(1)}억`
                 : `${(v / 1000).toFixed(0)}천`
             }
-            tick={{ fontSize: 11, fill: "#8B949E" }}
+            tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
             axisLine={false}
             tickLine={false}
             width={48}
@@ -196,7 +196,7 @@ const JeonseRateBar = ({ rate }: { rate: number }) => (
           rate >= 70
             ? "bg-destructive"
             : rate >= 50
-              ? "bg-yellow-500"
+              ? "bg-warn"
               : "bg-primary"
         }`}
         style={{ width: `${Math.min(rate, 100)}%` }}
@@ -208,15 +208,15 @@ const JeonseRateBar = ({ rate }: { rate: number }) => (
 
 /** Region card for the map overview */
 const REGION_GRADIENTS: Record<string, string> = {
-  "서울": "from-blue-600/20 to-indigo-600/10 hover:from-blue-600/30 hover:to-indigo-600/20",
-  "경기": "from-emerald-600/20 to-teal-600/10 hover:from-emerald-600/30 hover:to-teal-600/20",
-  "인천": "from-violet-600/20 to-purple-600/10 hover:from-violet-600/30 hover:to-purple-600/20",
+  "서울": "from-foreground/[0.08] to-transparent hover:from-foreground/[0.12]",
+  "경기": "from-foreground/[0.05] to-transparent hover:from-foreground/[0.09]",
+  "인천": "from-foreground/[0.03] to-transparent hover:from-foreground/[0.07]",
 };
 
 const REGION_BORDERS: Record<string, string> = {
-  "서울": "border-blue-500/30 hover:border-blue-500/50",
-  "경기": "border-emerald-500/30 hover:border-emerald-500/50",
-  "인천": "border-violet-500/30 hover:border-violet-500/50",
+  "서울": "border-border hover:border-foreground/30",
+  "경기": "border-border hover:border-foreground/30",
+  "인천": "border-border hover:border-foreground/30",
 };
 
 const RegionCard = ({
@@ -680,7 +680,7 @@ const ApartmentView = () => {
               <Star
                 className={`h-4 w-4 transition-colors ${
                   favorites.has(apt.aptName)
-                    ? "text-yellow-500 fill-yellow-500"
+                    ? "text-warn fill-warn"
                     : "text-muted-foreground"
                 }`}
               />
@@ -787,7 +787,7 @@ const ApartmentView = () => {
           {allFavorites.length > 0 && (
             <div className="bg-card rounded-xl p-4 space-y-3">
               <h4 className="text-sm font-mono text-muted-foreground flex items-center gap-1.5">
-                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                <Star className="h-4 w-4 text-warn fill-warn" />
                 내 관심 아파트
                 <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded ml-1">
                   {allFavorites.length}

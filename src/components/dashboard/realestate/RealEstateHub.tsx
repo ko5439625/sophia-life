@@ -9,9 +9,10 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
 } from "recharts";
-import SubscriptionView from "./SubscriptionView";
-import ListingMonitor from "./ListingMonitor";
-import RealEstateSearch from "./RealEstateSearch";
+// 매물 모니터(ListingMonitor, 크롤러 기반)·실거래가(RealEstateSearch)·구 분양정보(SubscriptionView)는
+// 파일은 남겨두되 UI 에서는 더 이상 쓰지 않음 (2026-09: 네이버 크롤링 중단, MOLIT 엔드포인트 종료)
+import PropertyFinder from "./PropertyFinder";
+import CheongyakView from "./CheongyakView";
 import AuctionMonitor from "./AuctionMonitor";
 import {
   loadInspections, saveInspection, deleteInspection,
@@ -51,7 +52,7 @@ const StarRating = ({ value, onChange, readonly = false }: {
       <button key={star} type="button" disabled={readonly}
         onClick={() => onChange?.(star)}
         className={`${readonly ? "cursor-default" : "cursor-pointer hover:scale-110"} transition-transform`}>
-        <Star className={`h-4 w-4 transition-colors ${star <= value ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground/30"}`} />
+        <Star className={`h-4 w-4 transition-colors ${star <= value ? "text-foreground fill-foreground" : "text-muted-foreground/30"}`} />
       </button>
     ))}
   </div>
@@ -62,12 +63,25 @@ const StarRating = ({ value, onChange, readonly = false }: {
 // ---------------------------------------------------------------------------
 
 const tabs = [
-  { id: "monitor", label: "매물 모니터" },
+  { id: "find", label: "매물 찾기" },
+  { id: "subscription", label: "청약" },
   { id: "auction", label: "경매" },
-  { id: "search", label: "실거래가" },
-  { id: "subscription", label: "분양 정보" },
   { id: "inspection", label: "임장 노트" },
 ];
+
+// 예전 서브탭 id (홈 알림 등에서 "realestate:monitor" 로 들어오는 경우) 호환
+const normalizeTab = (id?: string | null) => {
+  if (!id) return "find";
+  if (id === "monitor" || id === "search") return "find";
+  return tabs.some((t) => t.id === id) ? id : "find";
+};
+
+const LockedView = () => (
+  <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+    <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
+    <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
+  </div>
+);
 
 // ---------------------------------------------------------------------------
 // Component
@@ -75,11 +89,11 @@ const tabs = [
 
 const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; onTabUsed?: () => void }) => {
   const { isGuest } = useGuestMode();
-  const [activeTab, setActiveTab] = useState(initialTab || "monitor");
+  const [activeTab, setActiveTab] = useState(() => normalizeTab(initialTab));
 
   useEffect(() => {
-    if (initialTab) { setActiveTab(initialTab); onTabUsed?.(); }
-  }, [initialTab]);
+    if (initialTab) { setActiveTab(normalizeTab(initialTab)); onTabUsed?.(); }
+  }, [initialTab, onTabUsed]);
 
   // Inspection state (Supabase 연동)
   const [inspections, setInspections] = useState<InspectionRow[]>([]);
@@ -166,18 +180,18 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
   }));
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl sm:text-2xl font-bold">부동산</h2>
+    <div className="space-y-5">
+      <h2 className="text-xl sm:text-2xl font-bold md:hidden">부동산</h2>
 
-      <div className="flex gap-1 bg-muted rounded-lg p-1 overflow-x-auto">
+      <div className="flex gap-1 bg-muted rounded-xl p-1 overflow-x-auto scrollbar-hide xl:max-w-xl">
         {tabs.map((tab) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 relative min-h-[40px] px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors min-w-[60px] flex-shrink-0 ${
+            className={`flex-1 relative min-h-[44px] px-3 text-sm font-medium rounded-lg transition-colors min-w-[72px] flex-shrink-0 whitespace-nowrap ${
               activeTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}>
             {activeTab === tab.id && (
               <motion.div layoutId="realestate-hub-tab"
-                className="absolute inset-0 bg-card rounded-md shadow-sm"
+                className="absolute inset-0 bg-card rounded-lg shadow-sm"
                 transition={{ type: "spring", stiffness: 300, damping: 30 }} />
             )}
             <span className="relative z-10">{tab.label}</span>
@@ -186,43 +200,21 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
       </div>
 
       <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        {/* 매물 모니터 (크롤링) */}
-        {activeTab === "monitor" && (
-          isGuest ? (
-            <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
-              <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
-            </div>
-          ) : <ListingMonitor />
-        )}
+        {/* 매물 찾기 — 저장 조건으로 네이버페이 부동산 열기 */}
+        {activeTab === "find" && (isGuest ? <LockedView /> : <PropertyFinder />)}
+
+        {/* 청약 */}
+        {activeTab === "subscription" && <CheongyakView readOnly={isGuest} />}
 
         {/* 경매 */}
-        {activeTab === "auction" && (
-          isGuest ? (
-            <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
-              <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
-            </div>
-          ) : <AuctionMonitor />
-        )}
-
-        {/* 실거래가 */}
-        {activeTab === "search" && <RealEstateSearch />}
-
-        {/* 분양 정보 */}
-        {activeTab === "subscription" && <SubscriptionView />}
+        {activeTab === "auction" && (isGuest ? <LockedView /> : <AuctionMonitor />)}
 
         {/* 임장 노트 (Supabase 연동) */}
         {activeTab === "inspection" && (
-          isGuest ? (
-            <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
-              <Lock className="h-8 w-8 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">비공개 콘텐츠입니다</p>
-            </div>
-          ) : (
+          isGuest ? <LockedView /> : (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground font-mono">
+                <p className="text-sm text-muted-foreground">
                   {inspLoading ? "로딩 중..." : `${inspections.length}건의 임장 기록`}
                 </p>
                 <button onClick={() => { resetForm(); setShowForm(true); }}
@@ -302,7 +294,7 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1">
-                            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                            <Star className="h-3.5 w-3.5 text-foreground fill-foreground" />
                             <span className="text-sm font-mono font-bold">{avg.toFixed(1)}</span>
                           </div>
                           <div className="flex gap-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
@@ -326,7 +318,7 @@ const RealEstateHub = ({ initialTab, onTabUsed }: { initialTab?: string | null; 
               </div>
 
               {!inspLoading && inspections.length === 0 && (
-                <p className="text-center text-muted-foreground text-sm py-10 font-mono">아직 임장 기록이 없습니다</p>
+                <p className="text-center text-muted-foreground text-sm py-10">아직 임장 기록이 없습니다</p>
               )}
 
               {/* Comparison */}

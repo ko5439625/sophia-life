@@ -777,7 +777,7 @@ const PostEditor = ({
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg"
+              className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg"
             >
               <Sparkles className="h-3.5 w-3.5" />
               AI가 글을 다듬었습니다
@@ -1040,7 +1040,7 @@ const PostEditor = ({
               <button
                 onClick={handleAiEnhance}
                 disabled={aiLoading}
-                className="h-10 flex items-center gap-1 px-3 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-all disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
+                className="h-10 flex items-center gap-1 px-3 text-xs font-medium bg-muted text-foreground hover:bg-foreground/10 rounded-lg transition-all disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
                 title="AI로 글 다듬기 (이미지 유지)"
               >
                 {aiLoading ? (
@@ -1146,7 +1146,7 @@ const PostEditor = ({
               >
                 <Check className="h-4 w-4 flex-shrink-0 text-primary" />
                 <p className="flex-1 min-w-0 py-2.5 break-keep leading-snug">
-                  사진 글을 넣었어요. 확인하고 <button type="button" onClick={openPreview} className="inline-flex items-center min-h-[32px] -my-1.5 font-medium text-foreground underline underline-offset-4 decoration-[#d9668a] dark:decoration-[#f4a7b9]">미리보기</button> 후 발행해주세요.
+                  사진 글을 넣었어요. 확인하고 <button type="button" onClick={openPreview} className="inline-flex items-center min-h-[32px] -my-1.5 font-medium text-foreground underline underline-offset-4 decoration-love">미리보기</button> 후 발행해주세요.
                 </p>
                 <button
                   type="button"
@@ -1422,8 +1422,8 @@ const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null;
             {/* Header */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 min-w-0">
-                <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                <h2 className="text-xl sm:text-2xl font-bold truncate">블로그 관리</h2>
+                <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0 md:hidden" />
+                <h2 className="text-xl sm:text-2xl font-bold truncate md:hidden">블로그 관리</h2>
                 {/* 공개 블로그 메인 (사이드바 로고와 같은 주소) */}
                 <button
                   onClick={() => navigate("/?blog=true")}

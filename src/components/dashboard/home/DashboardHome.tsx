@@ -1,6 +1,34 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { motion, type Variants } from "framer-motion";
-import { AlertTriangle, Bell, Check, ChevronRight, Info, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  CalendarDays,
+  CalendarHeart,
+  Camera,
+  Check,
+  ChevronRight,
+  ClipboardPaste,
+  Cloud,
+  CloudFog,
+  CloudRain,
+  CloudSnow,
+  CloudSun,
+  Gem,
+  Heart,
+  Image as ImageIcon,
+  Info,
+  ListChecks,
+  MessageCircle,
+  Plus,
+  Receipt,
+  StickyNote,
+  Sun,
+  X,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import InboxComposer from "../desktop/InboxComposer";
+import { useIsDesktop } from "../desktop/useMediaQuery";
 import { getExchangeRate, getSectorFearGreed, getStockQuote } from "../../../services/marketApi";
 import type { ExchangeRateResult, FearGreedResult, StockQuote } from "../../../services/marketApi";
 import { getWeather } from "../../../services/weatherApi";
@@ -145,14 +173,14 @@ function CardHeader({ title, linkLabel, onLink }: { title: ReactNode; linkLabel?
   );
 }
 
-function weatherEmoji(desc: string): string {
-  if (desc.includes("맑")) return "☀️";
-  if (desc.includes("비")) return "🌧️";
-  if (desc.includes("눈")) return "🌨️";
-  if (desc.includes("흐")) return "☁️";
-  if (desc.includes("구름")) return "⛅";
-  if (desc.includes("안개") || desc.includes("박무")) return "🌫️";
-  return "🌤️";
+function weatherIcon(desc: string): LucideIcon {
+  if (desc.includes("맑")) return Sun;
+  if (desc.includes("비")) return CloudRain;
+  if (desc.includes("눈")) return CloudSnow;
+  if (desc.includes("흐")) return Cloud;
+  if (desc.includes("구름")) return CloudSun;
+  if (desc.includes("안개") || desc.includes("박무")) return CloudFog;
+  return CloudSun;
 }
 
 function fearGreedKo(v: number): string {
@@ -179,6 +207,7 @@ interface UpcomingEvent {
 
 const DashboardHome = ({ onNavigate, onQuickExpense, onSmartInbox }: DashboardHomeProps) => {
   const { state, getMonthlyExpenseTotal } = useFinancial();
+  const isDesktop = useIsDesktop();
 
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -436,357 +465,447 @@ const DashboardHome = ({ onNavigate, onQuickExpense, onSmartInbox }: DashboardHo
   const chatLabel = lastChat ? (lastChat.sender === "degul" ? "데굴" : "무요") : "";
   const chatText = lastChat
     ? lastChat.kind === "image"
-      ? "📷 사진"
+      ? "사진"
       : parseReply(lastChat.text).body
     : "";
 
   const chipClass = "inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-foreground";
+  const WeatherIcon = weather ? weatherIcon(weather.description) : null;
 
-  return (
-    <motion.div variants={listVariants} initial="hidden" animate="visible" className="space-y-3 pb-4">
-      {/* 1. 헤더 */}
-      <motion.header variants={itemVariants} className="px-1 pt-1 pb-1.5">
-        <h2 className="text-[22px] font-extrabold tracking-tight">무요 & 데굴 🩷</h2>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+  // ---- 블록 (모바일은 기존 순서, 데스크톱은 3열로 배치) ----
+  const headerEl = (
+    <motion.header variants={itemVariants} className="px-1 pt-1 pb-1.5">
+      <h2 className="flex items-center gap-2 text-[22px] font-extrabold tracking-tight">
+        무요 & 데굴 <Heart className="h-5 w-5 fill-love text-love" aria-hidden />
+      </h2>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <span className={chipClass}>
+          {today.getMonth() + 1}월 {today.getDate()}일 ({DAY_NAMES[today.getDay()]})
+        </span>
+        {weather && WeatherIcon && (
           <span className={chipClass}>
-            {today.getMonth() + 1}월 {today.getDate()}일 ({DAY_NAMES[today.getDay()]})
+            <WeatherIcon className="h-3.5 w-3.5 text-muted-foreground" /> {weather.temp}° {weather.description}
           </span>
-          {weather && (
-            <span className={chipClass}>
-              {weatherEmoji(weather.description)} {weather.temp}° {weather.description}
-            </span>
-          )}
-          {weddingDday && (
-            <button
-              onClick={() => onNavigate?.("couple")}
-              className="relative after:absolute after:-inset-2 after:content-[''] inline-flex items-center gap-1 rounded-full bg-pink-500/10 px-2.5 py-1 text-xs text-pink-500 dark:text-pink-400"
-            >
-              💍 결혼 {ddayLabel(weddingDday.diff)}
-            </button>
-          )}
-          {metDays !== null && (
-            <button onClick={() => onNavigate?.("couple")} className={`relative after:absolute after:-inset-2 after:content-[''] ${chipClass}`}>
-              💖 만난 지 {metDays.toLocaleString("ko-KR")}일
-            </button>
-          )}
-          {!weddingDday && metDays === null && ddays.length > 0 && (
-            <button onClick={() => onNavigate?.("couple")} className={`relative after:absolute after:-inset-2 after:content-[''] ${chipClass}`}>
-              🎉 기념일 <ChevronRight className="h-3 w-3" />
-            </button>
-          )}
-        </div>
-      </motion.header>
-
-      {/* 2. 빠른 입력 */}
-      <motion.div variants={itemVariants} className="grid grid-cols-4 gap-2">
-        {[
-          { label: "지출", icon: "💸", main: true, onClick: () => onQuickExpense?.() },
-          { label: "할 일", icon: "✅", onClick: focusTodoInput },
-          { label: "메모", icon: "📝", onClick: () => onNavigate?.("couple:memo") },
-          { label: "블로그", icon: "📷", onClick: () => onNavigate?.("blog:photo") },
-        ].map((q) => (
+        )}
+        {weddingDday && (
           <button
-            key={q.label}
-            onClick={q.onClick}
-            className={`flex h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl text-[13px] font-semibold transition-transform active:scale-[0.97] ${
-              q.main ? "bg-primary text-primary-foreground" : "bg-card border border-border hover:bg-muted/60"
-            }`}
+            onClick={() => onNavigate?.("couple")}
+            className="relative after:absolute after:-inset-2 after:content-[''] inline-flex items-center gap-1 rounded-full border border-love/30 bg-love/10 px-2.5 py-1 text-xs text-love"
           >
-            <span className="text-xl leading-none">{q.icon}</span>
-            {q.label}
+            <Gem className="h-3.5 w-3.5" /> 결혼 {ddayLabel(weddingDday.diff)}
+          </button>
+        )}
+        {metDays !== null && (
+          <button onClick={() => onNavigate?.("couple")} className={`relative after:absolute after:-inset-2 after:content-[''] ${chipClass}`}>
+            <Heart className="h-3.5 w-3.5 text-love" /> 만난 지 {metDays.toLocaleString("ko-KR")}일
+          </button>
+        )}
+        {!weddingDday && metDays === null && ddays.length > 0 && (
+          <button onClick={() => onNavigate?.("couple")} className={`relative after:absolute after:-inset-2 after:content-[''] ${chipClass}`}>
+            <CalendarHeart className="h-3.5 w-3.5 text-love" /> 기념일 <ChevronRight className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+    </motion.header>
+  );
+
+  const quickItems = [
+    { label: "지출", icon: Receipt, main: true, onClick: () => onQuickExpense?.() },
+    { label: "할 일", icon: ListChecks, onClick: focusTodoInput },
+    { label: "메모", icon: StickyNote, onClick: () => onNavigate?.("couple:memo") },
+    { label: "블로그", icon: Camera, onClick: () => onNavigate?.("blog:photo") },
+  ];
+
+  const quickEl = (
+    <motion.div variants={itemVariants} className="grid grid-cols-4 gap-2">
+      {quickItems.map((q) => (
+        <button
+          key={q.label}
+          onClick={q.onClick}
+          className={`flex h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl text-[13px] font-semibold transition-transform active:scale-[0.97] ${
+            q.main ? "bg-primary text-primary-foreground" : "bg-card border border-border hover:bg-muted/60"
+          }`}
+        >
+          <q.icon className="h-5 w-5" />
+          {q.label}
+        </button>
+      ))}
+    </motion.div>
+  );
+
+  // 붙여넣기로 기록 — 채팅·영수증 → AI가 탭별로 정리 (승인한 것만 저장)
+  const pasteEl = (
+    <motion.button
+      variants={itemVariants}
+      onClick={() => onSmartInbox?.()}
+      className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 px-4 min-h-[56px] text-left transition-colors hover:bg-muted/60 active:scale-[0.99]"
+    >
+      <ClipboardPaste className="h-5 w-5 shrink-0 text-muted-foreground" />
+      <span className="flex-1 min-w-0">
+        <span className="block text-[14px] font-semibold">붙여넣기로 기록</span>
+        <span className="block truncate text-[12px] text-muted-foreground">채팅·영수증을 넣으면 지출·일정·할 일로 정리해줘요</span>
+      </span>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </motion.button>
+  );
+
+  // 중요 알림 — 한 줄 스트립
+  const alertsEl =
+    alerts.length > 0 ? (
+      <motion.div variants={itemVariants} className="space-y-1.5">
+        {alerts.slice(0, 2).map((a) => {
+          const Icon = a.level === "warning" ? AlertTriangle : a.id.startsWith("sub-") ? Bell : Info;
+          return (
+            <div
+              key={a.id}
+              className={`flex items-center gap-2 rounded-xl border pl-3 text-[13px] ${
+                a.level === "warning" ? "border-warn/30 bg-warn/10" : "border-border bg-card"
+              }`}
+            >
+              <Icon className={`h-4 w-4 shrink-0 ${a.level === "warning" ? "text-warn" : "text-muted-foreground"}`} />
+              <button
+                onClick={() => a.actionTab && onNavigate?.(a.actionTab)}
+                className="flex min-h-[40px] min-w-0 flex-1 items-center gap-1 text-left"
+              >
+                <span className="truncate">{a.text}</span>
+                {a.actionTab && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+              </button>
+              <button
+                onClick={() => dismissAlert(a.id)}
+                aria-label="알림 닫기"
+                className="flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </motion.div>
+    ) : null;
+
+  // 3. 오늘
+  const todayEl = (
+    <motion.section variants={itemVariants} className={cardClass}>
+      <CardHeader
+        title="오늘"
+        linkLabel={todos.length > 0 ? `${doneCount}/${todos.length} 완료` : "체크리스트"}
+        onLink={() => onNavigate?.("schedule:checklist")}
+      />
+      <div className="divide-y divide-border">
+        {todos.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => toggleTodo(t.id)}
+            className="flex min-h-[44px] w-full items-center gap-2.5 py-2 text-left text-sm"
+          >
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-[1.5px] transition-colors ${
+                t.is_done ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/50"
+              }`}
+            >
+              {t.is_done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+            </span>
+            <span className={`min-w-0 flex-1 truncate ${t.is_done ? "text-muted-foreground line-through" : ""}`}>
+              {t.title}
+            </span>
           </button>
         ))}
-      </motion.div>
+        {todayEvents.map((e) => (
+          <button
+            key={e.id}
+            onClick={() => onNavigate?.("schedule:calendar")}
+            className="flex min-h-[44px] w-full items-center gap-2.5 py-2 text-left text-sm"
+          >
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            </span>
+            <span className="min-w-0 flex-1 truncate">
+              {e.time ? `${e.time.slice(0, 5)} ` : ""}
+              {e.title}
+            </span>
+            <span className="shrink-0 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">일정</span>
+          </button>
+        ))}
+        <form
+          onSubmit={(ev) => {
+            ev.preventDefault();
+            addTodo();
+          }}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <input
+            ref={todoInputRef}
+            value={newTodo}
+            onChange={(ev) => setNewTodo(ev.target.value)}
+            placeholder="할 일 추가"
+            enterKeyHint="done"
+            className="min-h-[44px] min-w-0 flex-1 bg-transparent text-base placeholder:text-muted-foreground focus:outline-none md:text-sm"
+          />
+          {newTodo.trim() && (
+            <button type="submit" className="min-h-[36px] shrink-0 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground">
+              추가
+            </button>
+          )}
+        </form>
+      </div>
+    </motion.section>
+  );
 
-      {/* 붙여넣기로 기록 — 채팅·영수증 → AI가 탭별로 정리 (승인한 것만 저장) */}
-      <motion.button
-        variants={itemVariants}
-        onClick={() => onSmartInbox?.()}
-        className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 px-4 min-h-[56px] text-left transition-colors hover:bg-muted/60 active:scale-[0.99]"
+  // 4. 이번 달 생활비
+  const budgetEl = (
+    <motion.section variants={itemVariants} className={cardClass}>
+      <CardHeader title={`${today.getMonth() + 1}월 생활비`} linkLabel="돈 탭" onLink={() => onNavigate?.("finance:budget")} />
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-mono text-[22px] font-bold tabular-nums">{formatWon(spent)}</span>
+        {budgetTotal > 0 && <span className="shrink-0 text-[13px] text-muted-foreground">/ {formatMan(budgetTotal)}원</span>}
+      </div>
+      {budgetTotal > 0 ? (
+        <>
+          <div className="mt-2.5 mb-2 h-2 overflow-hidden rounded-full bg-muted">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(usedPct, 100)}%` }}
+              transition={{ duration: 0.6, ease: EASE_OUT }}
+              className={`h-full rounded-full ${usedPct >= 100 ? "bg-destructive" : usedPct >= 90 ? "bg-warn" : "bg-foreground"}`}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[13px]">
+            <span className="text-muted-foreground">
+              {usedPct}% 사용 · {daysLeft}일 남음
+            </span>
+            <span className={remaining >= 0 ? "text-foreground" : "text-destructive"}>
+              {remaining >= 0 ? `${formatMan(remaining)}원 남음` : `${formatMan(-remaining)}원 초과`}
+            </span>
+          </div>
+          {topCats.length > 0 && (
+            <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+              {topCats.map((c) => (
+                <div key={c.name} className="min-w-0 rounded-xl bg-muted px-2.5 py-2">
+                  <p className="truncate text-xs text-muted-foreground">{c.name}</p>
+                  <p className={`mt-0.5 text-[13px] font-bold tabular-nums ${c.pct > 90 ? "text-warn" : ""}`}>{c.pct}%</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <button
+          onClick={() => onNavigate?.("finance:budget")}
+          className="mt-1 flex min-h-[40px] items-center gap-0.5 text-[13px] text-muted-foreground"
+        >
+          이번 달 예산이 아직 없어요 · 예산 세우기 <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </motion.section>
+  );
+
+  // 5. 결혼 준비 (결혼식 전까지만)
+  const weddingEl = showWedding ? (
+    <motion.section variants={itemVariants}>
+      <button
+        onClick={() => onNavigate?.("wedding")}
+        className="w-full rounded-2xl border border-love/30 bg-gradient-to-br from-love/[0.12] to-love/[0.02] p-4 text-left"
       >
-        <span className="text-xl leading-none">📋</span>
-        <span className="flex-1 min-w-0">
-          <span className="block text-[14px] font-semibold">붙여넣기로 기록</span>
-          <span className="block truncate text-[12px] text-muted-foreground">채팅·영수증을 넣으면 지출·일정·할 일로 정리해줘요</span>
-        </span>
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      </motion.button>
+        <div className="flex items-center gap-3.5">
+          {wedding && wedding.checklistTotal > 0 ? (
+            <WeddingRing pct={Math.round((wedding.checklistDone / wedding.checklistTotal) * 100)} />
+          ) : (
+            <span className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full bg-love/10">
+              <Gem className="h-6 w-6 text-love" />
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1 text-[15px] font-bold">
+              결혼 준비 · <span className="text-love">{ddayLabel(weddingDday.diff)}</span>
+              <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+            </p>
+            {wedding && (wedding.checklistTotal > 0 || wedding.total > 0) && (
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {[
+                  wedding.checklistTotal > 0 ? `체크리스트 ${wedding.checklistDone}/${wedding.checklistTotal}` : null,
+                  wedding.total > 0 ? `결제 ${formatMan(wedding.paid)} / ${formatMan(wedding.total)}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
+          </div>
+        </div>
+        {wedding?.nextThisWeek && (
+          <p className="mt-3 border-t border-love/20 pt-2.5 text-[13px]">
+            이번 주 ▸ {wedding.nextThisWeek.title}{" "}
+            <span className="text-muted-foreground">({shortDate(wedding.nextThisWeek.date)})</span>
+          </p>
+        )}
+      </button>
+    </motion.section>
+  ) : null;
 
-      {/* 중요 알림 — 한 줄 스트립 */}
-      {alerts.length > 0 && (
-        <motion.div variants={itemVariants} className="space-y-1.5">
-          {alerts.slice(0, 2).map((a) => {
-            const Icon = a.level === "warning" ? AlertTriangle : a.id.startsWith("sub-") ? Bell : Info;
+  // 6. 최근 채팅
+  const chatEl = lastChat ? (
+    <motion.section variants={itemVariants} className={cardClass}>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-1.5">
+            <MessageCircle className="h-3.5 w-3.5" /> 채팅
+          </span>
+        }
+        linkLabel="열기"
+        onLink={() => onNavigate?.("chat")}
+      />
+      <button onClick={() => onNavigate?.("chat")} className="block w-full text-left">
+        <p className="mb-1 text-xs text-muted-foreground">
+          {chatLabel} · {relativeTime(lastChat.created_at)}
+        </p>
+        <p className="inline-flex max-w-[85%] items-center gap-1.5 rounded-[14px] rounded-bl-[4px] bg-muted px-3 py-2 text-sm line-clamp-2 break-words">
+          {lastChat.kind === "image" && <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+          {chatText}
+        </p>
+      </button>
+    </motion.section>
+  ) : null;
+
+  // 속닥속닥 — 최근 메모
+  const memoEl =
+    freshMemos.length > 0 ? (
+      <motion.section variants={itemVariants} className={cardClass}>
+        <CardHeader
+          title={
+            <span className="flex items-center gap-1.5">
+              <Heart className="h-3.5 w-3.5 text-love" /> 속닥속닥
+            </span>
+          }
+          linkLabel="메모"
+          onLink={() => onNavigate?.("couple:memo")}
+        />
+        <div className="space-y-1">
+          {freshMemos.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => onNavigate?.("couple:memo")}
+              className="flex min-h-[40px] w-full items-center gap-2 text-left text-sm"
+            >
+              <span className={`shrink-0 text-xs font-semibold ${m.author === "sophia" ? "text-love" : "text-foreground"}`}>
+                {m.author === "sophia" ? "데굴" : "무요"}
+              </span>
+              <span className="min-w-0 flex-1 truncate">{m.message}</span>
+              <span className="shrink-0 text-[11px] text-muted-foreground">{relativeTime(m.timestamp)}</span>
+            </button>
+          ))}
+        </div>
+      </motion.section>
+    ) : null;
+
+  // 7. 다가오는 일정
+  const upcomingEl = (
+    <motion.section variants={itemVariants} className={cardClass}>
+      <CardHeader title="다가오는 일정" linkLabel="일정" onLink={() => onNavigate?.("schedule:calendar")} />
+      {upcoming.length === 0 ? (
+        <p className="py-1.5 text-[13px] text-muted-foreground">예정된 일정이 없어요</p>
+      ) : (
+        <div>
+          {upcoming.map((e) => {
+            const diff = diffDays(e.date);
             return (
-              <div
-                key={a.id}
-                className={`flex items-center gap-2 rounded-xl border pl-3 text-[13px] ${
-                  a.level === "warning" ? "border-amber-500/30 bg-amber-500/10" : "border-border bg-card"
-                }`}
-              >
-                <Icon className={`h-4 w-4 shrink-0 ${a.level === "warning" ? "text-amber-500" : "text-muted-foreground"}`} />
-                <button
-                  onClick={() => a.actionTab && onNavigate?.(a.actionTab)}
-                  className="flex min-h-[40px] min-w-0 flex-1 items-center gap-1 text-left"
-                >
-                  <span className="truncate">{a.text}</span>
-                  {a.actionTab && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                </button>
-                <button
-                  onClick={() => dismissAlert(a.id)}
-                  aria-label="알림 닫기"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+              <div key={e.id} className="flex min-h-[40px] items-center gap-2.5 text-sm">
+                <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 truncate">{e.title}</span>
+                {e.dateLabel && <span className="shrink-0 text-xs text-muted-foreground">{e.dateLabel}</span>}
+                <span className={`ml-auto shrink-0 font-mono text-[13px] ${diff <= 7 ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                  {ddayLabel(diff)}
+                </span>
               </div>
             );
           })}
-        </motion.div>
+        </div>
       )}
+    </motion.section>
+  );
 
+  // 8. 경제 한 줄
+  const tickerEl =
+    tickerItems.length > 0 ? (
+      <motion.div variants={itemVariants}>
+        <button
+          onClick={() => onNavigate?.("investment")}
+          className="flex min-h-[44px] w-full flex-wrap items-center gap-x-3.5 gap-y-1 rounded-2xl border border-border bg-card px-4 py-3 text-left text-xs text-muted-foreground"
+        >
+          {tickerItems.map((t) => (
+            <span key={t.label} className="whitespace-nowrap">
+              {t.label}{" "}
+              <b
+                className={`font-mono font-semibold ${
+                  t.tone === "up" ? "text-red-500 dark:text-red-400" : t.tone === "down" ? "text-blue-500 dark:text-blue-400" : "text-foreground"
+                }`}
+              >
+                {t.value}
+              </b>
+            </span>
+          ))}
+          <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0" />
+        </button>
+      </motion.div>
+    ) : null;
+
+  // ---- 데스크톱 (≥1280): 왼쪽 오늘·일정 / 가운데 붙여넣기로 기록 / 오른쪽 돈·웨딩·채팅 ----
+  if (isDesktop) {
+    return (
+      <motion.div variants={listVariants} initial="hidden" animate="visible" className="space-y-4 pb-4">
+        <div className="flex items-end justify-between gap-4">
+          {headerEl}
+          <motion.div variants={itemVariants} className="flex shrink-0 gap-1.5 pb-1.5">
+            {quickItems.slice(2).map((q) => (
+              <button
+                key={q.label}
+                onClick={q.onClick}
+                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"
+              >
+                <q.icon className="h-4 w-4 text-muted-foreground" />
+                {q.label}
+              </button>
+            ))}
+          </motion.div>
+        </div>
+        {alertsEl}
+        {/* 붙여넣기로 기록 — 세 칸 전체 폭. 결과 카드는 가로로 나란히 (가운데만 길어지지 않게) */}
+        <motion.div variants={itemVariants} className="min-w-0">
+          <InboxComposer onNavigate={onNavigate} />
+        </motion.div>
+        <div className="grid grid-cols-3 items-start gap-4">
+          <motion.div variants={listVariants} className="space-y-3">
+            {todayEl}
+            {upcomingEl}
+          </motion.div>
+          <motion.div variants={listVariants} className="space-y-3">
+            {budgetEl}
+            {weddingEl}
+          </motion.div>
+          <motion.div variants={listVariants} className="space-y-3">
+            {chatEl}
+            {memoEl}
+            {tickerEl}
+          </motion.div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div variants={listVariants} initial="hidden" animate="visible" className="space-y-3 pb-4">
+      {headerEl}
+      {quickEl}
+      {pasteEl}
+      {alertsEl}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
-        {/* 3. 오늘 */}
-        <motion.section variants={itemVariants} className={cardClass}>
-          <CardHeader
-            title="오늘"
-            linkLabel={todos.length > 0 ? `${doneCount}/${todos.length} 완료` : "체크리스트"}
-            onLink={() => onNavigate?.("schedule:checklist")}
-          />
-          <div className="divide-y divide-border">
-            {todos.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => toggleTodo(t.id)}
-                className="flex min-h-[44px] w-full items-center gap-2.5 py-2 text-left text-sm"
-              >
-                <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-[1.5px] transition-colors ${
-                    t.is_done ? "border-emerald-500 bg-emerald-500 text-white" : "border-muted-foreground/50"
-                  }`}
-                >
-                  {t.is_done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                </span>
-                <span className={`min-w-0 flex-1 truncate ${t.is_done ? "text-muted-foreground line-through" : ""}`}>
-                  {t.title}
-                </span>
-              </button>
-            ))}
-            {todayEvents.map((e) => (
-              <button
-                key={e.id}
-                onClick={() => onNavigate?.("schedule:calendar")}
-                className="flex min-h-[44px] w-full items-center gap-2.5 py-2 text-left text-sm"
-              >
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center text-base leading-none">{e.emoji || "📅"}</span>
-                <span className="min-w-0 flex-1 truncate">
-                  {e.time ? `${e.time.slice(0, 5)} ` : ""}
-                  {e.title}
-                </span>
-                <span className="shrink-0 rounded-md bg-sky-500/10 px-1.5 py-0.5 text-[11px] text-sky-600 dark:text-sky-400">일정</span>
-              </button>
-            ))}
-            <form
-              onSubmit={(ev) => {
-                ev.preventDefault();
-                addTodo();
-              }}
-              className="flex items-center gap-2"
-            >
-              <input
-                ref={todoInputRef}
-                value={newTodo}
-                onChange={(ev) => setNewTodo(ev.target.value)}
-                placeholder="＋ 할 일 추가"
-                enterKeyHint="done"
-                className="min-h-[44px] min-w-0 flex-1 bg-transparent text-base placeholder:text-muted-foreground focus:outline-none md:text-sm"
-              />
-              {newTodo.trim() && (
-                <button type="submit" className="min-h-[36px] shrink-0 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground">
-                  추가
-                </button>
-              )}
-            </form>
-          </div>
-        </motion.section>
-
-        {/* 4. 이번 달 생활비 */}
-        <motion.section variants={itemVariants} className={cardClass}>
-          <CardHeader title={`${today.getMonth() + 1}월 생활비`} linkLabel="돈 탭" onLink={() => onNavigate?.("finance:budget")} />
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="font-mono text-[22px] font-bold tabular-nums">{formatWon(spent)}</span>
-            {budgetTotal > 0 && <span className="shrink-0 text-[13px] text-muted-foreground">/ {formatMan(budgetTotal)}원</span>}
-          </div>
-          {budgetTotal > 0 ? (
-            <>
-              <div className="mt-2.5 mb-2 h-2 overflow-hidden rounded-full bg-muted">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(usedPct, 100)}%` }}
-                  transition={{ duration: 0.6, ease: EASE_OUT }}
-                  className={`h-full rounded-full ${
-                    usedPct >= 100 ? "bg-red-500" : usedPct >= 90 ? "bg-amber-500" : "bg-gradient-to-r from-emerald-500 to-emerald-400"
-                  }`}
-                />
-              </div>
-              <div className="flex items-center justify-between text-[13px]">
-                <span className="text-muted-foreground">
-                  {usedPct}% 사용 · {daysLeft}일 남음
-                </span>
-                <span className={remaining >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}>
-                  {remaining >= 0 ? `${formatMan(remaining)}원 남음` : `${formatMan(-remaining)}원 초과`}
-                </span>
-              </div>
-              {topCats.length > 0 && (
-                <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-                  {topCats.map((c) => (
-                    <div key={c.name} className="min-w-0 rounded-xl bg-muted px-2.5 py-2">
-                      <p className="truncate text-xs text-muted-foreground">{c.name}</p>
-                      <p className={`mt-0.5 text-[13px] font-bold tabular-nums ${c.pct > 90 ? "text-amber-500" : ""}`}>{c.pct}%</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <button
-              onClick={() => onNavigate?.("finance:budget")}
-              className="mt-1 flex min-h-[40px] items-center gap-0.5 text-[13px] text-muted-foreground"
-            >
-              이번 달 예산이 아직 없어요 · 예산 세우기 <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </motion.section>
-
-        {/* 5. 결혼 준비 (결혼식 전까지만) */}
-        {showWedding && (
-          <motion.section variants={itemVariants}>
-            <button
-              onClick={() => onNavigate?.("wedding")}
-              className="w-full rounded-2xl border border-pink-500/25 bg-gradient-to-br from-pink-500/[0.14] to-pink-500/[0.03] p-4 text-left"
-            >
-              <div className="flex items-center gap-3.5">
-                {wedding && wedding.checklistTotal > 0 ? (
-                  <WeddingRing pct={Math.round((wedding.checklistDone / wedding.checklistTotal) * 100)} />
-                ) : (
-                  <span className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full bg-pink-500/10 text-2xl">💍</span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1 text-[15px] font-bold">
-                    결혼 준비 · {ddayLabel(weddingDday.diff)}
-                    <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
-                  </p>
-                  {wedding && (wedding.checklistTotal > 0 || wedding.total > 0) && (
-                    <p className="mt-0.5 text-[13px] text-muted-foreground">
-                      {[
-                        wedding.checklistTotal > 0 ? `체크리스트 ${wedding.checklistDone}/${wedding.checklistTotal}` : null,
-                        wedding.total > 0 ? `결제 ${formatMan(wedding.paid)} / ${formatMan(wedding.total)}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {wedding?.nextThisWeek && (
-                <p className="mt-3 border-t border-pink-500/20 pt-2.5 text-[13px]">
-                  이번 주 ▸ {wedding.nextThisWeek.title}{" "}
-                  <span className="text-muted-foreground">({shortDate(wedding.nextThisWeek.date)})</span>
-                </p>
-              )}
-            </button>
-          </motion.section>
-        )}
-
-        {/* 6. 최근 채팅 */}
-        {lastChat && (
-          <motion.section variants={itemVariants} className={cardClass}>
-            <CardHeader title="💬 채팅" linkLabel="열기" onLink={() => onNavigate?.("chat")} />
-            <button onClick={() => onNavigate?.("chat")} className="block w-full text-left">
-              <p className="mb-1 text-xs text-muted-foreground">
-                {chatLabel} · {relativeTime(lastChat.created_at)}
-              </p>
-              <p className="inline-block max-w-[85%] rounded-[14px] rounded-bl-[4px] bg-muted px-3 py-2 text-sm line-clamp-2 break-words">
-                {chatText}
-              </p>
-            </button>
-          </motion.section>
-        )}
-
-        {/* 속닥속닥 — 최근 메모 */}
-        {freshMemos.length > 0 && (
-          <motion.section variants={itemVariants} className={cardClass}>
-            <CardHeader title="🩷 속닥속닥" linkLabel="메모" onLink={() => onNavigate?.("couple:memo")} />
-            <div className="space-y-1">
-              {freshMemos.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => onNavigate?.("couple:memo")}
-                  className="flex min-h-[40px] w-full items-center gap-2 text-left text-sm"
-                >
-                  <span className={`shrink-0 text-xs font-semibold ${m.author === "sophia" ? "text-pink-500" : "text-sky-500"}`}>
-                    {m.author === "sophia" ? "데굴" : "무요"}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{m.message}</span>
-                  <span className="shrink-0 text-[11px] text-muted-foreground">{relativeTime(m.timestamp)}</span>
-                </button>
-              ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* 7. 다가오는 일정 */}
-        <motion.section variants={itemVariants} className={cardClass}>
-          <CardHeader title="다가오는 일정" linkLabel="일정" onLink={() => onNavigate?.("schedule:calendar")} />
-          {upcoming.length === 0 ? (
-            <p className="py-1.5 text-[13px] text-muted-foreground">예정된 일정이 없어요</p>
-          ) : (
-            <div>
-              {upcoming.map((e) => {
-                const diff = diffDays(e.date);
-                return (
-                  <div key={e.id} className="flex min-h-[40px] items-center gap-2.5 text-sm">
-                    <span className="shrink-0 text-base leading-none">{e.emoji}</span>
-                    <span className="min-w-0 truncate">{e.title}</span>
-                    {e.dateLabel && <span className="shrink-0 text-xs text-muted-foreground">{e.dateLabel}</span>}
-                    <span
-                      className={`ml-auto shrink-0 font-mono text-[13px] ${
-                        diff <= 7 ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"
-                      }`}
-                    >
-                      {ddayLabel(diff)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </motion.section>
+        {todayEl}
+        {budgetEl}
+        {weddingEl}
+        {chatEl}
+        {memoEl}
+        {upcomingEl}
       </div>
-
-      {/* 8. 경제 한 줄 */}
-      {tickerItems.length > 0 && (
-        <motion.div variants={itemVariants}>
-          <button
-            onClick={() => onNavigate?.("investment")}
-            className="flex min-h-[44px] w-full flex-wrap items-center gap-x-3.5 gap-y-1 rounded-2xl border border-border bg-card px-4 py-3 text-left text-xs text-muted-foreground"
-          >
-            {tickerItems.map((t) => (
-              <span key={t.label} className="whitespace-nowrap">
-                {t.label}{" "}
-                <b
-                  className={`font-mono font-semibold ${
-                    t.tone === "up" ? "text-red-500 dark:text-red-400" : t.tone === "down" ? "text-blue-500 dark:text-blue-400" : "text-foreground"
-                  }`}
-                >
-                  {t.value}
-                </b>
-              </span>
-            ))}
-            <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0" />
-          </button>
-        </motion.div>
-      )}
+      {tickerEl}
     </motion.div>
   );
 };
@@ -795,7 +914,7 @@ function WeddingRing({ pct }: { pct: number }) {
   return (
     <div
       className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full"
-      style={{ background: `conic-gradient(#f472b6 0 ${pct}%, hsl(var(--muted)) ${pct}% 100%)` }}
+      style={{ background: `conic-gradient(hsl(var(--love)) 0 ${pct}%, hsl(var(--muted)) ${pct}% 100%)` }}
     >
       <span className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-card text-[13px] font-bold tabular-nums">
         {pct}%

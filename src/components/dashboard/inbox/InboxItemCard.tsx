@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Loader2, AlertCircle, Undo2 } from "lucide-react";
+import { Check, Loader2, AlertCircle, Undo2, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   INBOX_TARGET_LABEL,
@@ -71,7 +71,7 @@ export default function InboxItemCard({
       className={cn(
         "rounded-2xl border bg-card p-3 transition-colors",
         saved && "opacity-60",
-        approved ? "border-emerald-500/60 bg-emerald-500/[0.06]" : !ready ? "border-amber-400/60" : "border-border"
+        approved ? "border-foreground/40 bg-foreground/[0.04]" : !ready ? "border-warn/60" : "border-border"
       )}
       data-testid="inbox-item"
       data-type={item.type}
@@ -136,7 +136,7 @@ export default function InboxItemCard({
 
       {/* 승인 / 제외 */}
       {saved ? (
-        <p className="mt-2 flex min-h-[44px] items-center justify-center gap-1 text-[14px] font-medium text-emerald-600 dark:text-emerald-400">
+        <p className="mt-2 flex min-h-[44px] items-center justify-center gap-1 text-[14px] font-medium text-foreground">
           <Check className="h-4 w-4" /> 저장됨
         </p>
       ) : saving ? (
@@ -156,7 +156,7 @@ export default function InboxItemCard({
             <button
               type="button"
               onClick={() => onStatus("pending")}
-              className="flex min-h-[44px] min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-xl bg-emerald-500/15 px-2 text-[14px] font-semibold text-emerald-700 dark:text-emerald-300"
+              className="flex min-h-[44px] min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-xl bg-foreground/10 px-2 text-[14px] font-semibold text-foreground"
               aria-label="승인됨, 누르면 승인 취소"
             >
               승인됨 <Check className="h-4 w-4 shrink-0" />
@@ -338,7 +338,7 @@ function QuestionBubble({
 
   return (
     <div className="rounded-2xl rounded-tl-sm bg-muted/70 p-2.5" data-testid="inbox-question">
-      <p className="break-words text-[14px] font-medium leading-snug">🤔 {q.question}</p>
+      <p className="break-words text-[14px] font-medium leading-snug"><HelpCircle className="mr-1 inline h-4 w-4 -translate-y-px text-muted-foreground" />{q.question}</p>
       {q.options && q.options.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {q.options.map((o, i) => (

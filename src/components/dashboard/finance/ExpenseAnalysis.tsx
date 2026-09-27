@@ -195,7 +195,7 @@ const ExpenseAnalysis = () => {
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${spendingPct > 100 ? "bg-destructive" : spendingPct > 80 ? "bg-amber-500" : "bg-primary"}`}
+              className={`h-full rounded-full transition-all ${spendingPct > 100 ? "bg-destructive" : spendingPct > 80 ? "bg-warn" : "bg-primary"}`}
               style={{ width: `${Math.min(spendingPct, 100)}%` }}
             />
           </div>
@@ -209,8 +209,8 @@ const ExpenseAnalysis = () => {
         {extraSpending > 0 && (
           <div className="mt-3 pt-3 border-t border-border space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] text-amber-500 font-bold">추가 지출</span>
-              <span className="text-xs font-mono font-bold text-amber-500">{formatAmount(extraSpending)}</span>
+              <span className="text-[11px] text-warn font-bold">추가 지출</span>
+              <span className="text-xs font-mono font-bold text-warn">{formatAmount(extraSpending)}</span>
             </div>
             {cashFunded > 0 && (
               <div className="flex items-center justify-between pl-2">
@@ -238,9 +238,9 @@ const ExpenseAnalysis = () => {
               <p className="text-[11px] text-muted-foreground">현금저축 잔액 <span className="text-muted-foreground/50">({formatMonthLabel(selectedMonth)})</span></p>
               <p className="text-sm font-mono font-bold text-primary">{formatAmount(monthCashSavings)}</p>
             </div>
-            <div className="bg-yellow-500/5 rounded-lg px-3 py-2">
+            <div className="bg-warn/5 rounded-lg px-3 py-2">
               <p className="text-[11px] text-muted-foreground">비상금 잔액 <span className="text-muted-foreground/50">({formatMonthLabel(selectedMonth)})</span></p>
-              <p className="text-sm font-mono font-bold text-yellow-500">{formatAmount(monthEmergencyFund)}</p>
+              <p className="text-sm font-mono font-bold text-warn">{formatAmount(monthEmergencyFund)}</p>
             </div>
           </div>
         </div>
@@ -354,7 +354,7 @@ const ExpenseAnalysis = () => {
               </div>
               <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${cat.over ? "bg-destructive" : cat.pct > 80 ? "bg-amber-500" : "bg-primary"}`}
+                  className={`h-full rounded-full transition-all ${cat.over ? "bg-destructive" : cat.pct > 80 ? "bg-warn" : "bg-primary"}`}
                   style={{ width: `${Math.min(cat.pct, 100)}%` }}
                 />
               </div>
@@ -374,7 +374,7 @@ const ExpenseAnalysis = () => {
         <div className="space-y-2">
           <h4 className="text-xs text-muted-foreground font-mono">예산 외 지출</h4>
           {unbudgeted.map((item) => (
-            <div key={item.name} className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 flex items-center justify-between">
+            <div key={item.name} className="bg-warn/10 border border-warn/20 rounded-lg px-4 py-3 flex items-center justify-between">
               <span className="text-sm">{item.name}</span>
               <span className="text-sm font-mono">{formatAmount(item.amount)}</span>
             </div>
@@ -516,12 +516,12 @@ function MonthlyHistory({
                           </div>
                           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${pct > 100 ? "bg-destructive" : pct > 80 ? "bg-amber-500" : "bg-primary"}`}
+                              className={`h-full rounded-full ${pct > 100 ? "bg-destructive" : pct > 80 ? "bg-warn" : "bg-primary"}`}
                               style={{ width: `${Math.min(pct, 100)}%` }}
                             />
                           </div>
                           {unbudgetedCats.size > 0 && (
-                            <p className="text-[11px] text-amber-500 mt-1">
+                            <p className="text-[11px] text-warn mt-1">
                               예산 외: {Array.from(unbudgetedCats).join(", ")}
                             </p>
                           )}

@@ -134,7 +134,7 @@ export default function VendorDetail({
                 <span className="mx-1.5">·</span>
                 합계 {formatWon(totalAmount)}
                 <span className="mx-1.5">·</span>
-                <span className={remainingAmount > 0 ? "text-amber-500" : "text-emerald-500"}>
+                <span className={remainingAmount > 0 ? "text-warn" : "text-foreground"}>
                   잔금 {formatWon(remainingAmount)}
                 </span>
                 <span className="mx-1.5">·</span>
@@ -161,7 +161,7 @@ export default function VendorDetail({
         {/* Progress bar */}
         <div className="mt-2 w-full h-1.5 bg-muted rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-500"
+            className="h-full bg-love rounded-full transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -290,14 +290,14 @@ function DetailTab({
             {!vatApplied ? (
               <button
                 onClick={applyVat}
-                className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground"
               >
                 +VAT 10%
               </button>
             ) : (
               <button
                 onClick={removeVat}
-                className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-foreground/10 text-foreground"
               >
                 VAT 적용됨 ✓
               </button>
@@ -345,14 +345,14 @@ function DetailTab({
           {!vatApplied ? (
             <button
               onClick={applyVat}
-              className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors"
+              className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-colors"
             >
               +VAT 10%
             </button>
           ) : (
             <button
               onClick={removeVat}
-              className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/40 dark:hover:text-red-300 transition-colors"
+              className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-foreground/10 text-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
               VAT 적용됨 ✓
             </button>
@@ -392,7 +392,7 @@ function MobileItemCard({
 
   return (
     <div
-      className={`border-b border-border/30 ${isPre ? "bg-emerald-50/30 dark:bg-emerald-950/10" : ""}`}
+      className={`border-b border-border/30 ${isPre ? "bg-muted/40" : ""}`}
     >
       {/* Summary row (always visible) */}
       <button
@@ -412,7 +412,7 @@ function MobileItemCard({
             <p className="text-[11px] text-muted-foreground/50 truncate mt-0.5">{item.description}</p>
           )}
         </div>
-        <span className={`text-xs font-mono font-semibold tabular-nums flex-shrink-0 ${isPre ? "text-emerald-600 dark:text-emerald-400" : ""}`}>
+        <span className={`text-xs font-mono font-semibold tabular-nums flex-shrink-0 ${isPre ? "text-foreground" : ""}`}>
           {formatWon(item.amount)}
         </span>
         <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/30 transition-transform flex-shrink-0 ${expanded ? "rotate-180" : ""}`} />
@@ -520,7 +520,7 @@ function DesktopItemRow({
   return (
     <div
       className={`grid grid-cols-[1fr_120px_100px_100px_100px_90px_32px] gap-0 border-b border-border/30 hover:bg-muted/20 transition-colors group ${
-        isPre ? "bg-emerald-50/30 dark:bg-emerald-950/10" : ""
+        isPre ? "bg-muted/40" : ""
       }`}
     >
       {/* Name */}
@@ -616,7 +616,7 @@ function DesktopItemRow({
           }
           placeholder="0"
           className={`w-full text-right text-[11px] font-mono tabular-nums bg-transparent px-1 py-1 rounded focus:bg-muted/50 focus:outline-none ${
-            isPre ? "text-emerald-600 dark:text-emerald-400" : ""
+            isPre ? "text-foreground" : ""
           }`}
         />
       </div>

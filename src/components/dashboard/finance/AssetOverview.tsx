@@ -34,6 +34,7 @@ import {
 import { useFinancial } from "../../../store/financialStore";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 import { getAnnualCpiRate } from "../../../services/ecosApi";
+import { PensionLine } from "../desktop/PensionDialog";
 
 // ---------------------------------------------------------------------------
 // Gemini AI Report
@@ -347,8 +348,8 @@ const AssetOverview = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 max-w-md">
             <div className="flex items-center gap-2 mb-1">
               <p className="text-sm text-muted-foreground">총 자산</p>
               <span className="text-[11px] text-muted-foreground/50 font-mono">{now.getFullYear()}년 {now.getMonth() + 1}월 기준</span>
@@ -369,11 +370,9 @@ const AssetOverview = () => {
                 <p className="text-[11px] text-muted-foreground">가용자산</p>
                 <p className="text-sm font-mono font-bold text-primary">{isGuest ? "₩•••" : `${formatKRW(totalAvailable)}원`}</p>
               </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground">연금 (비가용)</p>
-                <p className="text-sm font-mono font-bold text-purple-400">{isGuest ? "₩•••" : `${formatKRW(totalPension)}원`}</p>
-              </div>
             </div>
+            {/* 연금은 인출 전까지 못 쓰는 돈 → 한 줄만, 입력·상세는 대화상자에서 */}
+            <PensionLine className="mt-1 border-t border-border pt-1" format={(n) => (isGuest ? "₩•••" : `${formatKRW(n)}원`)} />
           </div>
           {/* AI 분석 버튼 */}
           {!isGuest && (
@@ -654,24 +653,24 @@ const AssetOverview = () => {
         </p>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card rounded-xl p-4 border border-primary/15">
+        <div className="bg-card rounded-xl p-4 border border-border">
           <div className="flex items-center gap-2 mb-1.5">
-            <Wallet className="h-4 w-4 text-primary" />
+            <Wallet className="h-4 w-4 text-muted-foreground" />
             <span className="text-[11px] text-muted-foreground">현금자산</span>
-            <span className="text-[11px] text-primary font-mono ml-auto">{cashPct}%</span>
+            <span className="text-[11px] text-muted-foreground font-mono ml-auto">{cashPct}%</span>
           </div>
-          <p className="text-lg font-mono font-bold text-primary">
+          <p className="text-lg font-mono font-bold text-foreground">
             {isGuest ? "₩•••" : `${formatCompact(totalCash)}원`}
           </p>
           <p className="text-[11px] text-muted-foreground/60 mt-0.5">{"저축 + 비상금 + 현금보유 (설정)"}</p>
         </div>
-        <div className="bg-card rounded-xl p-4 border border-blue-500/15">
+        <div className="bg-card rounded-xl p-4 border border-border">
           <div className="flex items-center gap-2 mb-1.5">
-            <BarChart3 className="h-4 w-4 text-blue-500" />
+            <BarChart3 className="h-4 w-4 text-foreground" />
             <span className="text-[11px] text-muted-foreground">투자자산</span>
-            <span className="text-[11px] text-blue-500 font-mono ml-auto">{investPct}%</span>
+            <span className="text-[11px] text-foreground font-mono ml-auto">{investPct}%</span>
           </div>
-          <p className="text-lg font-mono font-bold text-blue-500">
+          <p className="text-lg font-mono font-bold text-foreground">
             {isGuest ? "₩•••" : `${formatCompact(totalInvestment)}원`}
           </p>
           <p className="text-[11px] text-muted-foreground/60 mt-0.5">
@@ -680,20 +679,20 @@ const AssetOverview = () => {
         </div>
         <div className="bg-card rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1.5">
-            <Banknote className="h-4 w-4 text-primary" />
+            <Banknote className="h-4 w-4 text-muted-foreground" />
             <span className="text-[11px] text-muted-foreground">저축</span>
           </div>
-          <p className="text-base font-mono font-bold text-primary">
+          <p className="text-base font-mono font-bold text-foreground">
             {isGuest ? "₩•••" : `${formatCompact(effectiveCashSavings)}원`}
           </p>
           <p className="text-[11px] text-muted-foreground/60 mt-0.5">기초 {formatCompact(state.cashSavings)} + 적립분</p>
         </div>
         <div className="bg-card rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1.5">
-            <ShieldCheck className="h-4 w-4 text-yellow-500" />
+            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
             <span className="text-[11px] text-muted-foreground">비상금</span>
           </div>
-          <p className="text-base font-mono font-bold text-yellow-500">
+          <p className="text-base font-mono font-bold text-foreground">
             {isGuest ? "₩•••" : `${formatCompact(effectiveEmergencyFund)}원`}
           </p>
           <p className="text-[11px] text-muted-foreground/60 mt-0.5">기초 {formatCompact(state.emergencyFund)} + 적립분</p>
@@ -790,7 +789,7 @@ const AssetOverview = () => {
                         <span className="text-sm font-mono font-medium">{isGuest ? "₩•••" : `${formatCompact(m.total)}원`}</span>
                         <div className="flex gap-2 mt-0.5">
                           <span className="text-[11px] text-primary font-mono">현금 {isGuest ? "₩•••" : formatCompact(m.cash)}</span>
-                          <span className="text-[11px] text-blue-500 font-mono">투자 {isGuest ? "₩•••" : formatCompact(m.investment)}</span>
+                          <span className="text-[11px] text-muted-foreground font-mono">투자 {isGuest ? "₩•••" : formatCompact(m.investment)}</span>
                         </div>
                       </div>
                     </div>

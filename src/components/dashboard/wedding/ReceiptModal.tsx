@@ -758,18 +758,18 @@ function PreviewPhase({
     <div className="space-y-4">
       {/* Confidence banner */}
       {parsedResult ? (
-        <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 rounded-lg px-3 py-2 text-xs">
+        <div className="flex items-center gap-2 bg-muted text-foreground rounded-lg px-3 py-2 text-xs">
           <Sparkles className="h-3.5 w-3.5" />
           AI 분석 완료 · 신뢰도 {Math.round(parsedResult.confidence * 100)}%
           {parsedResult.notes && (
-            <span className="text-emerald-500/60 ml-1">— {parsedResult.notes}</span>
+            <span className="text-muted-foreground ml-1">— {parsedResult.notes}</span>
           )}
         </div>
       ) : (
-        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300 rounded-lg px-3 py-2 text-xs">
+        <div className="flex items-center gap-2 bg-warn/10 text-warn rounded-lg px-3 py-2 text-xs">
           <AlertCircle className="h-3.5 w-3.5" />
           AI 분석 실패 · 수동으로 입력해주세요
-          {error && <span className="text-amber-500/60 ml-1">({error})</span>}
+          {error && <span className="text-warn/70 ml-1">({error})</span>}
         </div>
       )}
 
@@ -814,7 +814,7 @@ function PreviewPhase({
           <div
             key={idx}
             className={`grid grid-cols-[1fr_90px_80px_80px_80px_70px_28px] gap-0 border-t border-border/30 hover:bg-muted/10 ${
-              item.isPrepayment ? "bg-emerald-50/30 dark:bg-emerald-950/10" : ""
+              item.isPrepayment ? "bg-muted/40" : ""
             }`}
           >
             <div className="p-1">
@@ -892,14 +892,14 @@ function PreviewPhase({
             {!vatApplied ? (
               <button
                 onClick={applyVat}
-                className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors"
+                className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-colors"
               >
                 +VAT 10%
               </button>
             ) : (
               <button
                 onClick={removeVat}
-                className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/40 dark:hover:text-red-300 transition-colors"
+                className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
               >
                 VAT 적용됨 ✓
               </button>

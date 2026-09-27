@@ -4,22 +4,23 @@ import InvestmentView from "../finance/InvestmentView";
 import HedgingView from "../finance/HedgingView";
 import QuantRecommendView from "../finance/QuantRecommendView";
 import TradingView from "../finance/TradingView";
-import PensionView from "./PensionView";
 
 const tabs = [
   { id: "portfolio", label: "투자 현황" },
-  { id: "pension", label: "연금 투자" },
   { id: "quant", label: "퀀트 추천" },
   { id: "trading", label: "매매" },
   { id: "hedging", label: "헷징 분석" },
 ];
 
+// 연금은 인출 전까지 못 쓰는 돈이라 별도 탭 대신 자산 현황의 "연금 잔액 · 상세"로 이동
+const TAB_IDS = new Set(tabs.map((t) => t.id));
+
 const InvestmentHub = ({ initialTab, onTabUsed, embedded }: { initialTab?: string | null; onTabUsed?: () => void; embedded?: boolean }) => {
-  const [activeTab, setActiveTab] = useState(initialTab || "portfolio");
+  const [activeTab, setActiveTab] = useState(initialTab && TAB_IDS.has(initialTab) ? initialTab : "portfolio");
 
   useEffect(() => {
     if (initialTab) {
-      setActiveTab(initialTab);
+      setActiveTab(TAB_IDS.has(initialTab) ? initialTab : "portfolio");
       onTabUsed?.();
     }
   }, [initialTab]);
@@ -57,9 +58,6 @@ const InvestmentHub = ({ initialTab, onTabUsed, embedded }: { initialTab?: strin
               {tab.id === "hedging" && (
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/50 flex-shrink-0" />
               )}
-              {tab.id === "quant" && (
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500/50 flex-shrink-0" />
-              )}
             </span>
           </button>
         ))}
@@ -72,7 +70,6 @@ const InvestmentHub = ({ initialTab, onTabUsed, embedded }: { initialTab?: strin
         transition={{ duration: 0.3 }}
       >
         {activeTab === "portfolio" && <InvestmentView />}
-        {activeTab === "pension" && <PensionView />}
         {activeTab === "quant" && <QuantRecommendView />}
         {activeTab === "trading" && <TradingView />}
         {activeTab === "hedging" && <HedgingView />}

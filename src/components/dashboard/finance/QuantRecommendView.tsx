@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Loader2, TrendingUp, Shield, Zap, RefreshCw, Lock, X, ChevronRight, Search } from "lucide-react";
+import { Sparkles, Loader2, TrendingUp, Shield, Zap, RefreshCw, Lock, X, ChevronRight, Search, Flame, Eye, AlertTriangle } from "lucide-react";
 import { useGuestMode } from "../../../hooks/useGuestMode";
 import { formatKRW } from "./budgetData";
 import { isKisConfigured } from "../../../services/kisApi";
@@ -668,17 +668,17 @@ function resolveSearchQuery(query: string): { directSymbols: { symbol: string; n
 }
 
 const perspectives = [
-  { id: "aggressive" as const, label: "공격", icon: Zap, color: "#EF4444", desc: "고성장·고변동성·모멘텀" },
-  { id: "neutral" as const, label: "중립", icon: TrendingUp, color: "#EAB308", desc: "밸류+퀄리티·균형" },
-  { id: "conservative" as const, label: "보수", icon: Shield, color: "#3B82F6", desc: "저변동·고배당·안정" },
+  { id: "aggressive" as const, label: "공격", icon: Zap, color: "hsl(var(--foreground))", desc: "고성장·고변동성·모멘텀" },
+  { id: "neutral" as const, label: "중립", icon: TrendingUp, color: "hsl(var(--foreground))", desc: "밸류+퀄리티·균형" },
+  { id: "conservative" as const, label: "보수", icon: Shield, color: "hsl(var(--foreground))", desc: "저변동·고배당·안정" },
 ] as const;
 
 const valColor = (v: string) => v === "저평가" ? "text-primary" : v === "고평가" ? "text-destructive" : "text-muted-foreground";
 
 const recBadge = (r: "strong" | "normal" | "avoid") => {
-  if (r === "strong") return { text: "추천", bg: "bg-primary/15 text-primary border-primary/30", icon: "🔥" };
-  if (r === "normal") return { text: "보통", bg: "bg-amber-500/15 text-amber-500 border-amber-500/30", icon: "👀" };
-  return { text: "비추천", bg: "bg-destructive/15 text-destructive border-destructive/30", icon: "⚠️" };
+  if (r === "strong") return { text: "추천", bg: "bg-primary/15 text-primary border-primary/30", icon: <Flame className="inline h-3 w-3 -mt-px" aria-hidden /> };
+  if (r === "normal") return { text: "보통", bg: "bg-warn/15 text-warn border-warn/30", icon: <Eye className="inline h-3 w-3 -mt-px" aria-hidden /> };
+  return { text: "비추천", bg: "bg-destructive/15 text-destructive border-destructive/30", icon: <AlertTriangle className="inline h-3 w-3 -mt-px" aria-hidden /> };
 };
 
 function AIResultPanel({ result, loading, error, onClose }: {
@@ -719,7 +719,7 @@ function AIResultPanel({ result, loading, error, onClose }: {
                         <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
                           result.confidence.includes("높") ? "bg-primary/10 text-primary" :
                           result.confidence.includes("낮") ? "bg-destructive/10 text-destructive" :
-                          "bg-amber-500/10 text-amber-500"
+                          "bg-warn/10 text-warn"
                         }`}>
                           {"신뢰도 "}{result.confidence}
                         </span>
@@ -731,7 +731,7 @@ function AIResultPanel({ result, loading, error, onClose }: {
                       <div className="bg-destructive transition-all" style={{ width: `${bear}%` }} />
                     </div>
                     {Math.abs(bull - bear) <= 10 && (
-                      <p className="text-[11px] text-amber-500 mt-1">{"확률 차이 "}{Math.abs(bull - bear)}%p - 방향성 불분명, 관망 권장</p>
+                      <p className="text-[11px] text-warn mt-1">{"확률 차이 "}{Math.abs(bull - bear)}%p - 방향성 불분명, 관망 권장</p>
                     )}
                   </div>
                 );
@@ -742,7 +742,7 @@ function AIResultPanel({ result, loading, error, onClose }: {
                   {result.entry && (
                     <div className="text-center bg-background/50 rounded-lg py-2">
                       <p className="text-[11px] text-muted-foreground">진입가</p>
-                      <p className="text-sm font-mono font-bold text-blue-400">{result.entry}</p>
+                      <p className="text-sm font-mono font-bold text-foreground">{result.entry}</p>
                     </div>
                   )}
                   {result.target && (
@@ -774,7 +774,7 @@ function AIResultPanel({ result, loading, error, onClose }: {
                     const [title, ...content] = section.split("]");
                     const text = content.join("]").trim();
                     if (!text) return null;
-                    const colors = ["text-blue-400", "text-amber-400", "text-primary"];
+                    const colors = ["text-foreground", "text-foreground", "text-foreground"];
                     return (
                       <div key={i}>
                         <span className={`text-[11px] font-bold ${colors[i] || "text-muted-foreground"}`}>{title.trim()}</span>
@@ -789,8 +789,8 @@ function AIResultPanel({ result, loading, error, onClose }: {
             </div>
           )}
           {result.prediction && (
-            <div className="bg-blue-500/5 rounded-lg p-2.5">
-              <p className="text-[11px] text-blue-400 font-bold mb-1">Price Target & Outlook</p>
+            <div className="bg-muted/30 rounded-lg p-2.5">
+              <p className="text-[11px] text-foreground font-bold mb-1">Price Target & Outlook</p>
               <p className="text-xs leading-relaxed whitespace-pre-wrap break-words">{result.prediction}</p>
             </div>
           )}
@@ -1214,7 +1214,7 @@ const QuantRecommendView = () => {
             </button>
           ))}
           <button onClick={() => setShowFilter(!showFilter)}
-            className={`min-w-[40px] px-2 py-1.5 rounded-lg text-xs transition-colors ${showFilter ? "bg-amber-500/20 text-amber-500" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
+            className={`min-w-[40px] px-2 py-1.5 rounded-lg text-xs transition-colors ${showFilter ? "bg-foreground/10 text-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
             필터
           </button>
           <button onClick={handleFetch} disabled={loading}
@@ -1229,7 +1229,7 @@ const QuantRecommendView = () => {
       <AnimatePresence>
         {showFilter && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="bg-card rounded-xl p-4 space-y-3 border border-amber-500/20">
+            <div className="bg-card rounded-xl p-4 space-y-3 border border-border">
               <p className="text-xs font-bold">스크리닝 필터</p>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <div>
@@ -1379,14 +1379,14 @@ const QuantRecommendView = () => {
               return (
                 <div key={stock.symbol}>
                   <motion.button onClick={() => handleAIAnalyze(stock)}
-                    className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${rank <= 3 ? "border-l-2 border-yellow-500/50" : ""} ${
+                    className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${rank <= 3 ? "border-l-2 border-foreground/40" : ""} ${
                       isSelected ? "bg-card border border-primary/30" : "bg-card/50 hover:bg-card"
                     }`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                         {rank <= 10 && (
-                          <span className={`text-[11px] font-bold px-1 py-0.5 rounded ${rank <= 3 ? "bg-yellow-500/20 text-yellow-500" : "bg-primary/10 text-primary"}`}>
-                            {rank <= 3 ? ["🥇","🥈","🥉"][rank-1] : `${rank}위`}
+                          <span className={`text-[11px] font-bold px-1 py-0.5 rounded ${rank <= 3 ? "bg-foreground/10 text-foreground" : "bg-muted text-muted-foreground"}`}>
+                            {`${rank}위`}
                           </span>
                         )}
                         <span className="text-sm font-medium truncate">{stock.name}</span>
@@ -1497,19 +1497,19 @@ const QuantRecommendView = () => {
                   <div className="space-y-1.5">
                     {simResult.stocks.map((s, i) => {
                       const profit = Math.round(perStock * (s.returnPct / 100));
-                      const rankColors = ["text-yellow-500", "text-gray-400", "text-amber-600"];
-                      const rankBg = i < 3 ? "border-l-2 border-yellow-500/50" : "";
+                      const rankColors = ["text-foreground", "text-foreground", "text-foreground"];
+                      const rankBg = i < 3 ? "border-l-2 border-foreground/40" : "";
                       return (
                         <div key={s.symbol} className={`rounded-lg px-3 py-2 ${s.returnPct >= 0 ? "bg-card" : "bg-destructive/5"} ${rankBg}`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className={`text-xs font-bold w-6 text-center ${i < 3 ? rankColors[i] : "text-muted-foreground"}`}>
-                                {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
+                                {i + 1}
                               </span>
                               <span className="text-xs font-medium truncate">{s.name}</span>
                               <span className="text-[11px] font-mono text-muted-foreground">{s.symbol}</span>
                               {i < 3 && <span className="text-[11px] px-1 py-0.5 rounded bg-primary/10 text-primary font-bold">강력추천</span>}
-                              {i >= 3 && i < 7 && <span className="text-[11px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-500 font-bold">추천</span>}
+                              {i >= 3 && i < 7 && <span className="text-[11px] px-1 py-0.5 rounded bg-warn/10 text-warn font-bold">추천</span>}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <span className={`text-xs font-mono font-bold ${s.returnPct >= 0 ? "text-primary" : "text-destructive"}`}>
