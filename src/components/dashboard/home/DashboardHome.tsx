@@ -509,11 +509,12 @@ const DashboardHome = ({ onNavigate, onQuickExpense, onSmartInbox }: DashboardHo
     </motion.header>
   );
 
+  // 모바일 빠른 입력은 버튼별 파스텔 색 (모노 테마 안에서 구분감)
   const quickItems = [
-    { label: "지출", icon: Receipt, main: true, onClick: () => onQuickExpense?.() },
-    { label: "할 일", icon: ListChecks, onClick: focusTodoInput },
-    { label: "메모", icon: StickyNote, onClick: () => onNavigate?.("couple:memo") },
-    { label: "블로그", icon: Camera, onClick: () => onNavigate?.("blog:photo") },
+    { label: "지출", icon: Receipt, tint: "text-[#f4a7b9] bg-[#f4a7b9]/15", onClick: () => onQuickExpense?.() },
+    { label: "할 일", icon: ListChecks, tint: "text-[#9ec5f4] bg-[#9ec5f4]/15", onClick: focusTodoInput },
+    { label: "메모", icon: StickyNote, tint: "text-[#f5c77e] bg-[#f5c77e]/15", onClick: () => onNavigate?.("couple:memo") },
+    { label: "블로그", icon: Camera, tint: "text-[#c3b1f0] bg-[#c3b1f0]/15", onClick: () => onNavigate?.("blog:photo") },
   ];
 
   const quickEl = (
@@ -522,11 +523,11 @@ const DashboardHome = ({ onNavigate, onQuickExpense, onSmartInbox }: DashboardHo
         <button
           key={q.label}
           onClick={q.onClick}
-          className={`flex h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl text-[13px] font-semibold transition-transform active:scale-[0.97] ${
-            q.main ? "bg-primary text-primary-foreground" : "bg-card border border-border hover:bg-muted/60"
-          }`}
+          className="flex h-[80px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-border bg-card text-[13px] font-semibold transition-transform hover:bg-muted/60 active:scale-[0.97]"
         >
-          <q.icon className="h-5 w-5" />
+          <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${q.tint}`}>
+            <q.icon className="h-5 w-5" />
+          </span>
           {q.label}
         </button>
       ))}

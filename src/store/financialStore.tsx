@@ -553,11 +553,22 @@ const STORAGE_KEY = "sophia-financial-data";
 
 // 2026-09-28 돈 데이터 초기화(가짜 데이터 정리) — 각 기기의 옛 캐시가 DB로 다시 올라가지 않게 1회 삭제
 const FINANCE_RESET_KEY = "sophia-finance-reset";
-const FINANCE_RESET_VERSION = "2026-09-28";
+// v2: 설정 > 개인 정보(연봉·현금 보유·연금 잔액 등, 기기별 localStorage)의 금액도 0으로
+const FINANCE_RESET_VERSION = "2026-09-28b";
+const PERSONAL_MONEY_FIELDS = [
+  "salaryOwn", "salarySpouse", "monthlyLoanPayment", "cashSavings", "emergencyFund",
+  "cashHoldings", "pensionSavings", "irpBalance", "dcBalance",
+];
 try {
   if (typeof localStorage !== "undefined" && localStorage.getItem(FINANCE_RESET_KEY) !== FINANCE_RESET_VERSION) {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY); // DB에서 다시 불러오므로 안전
     localStorage.removeItem("sophia-trades"); // 매매 탭(로컬 전용)
+    const raw = localStorage.getItem("sophia-personal-info");
+    if (raw) {
+      const info = JSON.parse(raw) as Record<string, unknown>;
+      for (const f of PERSONAL_MONEY_FIELDS) if (f in info) info[f] = "";
+      localStorage.setItem("sophia-personal-info", JSON.stringify(info));
+    }
     localStorage.setItem(FINANCE_RESET_KEY, FINANCE_RESET_VERSION);
   }
 } catch {
