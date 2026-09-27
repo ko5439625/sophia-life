@@ -822,12 +822,13 @@ export async function loadPosts(): Promise<PostRow[]> {
   }
 }
 
+/** 글 저장 — 실패하면 throw (호출부가 임시저장을 지우지 않고 사용자에게 알리도록) */
 export async function savePost(post: PostRow): Promise<void> {
-  if (!isReady() || !supabase) return;
-  try {
-    await supabase.from("posts").upsert(post);
-  } catch (e) {
-    console.error("[supabaseSync] savePost error:", e);
+  if (!isReady() || !supabase) throw new Error("저장소에 연결되지 않았어요.");
+  const { error } = await supabase.from("posts").upsert(post);
+  if (error) {
+    console.error("[supabaseSync] savePost error:", error);
+    throw new Error(error.message);
   }
 }
 

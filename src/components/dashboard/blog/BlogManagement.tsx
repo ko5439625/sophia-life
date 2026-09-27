@@ -48,7 +48,9 @@ import {
   Eye,
   ExternalLink,
   ArrowRight,
+  History,
 } from "lucide-react";
+import { getDraft, setDraft, deleteDraft, formatDraftTime, formatDraftDateTime } from "./blogDraftStore";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -315,6 +317,28 @@ const PostListItem = ({
   </motion.div>
 );
 
+// --- 에디터 임시저장 (IndexedDB) ---
+const EDITOR_DRAFT_DEBOUNCE_MS = 800;
+const editorDraftKey = (postId?: string | null) => (postId ? `editor:${postId}` : "editor:new");
+
+interface EditorDraft {
+  v: 1;
+  title: string;
+  contentHtml: string;
+  category: string;
+  tags: string;
+  isPublic: boolean;
+  savedAt: number;
+}
+type EditorSnapshot = Omit<EditorDraft, "v" | "savedAt">;
+
+const sameSnapshot = (a: EditorSnapshot, b: EditorSnapshot) =>
+  a.title === b.title &&
+  a.contentHtml === b.contentHtml &&
+  a.category === b.category &&
+  a.tags === b.tags &&
+  a.isPublic === b.isPublic;
+
 /** Notion-style editor with contentEditable, image paste, inline image insertion */
 const PostEditor = ({
   initialTitle,
@@ -326,6 +350,7 @@ const PostEditor = ({
   initialImages,
   categories,
   isEditing,
+  draftKey,
   onSave,
   onCancel,
   autoOpenPhotoWizard = false,
@@ -341,6 +366,8 @@ const PostEditor = ({
   initialImages: string[];
   categories: string[];
   isEditing: boolean;
+  /** 임시저장 키 ("editor:new" 또는 "editor:{postId}") */
+  draftKey: string;
   /** 홈 "블로그" 바로가기 등으로 진입 시 사진으로 글쓰기 창을 바로 연다 */
   autoOpenPhotoWizard?: boolean;
   onSave: (data: {
@@ -474,6 +501,170 @@ const PostEditor = ({
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------------------------------------------------------------------------
+  // 임시저장: 제목/본문/카테고리/태그/공개여부를 자동 저장 (새로고침·탭 전환·돌아가기에도 유지)
+  // ---------------------------------------------------------------------------
+  /** 마지막 자동 저장 시각 */
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+  /** 기존 글에 덮어쓰지 않고 사용자 선택을 기다리는 임시저장본 */
+  const [pendingDraft, setPendingDraft] = useState<EditorDraft | null>(null);
+  /** 새 글에 자동으로 불러온 임시저장의 시각 */
+  const [restoredDraftAt, setRestoredDraftAt] = useState<number | null>(null);
+  const draftHydratedRef = useRef(false);
+  /** 발행/버리기 이후엔 저장하지 않음 */
+  const draftDisabledRef = useRef(false);
+  const pendingDraftRef = useRef<EditorDraft | null>(null);
+  pendingDraftRef.current = pendingDraft;
+  const draftTimerRef = useRef<number | null>(null);
+  /** 에디터를 연 시점의 내용 (이것과 같으면 저장할 필요 없음) */
+  const initialSnapshotRef = useRef<EditorSnapshot | null>(null);
+  const editorFields = { title, category, tags: tagsInput, isPublic };
+  const editorFieldsRef = useRef(editorFields);
+  editorFieldsRef.current = editorFields;
+  /** 언마운트 시점엔 contentRef가 비므로 요소를 따로 보관 */
+  const contentElRef = useRef<HTMLDivElement | null>(null);
+
+  const readSnapshot = useCallback((): EditorSnapshot => {
+    const f = editorFieldsRef.current;
+    const el = contentRef.current ?? contentElRef.current;
+    // 글자·이미지 없이 <br>만 남은 본문은 빈 본문으로 취급
+    const blank = !el || (!el.textContent?.trim() && !el.querySelector("img, hr, details, table"));
+    return {
+      title: f.title,
+      contentHtml: blank ? "" : el.innerHTML,
+      category: f.category,
+      tags: f.tags,
+      isPublic: f.isPublic,
+    };
+  }, []);
+
+  const saveEditorDraftNow = useCallback(() => {
+    if (draftTimerRef.current !== null) {
+      window.clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = null;
+    }
+    // 선택 대기 중인 임시저장본이 있으면 덮어쓰지 않는다 (불러오기/버리기 후 저장 재개)
+    if (!draftHydratedRef.current || draftDisabledRef.current || pendingDraftRef.current) return;
+    const snap = readSnapshot();
+    const initial = initialSnapshotRef.current;
+    if (initial && sameSnapshot(snap, initial)) {
+      void deleteDraft(draftKey);
+      return;
+    }
+    const now = Date.now();
+    const draft: EditorDraft = { v: 1, ...snap, savedAt: now };
+    void setDraft(draftKey, draft).then(() => setDraftSavedAt(now));
+  }, [draftKey, readSnapshot]);
+
+  const scheduleEditorDraftSave = useCallback(() => {
+    if (!draftHydratedRef.current || draftDisabledRef.current) return;
+    if (draftTimerRef.current !== null) window.clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = window.setTimeout(saveEditorDraftNow, EDITOR_DRAFT_DEBOUNCE_MS);
+  }, [saveEditorDraftNow]);
+
+  const applyEditorDraft = useCallback((d: EditorDraft) => {
+    setTitle(d.title ?? "");
+    setCategory(d.category ?? initialCategory);
+    setTagsInput(d.tags ?? "");
+    setIsPublic(d.isPublic ?? true);
+    if (contentRef.current) contentRef.current.innerHTML = d.contentHtml ?? "";
+    setAiUndoHtml(null);
+  }, [initialCategory]);
+
+  // 마운트: 초기 내용 스냅샷 → 임시저장 확인
+  useEffect(() => {
+    contentElRef.current = contentRef.current;
+    initialSnapshotRef.current = readSnapshot();
+    let cancelled = false;
+    (async () => {
+      const d = await getDraft<EditorDraft>(draftKey);
+      if (cancelled) return;
+      const initial = initialSnapshotRef.current!;
+      if (d && d.v === 1) {
+        if (sameSnapshot(d, initial)) {
+          void deleteDraft(draftKey); // 원본과 같으면 의미 없는 초안
+        } else {
+          const initialEmpty = !initial.title.trim() && !initial.contentHtml.trim();
+          const now = readSnapshot();
+          const untouched = sameSnapshot(now, initial);
+          if (!isEditing && initialEmpty && untouched) {
+            applyEditorDraft(d); // 빈 새 글이면 바로 불러옴 (안내 + 버리기 제공)
+            setRestoredDraftAt(d.savedAt);
+            setDraftSavedAt(d.savedAt);
+          } else {
+            setPendingDraft(d); // 기존 글/이미 작성 중이면 사용자 선택을 기다림
+          }
+        }
+      }
+      draftHydratedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 필드 변경 → 디바운스 저장
+  useEffect(() => {
+    scheduleEditorDraftSave();
+  }, [title, category, tagsInput, isPublic, scheduleEditorDraftSave]);
+
+  // 본문 변경 (입력·서식·이미지 업로드·AI 다듬기·사진 글 삽입 모두) → 디바운스 저장
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || typeof MutationObserver === "undefined") return;
+    const mo = new MutationObserver(() => scheduleEditorDraftSave());
+    mo.observe(el, { childList: true, subtree: true, characterData: true, attributes: true });
+    return () => mo.disconnect();
+  }, [scheduleEditorDraftSave]);
+
+  // 탭 전환/페이지 닫힘/언마운트(돌아가기 포함) 시 즉시 저장
+  useEffect(() => {
+    const flush = () => {
+      if (draftTimerRef.current !== null) saveEditorDraftNow();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, [saveEditorDraftNow]);
+
+  const loadPendingDraft = () => {
+    if (!pendingDraft) return;
+    applyEditorDraft(pendingDraft);
+    setDraftSavedAt(pendingDraft.savedAt);
+    pendingDraftRef.current = null;
+    setPendingDraft(null);
+    toast.success("임시저장된 글을 불러왔어요.");
+  };
+
+  const discardDraft = async (mode: "pending" | "restored") => {
+    const ok = await confirmDialog({
+      title: "임시저장을 버릴까요?",
+      description: mode === "restored" ? "불러온 내용이 지워지고 빈 글로 돌아가요." : "임시저장된 글이 지워져요. 지금 화면의 글은 그대로예요.",
+      confirmText: "버리기",
+    });
+    if (!ok) return;
+    if (draftTimerRef.current !== null) {
+      window.clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = null;
+    }
+    await deleteDraft(draftKey);
+    if (mode === "restored" && initialSnapshotRef.current) {
+      applyEditorDraft({ v: 1, ...initialSnapshotRef.current, savedAt: 0 });
+      setRestoredDraftAt(null);
+    } else {
+      pendingDraftRef.current = null;
+      setPendingDraft(null);
+    }
+    setDraftSavedAt(null);
+  };
 
   const getContentAsHtml = useCallback((): string => {
     if (!contentRef.current) return "";
@@ -691,6 +882,12 @@ const PostEditor = ({
 
   const handleSave = () => {
     if (!title.trim()) return;
+    // 발행 후엔 언마운트 저장을 막는다 (임시저장 삭제는 저장 완료 후 상위에서 처리)
+    draftDisabledRef.current = true;
+    if (draftTimerRef.current !== null) {
+      window.clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = null;
+    }
     setInsertHint(false);
     setPreviewPost(null);
     const tags = parseTags();
@@ -757,6 +954,55 @@ const PostEditor = ({
         </div>
       </div>
 
+      {/* 임시저장 안내 */}
+      {pendingDraft && (
+        <div role="status" className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border bg-muted pl-3 pr-1.5 py-1.5 min-w-0">
+          <History className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
+          <p className="flex-1 min-w-[150px] py-1.5 text-xs text-foreground break-keep leading-relaxed">
+            임시저장된 글이 있어요 <span className="text-muted-foreground tabular-nums whitespace-nowrap">({formatDraftDateTime(pendingDraft.savedAt)})</span>
+          </p>
+          <div className="flex items-center gap-1 ml-auto">
+            <button
+              type="button"
+              onClick={loadPendingDraft}
+              className="min-h-[40px] px-3 rounded-md bg-background text-xs font-medium text-foreground hover:bg-background/70"
+            >
+              불러오기
+            </button>
+            <button
+              type="button"
+              onClick={() => discardDraft("pending")}
+              className="min-h-[40px] px-3 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              버리기
+            </button>
+          </div>
+        </div>
+      )}
+      {!pendingDraft && restoredDraftAt !== null && (
+        <div role="status" className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-muted pl-3 pr-1 py-1 min-w-0">
+          <History className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
+          <p className="flex-1 min-w-0 py-1.5 text-xs text-foreground break-keep leading-relaxed">
+            임시저장된 글을 불러왔어요 <span className="text-muted-foreground tabular-nums whitespace-nowrap">({formatDraftDateTime(restoredDraftAt)})</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => discardDraft("restored")}
+            className="min-h-[40px] px-3 flex-shrink-0 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            버리기
+          </button>
+          <button
+            type="button"
+            onClick={() => setRestoredDraftAt(null)}
+            className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+            aria-label="안내 닫기"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Writing area -- Notion-style clean editor */}
       <div className="bg-card rounded-xl min-h-[400px] sm:min-h-[600px] relative">
         {/* Paste toast */}
@@ -797,8 +1043,15 @@ const PostEditor = ({
             autoFocus
           />
 
-          {/* Divider */}
-          <div className="h-px bg-border/50 my-4" />
+          {/* Divider + 자동 저장 상태 */}
+          <div className="flex items-center gap-3 my-4">
+            <div className="h-px flex-1 bg-border/50" />
+            {draftSavedAt !== null && !pendingDraft && (
+              <span className="flex-shrink-0 text-[11px] text-muted-foreground tabular-nums" aria-live="polite">
+                자동 저장됨 · {formatDraftTime(draftSavedAt)}
+              </span>
+            )}
+          </div>
 
           {/* Toolbar */}
           <div className="mb-4 border-b border-border/50 pb-3 space-y-2">
@@ -1354,9 +1607,19 @@ const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null;
       saved = savePostToDB({ id: newPost.id, title: newPost.title, content: newPost.content, category: newPost.category, tags: newPost.tags, is_public: newPost.isPublic, created_at: newPost.createdAt, images: newPost.images });
       target = { id: newPost.id, title: newPost.title, isNew: true, isPublic: newPost.isPublic };
     }
+    const draftKey = editorDraftKey(editingPost?.id);
     cancelEditor();
     // 저장이 끝난 뒤에 "글 보러 가기" 제공 (먼저 이동하면 공개 페이지에서 글을 못 찾음)
-    saved.then(() => setPublished(target));
+    // 임시저장도 저장 완료 후에 지운다 (저장 중 창이 닫혀도 초안은 남도록)
+    saved
+      .then(() => {
+        void deleteDraft(draftKey);
+        setPublished(target);
+      })
+      .catch(() => {
+        // 저장 실패 시 임시저장은 그대로 — 다시 열면 불러올 수 있음
+        toast.error("글이 저장되지 않았어요. 임시저장은 남아 있으니 다시 시도해주세요.");
+      });
   };
 
   const deletePost = async (id: string) => {
@@ -1375,7 +1638,10 @@ const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null;
     const updated = posts.map((p) => (p.id === id ? { ...p, isPublic: !p.isPublic } : p));
     setPosts(updated);
     const post = updated.find((p) => p.id === id);
-    if (post) savePostToDB({ id: post.id, title: post.title, content: post.content, category: post.category, tags: post.tags, is_public: post.isPublic, created_at: post.createdAt, images: post.images });
+    if (post)
+      savePostToDB({ id: post.id, title: post.title, content: post.content, category: post.category, tags: post.tags, is_public: post.isPublic, created_at: post.createdAt, images: post.images }).catch(
+        () => toast.error("공개 설정이 저장되지 않았어요. 다시 시도해주세요.")
+      );
   };
 
   // ---------------------------------------------------------------------------
@@ -1407,6 +1673,7 @@ const BlogManagement = ({ initialTab, onTabUsed }: { initialTab?: string | null;
             initialImages={editingPost?.images ?? []}
             categories={editorCategories}
             isEditing={!!editingPost}
+            draftKey={editorDraftKey(editingPost?.id)}
             autoOpenPhotoWizard={autoPhotoWizard}
             onSave={savePost}
             onCancel={cancelEditor}

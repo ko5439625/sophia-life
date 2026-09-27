@@ -19,7 +19,9 @@ import {
   Check,
   Camera,
   Quote,
+  History,
 } from "lucide-react";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { resizeImage } from "@/lib/imageResize";
 import {
   generatePhotoBlog,
@@ -31,6 +33,7 @@ import {
 } from "@/services/photoBlogApi";
 import { uploadBlobToBlogStorage, BLOG_UPLOAD_MAX_SIDE } from "./blogImageUpload";
 import { buildPostHtml } from "./photoBlogHtml";
+import { getDraft, setDraft, deleteDraft, formatDraftTime, formatDraftDateTime } from "./blogDraftStore";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,6 +68,51 @@ const STEPS: { key: Step; label: string }[] = [
   { key: "info", label: "정보" },
   { key: "result", label: "글 확인" },
 ];
+
+// --- 임시저장 (IndexedDB) ---
+const DRAFT_KEY = "photo-wizard";
+const DRAFT_DEBOUNCE_MS = 600;
+
+interface DraftPhoto {
+  id: string;
+  /** 원본 파일 (에디터에 넣을 때 1600px 업로드에 사용). localStorage 폴백에서는 없음 */
+  file?: Blob;
+  fileName: string;
+  type: string;
+  aiBase64: string;
+  note: string;
+}
+
+interface WizardDraft {
+  v: 1;
+  savedAt: number;
+  step: Step;
+  topic: string;
+  place: string;
+  date: string;
+  tone: PhotoBlogTone;
+  tagsInput: string;
+  result: PhotoBlogResult | null;
+  /** 현재 사진 목록 순서 */
+  photoIds: string[];
+  /** 생성 당시 사진 순서 스냅샷 */
+  genPhotoIds: string[];
+  /** 생성 요청 (base64 제외 — 복원 시 사진에서 다시 만든다) */
+  genRequest: (Omit<PhotoBlogRequest, "photos"> & { notes: (string | undefined)[] }) | null;
+  /** photos ∪ genPhotos */
+  photoPool: DraftPhoto[];
+}
+
+function base64ToBlob(base64: string, type = "image/jpeg"): Blob {
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
+}
+
+/** 사진·주제·장소·결과가 모두 비어 있으면 저장할 게 없는 상태 */
+const isEmptyState = (st: { photos: WizardPhoto[]; topic: string; place: string; result: PhotoBlogResult | null }) =>
+  st.photos.length === 0 && !st.topic.trim() && !st.place.trim() && !st.result;
 
 const todayStr = () => {
   const d = new Date();
@@ -104,6 +152,10 @@ const PhotoBlogWizard = ({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  /** 마지막 자동 저장 시각 */
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  /** 불러온 임시저장의 저장 시각 (안내 배너용) */
+  const [restoredAt, setRestoredAt] = useState<number | null>(null);
 
   // 언마운트 시 object URL 정리
   const allPhotosRef = useRef<WizardPhoto[]>([]);
@@ -121,6 +173,154 @@ const PhotoBlogWizard = ({
   }, [error]);
 
   const busy = generating || !!inserting || regenIndex !== null;
+
+  // ---------------------------------------------------------------------------
+  // 임시저장: 입력/선택한 내용은 AI 실패·창 닫기·새로고침·탭 전환에도 남아 있어야 한다
+  // ---------------------------------------------------------------------------
+  const latest = { step, photos, topic, place, date, tone, tagsInput, result, genPhotos, genRequest };
+  const latestRef = useRef(latest);
+  latestRef.current = latest;
+  /** 복원 확인이 끝나기 전엔 저장/삭제하지 않는다 (빈 상태로 기존 초안을 덮어쓰지 않도록) */
+  const hydratedRef = useRef(false);
+  const saveTimerRef = useRef<number | null>(null);
+
+  const saveNow = useCallback(() => {
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    if (!hydratedRef.current) return;
+    const st = latestRef.current;
+    if (isEmptyState(st)) {
+      void deleteDraft(DRAFT_KEY);
+      return;
+    }
+    const pool = new Map<string, DraftPhoto>();
+    [...st.photos, ...st.genPhotos].forEach((p) => {
+      if (pool.has(p.id)) return;
+      // note는 현재 목록 기준 (genPhotos 스냅샷은 생성 당시 메모)
+      pool.set(p.id, { id: p.id, file: p.file, fileName: p.file.name, type: p.file.type, aiBase64: p.aiBase64, note: p.note });
+    });
+    const now = Date.now();
+    const draft: WizardDraft = {
+      v: 1,
+      savedAt: now,
+      step: st.step,
+      topic: st.topic,
+      place: st.place,
+      date: st.date,
+      tone: st.tone,
+      tagsInput: st.tagsInput,
+      result: st.result,
+      photoIds: st.photos.map((p) => p.id),
+      genPhotoIds: st.genPhotos.map((p) => p.id),
+      genRequest: st.genRequest
+        ? {
+            topic: st.genRequest.topic,
+            place: st.genRequest.place,
+            date: st.genRequest.date,
+            tone: st.genRequest.tone,
+            notes: st.genRequest.photos.map((p) => p.note),
+          }
+        : null,
+      photoPool: Array.from(pool.values()),
+    };
+    void setDraft(DRAFT_KEY, draft).then(() => setSavedAt(now));
+  }, []);
+
+  // 변경 후 ~600ms 디바운스 저장
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(saveNow, DRAFT_DEBOUNCE_MS);
+  }, [step, photos, topic, place, date, tone, tagsInput, result, genPhotos, genRequest, saveNow]);
+
+  // 탭 전환/페이지 닫힘/언마운트 시 대기 중인 저장을 즉시 실행
+  useEffect(() => {
+    const flush = () => {
+      if (saveTimerRef.current !== null) saveNow();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, [saveNow]);
+
+  // 열릴 때: 위저드가 비어 있고 임시저장이 있으면 자동 복원
+  useEffect(() => {
+    if (!open || hydratedRef.current) return;
+    let cancelled = false;
+    (async () => {
+      const draft = await getDraft<WizardDraft>(DRAFT_KEY);
+      if (cancelled) return;
+      if (draft && draft.v === 1 && isEmptyState(latestRef.current)) {
+        const byId = new Map<string, WizardPhoto>();
+        (draft.photoPool ?? []).forEach((d) => {
+          if (!d.aiBase64) return;
+          const thumbBlob = base64ToBlob(d.aiBase64);
+          const src = d.file ?? thumbBlob; // localStorage 폴백이면 원본 대신 1024px 사본
+          const file = src instanceof File ? src : new File([src], d.fileName || "photo.jpg", { type: d.type || src.type || "image/jpeg" });
+          const photo: WizardPhoto = { id: d.id, file, thumbUrl: URL.createObjectURL(thumbBlob), aiBase64: d.aiBase64, note: d.note ?? "" };
+          allPhotosRef.current.push(photo);
+          byId.set(d.id, photo);
+        });
+        const pick = (ids: string[] | undefined) =>
+          (ids ?? []).map((id) => byId.get(id)).filter((p): p is WizardPhoto => !!p);
+        const restoredPhotos = pick(draft.photoIds);
+        const restoredGen = pick(draft.genPhotoIds);
+        const hasResult = !!draft.result && restoredGen.length === (draft.genPhotoIds ?? []).length;
+        setPhotos(restoredPhotos);
+        setTopic(draft.topic ?? "");
+        setPlace(draft.place ?? "");
+        setDate(draft.date ?? todayStr());
+        setTone(draft.tone ?? "담백");
+        setTagsInput(draft.tagsInput ?? "");
+        if (hasResult) {
+          setResult(draft.result);
+          setGenPhotos(restoredGen);
+          setGenRequest(
+            draft.genRequest
+              ? {
+                  topic: draft.genRequest.topic,
+                  place: draft.genRequest.place,
+                  date: draft.genRequest.date,
+                  tone: draft.genRequest.tone,
+                  photos: restoredGen.map((p, i) => ({
+                    base64: p.aiBase64,
+                    mime: "image/jpeg" as const,
+                    note: draft.genRequest?.notes?.[i],
+                  })),
+                }
+              : null
+          );
+        }
+        const nextStep: Step = draft.step === "result" && !hasResult ? "info" : draft.step ?? "photos";
+        setStep(restoredPhotos.length === 0 && nextStep !== "result" ? "photos" : nextStep);
+        setRestoredAt(draft.savedAt ?? Date.now());
+        setSavedAt(draft.savedAt ?? null);
+      }
+      hydratedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  const startOver = async () => {
+    const ok = await confirmDialog({
+      title: "새로 시작할까요?",
+      description: "임시저장된 사진과 글이 모두 지워져요.",
+      confirmText: "새로 시작",
+    });
+    if (!ok) return;
+    resetAll();
+  };
 
   // --- 사진 추가 (1024px로 줄여서 AI용 base64 + 미리보기 동시 확보) ---
   const addFiles = useCallback(
@@ -195,6 +395,7 @@ const PhotoBlogWizard = ({
       return;
     }
     setError(null);
+    saveNow(); // AI 호출이 실패해도 입력한 내용은 남도록 먼저 저장
     setGenerating(true);
     const snapshot = [...photos];
     const req: PhotoBlogRequest = {
@@ -222,6 +423,7 @@ const PhotoBlogWizard = ({
   const handleRegenerate = async (photoIndex: number) => {
     if (!result || !genRequest) return;
     setError(null);
+    saveNow(); // 문단을 고친 내용이 있으면 AI 호출 전에 저장
     setRegenIndex(photoIndex);
     try {
       const { heading, body, highlight } = await regenerateSection({ ...genRequest, draft: result }, photoIndex);
@@ -283,6 +485,13 @@ const PhotoBlogWizard = ({
   };
 
   const resetAll = () => {
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    void deleteDraft(DRAFT_KEY);
+    setRestoredAt(null);
+    setSavedAt(null);
     setStep("photos");
     setPhotos([]);
     setTopic("");
@@ -298,6 +507,7 @@ const PhotoBlogWizard = ({
 
   const handleOpenChange = (next: boolean) => {
     if (!next && busy) return; // 작업 중엔 닫기 방지
+    if (!next) saveNow();
     onOpenChange(next);
   };
 
@@ -371,6 +581,30 @@ const PhotoBlogWizard = ({
           ref={scrollRef}
           className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-4 sm:px-5 py-4 space-y-4"
         >
+          {restoredAt !== null && (
+            <div role="status" className="flex items-center gap-2 rounded-lg bg-muted pl-3 pr-1 py-1 text-sm min-w-0">
+              <History className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
+              <p className="flex-1 min-w-0 py-2 text-xs text-muted-foreground break-keep leading-relaxed">
+                임시저장된 내용을 불러왔어요 <span className="tabular-nums whitespace-nowrap">({formatDraftDateTime(restoredAt)})</span>
+              </p>
+              <button
+                type="button"
+                onClick={startOver}
+                disabled={busy}
+                className="h-10 px-3 flex-shrink-0 rounded-md text-xs font-medium text-foreground hover:bg-background/60 disabled:opacity-50"
+              >
+                새로 시작
+              </button>
+              <button
+                type="button"
+                onClick={() => setRestoredAt(null)}
+                className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+                aria-label="안내 닫기"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           {error && (
             <div role="alert" className="flex items-start gap-2 rounded-lg bg-destructive/10 text-destructive pl-3 pr-1 py-1.5 text-sm">
               <AlertCircle className="h-4 w-4 mt-2.5 flex-shrink-0" />
@@ -699,6 +933,11 @@ const PhotoBlogWizard = ({
           {inserting && (
             <p className="mb-2 text-xs text-muted-foreground break-keep" aria-live="polite">
               사진을 올리고 있어요 ({inserting.done}/{inserting.total}) · 창을 닫지 말아주세요
+            </p>
+          )}
+          {!inserting && savedAt !== null && (
+            <p className="mb-2 text-[11px] text-muted-foreground tabular-nums" aria-live="polite">
+              자동 저장됨 · {formatDraftTime(savedAt)}
             </p>
           )}
           <div className="flex items-center gap-2">
