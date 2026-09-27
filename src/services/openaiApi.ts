@@ -54,7 +54,14 @@ export function describeGeminiError(status: number, body: string): string {
   if (status === 429) return "AI 요청 한도를 초과했어요. 잠시 후 다시 시도해주세요.";
   if (status === 413) return "보낸 데이터가 너무 커요. 사진 수를 줄여서 다시 시도해주세요.";
   if (status >= 500) return "AI 서버가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해주세요.";
-  return `AI 요청에 실패했어요 (${status}).`;
+  // 그 밖의 400 등은 Google 오류 메시지를 짧게 붙여 원인을 알 수 있게
+  let detail = "";
+  try {
+    detail = (JSON.parse(body)?.error?.message as string | undefined)?.slice(0, 140) ?? "";
+  } catch {
+    /* 본문이 JSON이 아님 */
+  }
+  return `AI 요청에 실패했어요 (${status})${detail ? ` · ${detail}` : ""}`;
 }
 
 // ---------------------------------------------------------------------------

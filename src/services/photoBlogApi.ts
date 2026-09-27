@@ -103,6 +103,7 @@ const RESULT_SCHEMA = {
   type: "OBJECT",
   properties: {
     title: { type: "STRING" },
+    summary: { type: "STRING" }, // required에 있는데 정의가 빠져 Gemini가 400을 내던 원인
     intro: { type: "STRING" },
     sections: {
       type: "ARRAY",
