@@ -34,7 +34,7 @@ export interface CheongyakNotice {
 }
 
 export type NoticeResult =
-  | { status: "ok"; items: CheongyakNotice[]; source: "direct" | "proxy" }
+  | { status: "ok"; items: CheongyakNotice[]; source: "worker" | "direct" | "proxy" }
   | { status: "no-key" }
   /** 키는 있지만 청약홈 분양정보 API 활용신청이 안 된 키 (odcloud 401 / code -4) */
   | { status: "key-not-registered" }
@@ -123,6 +123,17 @@ async function fetchDirect(key: string, withCond: boolean): Promise<CheongyakNot
 }
 
 export async function fetchCheongyakNotices(): Promise<NoticeResult> {
+  // 1순위: 청약 알림 워커 (서버에 저장된 공공데이터 키 사용 → 앱 설정에 키가 없어도 됨)
+  try {
+    const res = await fetch(`${CHEONGYAK_WORKER}/notices`, { headers: { accept: "application/json" } });
+    if (res.ok) {
+      const json = await res.json();
+      if (Array.isArray(json?.data)) return { status: "ok", items: openOnly(mapItems(json.data as RawItem[])), source: "worker" };
+    }
+  } catch {
+    /* 아래 경로로 */
+  }
+
   const key = getDataKey();
   let lastError = "";
   let unregistered = false;

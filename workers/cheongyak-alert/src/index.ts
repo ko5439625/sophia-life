@@ -116,6 +116,21 @@ export default {
       }
       return Response.json({ regions: await loadRegions(env), options: SIDO }, { headers: cors });
     }
+    // 앱 청약 목록용: 서버 키로 마감 전 공고 원본 전달 (앱에 키가 없어도 동작)
+    if (u.pathname === "/notices") {
+      const api = new URL(FEED);
+      api.searchParams.set("serviceKey", env.DATA_GO_KR_API_KEY);
+      api.searchParams.set("page", "1");
+      api.searchParams.set("perPage", "100");
+      const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+      api.searchParams.set("cond[RCEPT_ENDDE::GTE]", today);
+      const res = await fetch(api.toString());
+      const body = await res.text();
+      return new Response(body, {
+        status: res.status,
+        headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "public, max-age=600" },
+      });
+    }
     if (u.pathname === "/run" && u.searchParams.get("dry")) {
       const [regions, notices] = await Promise.all([loadRegions(env), fetchNotices(env)]);
       const m = notices.filter((n) => matchesRegion(n, regions));
