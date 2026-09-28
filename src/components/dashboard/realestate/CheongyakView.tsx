@@ -40,7 +40,7 @@ function DdayBadge({ n }: { n: CheongyakNotice }) {
 function NoticeCard({ n }: { n: CheongyakNotice }) {
   const phase = noticePhase(n);
   return (
-    <li className="bg-card border border-border rounded-2xl p-4 space-y-3">
+    <li className="min-w-0 bg-card border border-border rounded-2xl p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -67,12 +67,13 @@ function NoticeCard({ n }: { n: CheongyakNotice }) {
           <dd className="font-medium tabular-nums">{n.totalSupply != null ? `${n.totalSupply.toLocaleString("ko-KR")}세대` : "-"}</dd>
         </div>
       </dl>
+      {/* 링크는 왼쪽 — 오른쪽 아래 떠 있는 ＋ 버튼에 가리지 않게 */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">당첨 발표 {md(n.winnerDate)}</span>
         <a href={n.url} target="_blank" rel="noopener noreferrer"
-          className="min-h-[44px] -mr-2 px-2 inline-flex items-center gap-1 text-sm font-medium hover:text-muted-foreground">
+          className="min-h-[44px] -ml-2 px-2 inline-flex items-center gap-1 text-sm font-medium hover:text-muted-foreground">
           청약홈 공고 <ExternalLink className="h-3.5 w-3.5" />
         </a>
+        <span className="text-xs text-muted-foreground">당첨 발표 {md(n.winnerDate)}</span>
       </div>
     </li>
   );
@@ -259,7 +260,7 @@ const CheongyakView = ({ readOnly = false }: { readOnly?: boolean }) => {
             <p className="text-sm text-muted-foreground">{picked.length ? `${picked.join(" · ")} 기준` : "전체 지역 기준"}</p>
           </div>
         ) : (
-          <ul className="grid gap-3 2xl:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
             {items.map((n) => <NoticeCard key={n.id} n={n} />)}
           </ul>
         )}
