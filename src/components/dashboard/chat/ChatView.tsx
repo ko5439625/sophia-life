@@ -46,6 +46,18 @@ const DESKTOP_DOWNLOAD = IS_WINDOWS
   ? `${RELEASE_BASE}/QA.JJ.Setup.0.3.1.exe`
   : `${RELEASE_BASE}/QA.JJ-0.3.1-arm64.dmg`;
 
+// 재조회 결과와 현재 목록 합치기 — 조회 중에 실시간으로 도착한 메시지가 덮어써져
+// 사라졌다가 늦게 다시 나타나던 문제 방지 (이미지 signed URL도 유지)
+function mergeHistory(prev: ChatMessage[], fetched: ChatMessage[]): ChatMessage[] {
+  const urls = new Map(prev.map((m) => [m.id, m.image_url]));
+  const ids = new Set(fetched.map((m) => m.id));
+  const last = fetched.length ? fetched[fetched.length - 1].created_at : "";
+  const arrived = prev.filter((m) => !ids.has(m.id) && m.created_at >= last);
+  return [...fetched.map((m) => ({ ...m, image_url: urls.get(m.id) })), ...arrived].sort((a, b) =>
+    a.created_at.localeCompare(b.created_at)
+  );
+}
+
 // 답장 인용 미리보기 텍스트
 function quoteText(m: ChatMessage): string {
   if (m.deleted) return "삭제된 메시지";
@@ -191,7 +203,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
     purgeOldMessages().then(() =>
       loadTodayMessages().then((msgs) => {
         lastSync.current = Date.now();
-        setMessages(msgs);
+        setMessages((prev) => mergeHistory(prev, msgs));
         markAsRead(sender);
       })
     );
@@ -204,10 +216,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
       if (document.visibilityState !== "visible" || Date.now() - lastSync.current < 30_000) return;
       lastSync.current = Date.now();
       loadTodayMessages().then((msgs) => {
-        setMessages((prev) => {
-          const urls = new Map(prev.map((m) => [m.id, m.image_url]));
-          return msgs.map((m) => ({ ...m, image_url: urls.get(m.id) }));
-        });
+        setMessages((prev) => mergeHistory(prev, msgs));
         markAsRead(sender);
       });
     };
@@ -259,7 +268,7 @@ function ChatRoom({ sender, onLogout }: { sender: ChatSender; onLogout: () => vo
       onReconnect: () => {
         // 재연결 시 누락 메시지 보정
         loadTodayMessages().then((msgs) => {
-          setMessages(msgs);
+          setMessages((prev) => mergeHistory(prev, msgs));
           markAsRead(sender);
         });
       },
